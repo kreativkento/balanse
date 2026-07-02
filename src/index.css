@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --color-balanse-sage: #7a8b7b;
+  --color-balanse-terracotta: #c07a65;
+  --color-balanse-cream: #f7f5f0;
+  --color-balanse-ink: #1e221f;
+  --color-balanse-clay: #e8e3d9;
+
+  --font-heading: "Syne", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--color-balanse-ink);
+    background-color: var(--color-balanse-cream);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
