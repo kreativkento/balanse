@@ -1,0 +1,81 @@
+import { createBrowserRouter } from 'react-router';
+import { Root } from './Root';
+import HomePage from './pages/HomePage';
+import GalleryPage from './pages/GalleryPage';
+import PricingPage from './pages/PricingPage';
+import ClassesPage from './pages/ClassesPage';
+import LoginChoicePage from './pages/LoginChoicePage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import DashboardPage from './pages/DashboardPage';
+import BookClassPage from './pages/BookClassPage';
+import PaymentPage from './pages/PaymentPage';
+import BookingPendingPage from './pages/BookingPendingPage';
+import ProfilePage from './pages/ProfilePage';
+import StaffLoginPage from './pages/StaffLoginPage';
+import StaffDashboardPage from './pages/StaffDashboardPage';
+import StaffSchedulePage from './pages/StaffSchedulePage';
+import StaffGalleryPage from './pages/StaffGalleryPage';
+import StaffAccountPage from './pages/StaffAccountPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminStaffPage from './pages/AdminStaffPage';
+import AdminStudentsPage from './pages/AdminStudentsPage';
+import AdminSchedulePage from './pages/AdminSchedulePage';
+import AdminPaymentsPage from './pages/AdminPaymentsPage';
+import AdminGalleryPage from './pages/AdminGalleryPage';
+import AdminSubscriptionsPage from './pages/AdminSubscriptionsPage';
+import AdminPromosPage from './pages/AdminPromosPage';
+import AdminPoliciesPage from './pages/AdminPoliciesPage';
+import AdminAbsenceTrackerPage from './pages/AdminAbsenceTrackerPage';
+import AdminCoachAvailabilityPage from './pages/AdminCoachAvailabilityPage';
+import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
+import StaffProfilePage from './pages/StaffProfilePage';
+import NewsPage from './pages/NewsPage';
+import CoachesPage from './pages/CoachesPage';
+import ProfileSetupPage from './pages/ProfileSetupPage';
+import StudentPaymentHistoryPage from './pages/StudentPaymentHistoryPage';
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    Component: Root,
+    children: [
+      { index: true, Component: HomePage },
+      { path: 'gallery', Component: GalleryPage },
+      { path: 'pricing', Component: PricingPage },
+      { path: 'classes', Component: ClassesPage },
+      { path: 'news', Component: NewsPage },
+      { path: 'coaches', Component: CoachesPage },
+      { path: 'auth', Component: LoginChoicePage },
+      { path: 'login', Component: LoginPage },
+      { path: 'signup', Component: SignupPage },
+      { path: 'profile-setup', Component: ProfileSetupPage },
+      { path: 'dashboard', Component: DashboardPage },
+      { path: 'book', Component: BookClassPage },
+      { path: 'payment', Component: PaymentPage },
+      { path: 'booking-pending', Component: BookingPendingPage },
+      { path: 'profile', Component: ProfilePage },
+      { path: 'payment-history', Component: StudentPaymentHistoryPage },
+      { path: 'staff-login', Component: StaffLoginPage },
+      { path: 'staff-dashboard', Component: StaffDashboardPage },
+      { path: 'staff-schedule',   Component: StaffSchedulePage },
+      { path: 'staff-gallery',    Component: StaffGalleryPage },
+      { path: 'staff-account',      Component: StaffAccountPage },
+      { path: 'staff-availability', Component: StaffAvailabilityPage },
+      { path: 'staff-profile',      Component: StaffProfilePage },
+      { path: 'admin-login', Component: AdminLoginPage },
+      { path: 'admin-dashboard', Component: AdminDashboardPage },
+      { path: 'admin-staff', Component: AdminStaffPage },
+      { path: 'admin-students', Component: AdminStudentsPage },
+      { path: 'admin-schedule',   Component: AdminSchedulePage },
+      { path: 'admin-payments',   Component: AdminPaymentsPage },
+      { path: 'admin-gallery',    Component: AdminGalleryPage },
+      { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
+      { path: 'admin-promos',     Component: AdminPromosPage },
+      { path: 'admin-policies',   Component: AdminPoliciesPage },
+      { path: 'admin-absence',             Component: AdminAbsenceTrackerPage },
+      { path: 'admin-coach-availability',  Component: AdminCoachAvailabilityPage },
+    ],
+  },
+]);
