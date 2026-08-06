@@ -74,9 +74,14 @@ export default function SignupPage() {
     if (!validate()) return;
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
 
-    const result = signup(email.trim(), password, firstName.trim(), lastName.trim(), middleInitial.trim());
+    const result = await signup(
+      email.trim(),
+      password,
+      firstName.trim(),
+      lastName.trim(),
+      middleInitial.trim(),
+    );
     setLoading(false);
 
     if (result.success) {

@@ -1,26 +1,35 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { supabase } from '../../lib/supabase';
+import {
+  AuthResult,
+  deriveNameFromEmail,
+  mapAuthError,
+  profileRowToUserProfile,
+  validateEmailPassword,
+  wrongRoleMessage,
+} from '../../lib/auth-helpers';
+import { fetchAccountWithProfileByAuthUserId, isRoleMatch } from '../../lib/profile-service';
+import type { AccountWithProfile, UserRole } from '../../lib/database.types';
 
-interface AdminUser {
+export interface AdminUser {
   name: string;
   email: string;
+  role: UserRole;
 }
 
 interface AdminAuthContextType {
   adminUser: AdminUser | null;
-  adminLogin: (email: string, password: string) => { success: boolean; error?: string };
-  adminLogout: () => void;
+  adminLogin: (email: string, password: string) => Promise<AuthResult>;
+  adminLogout: () => Promise<void>;
 }
 
-const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-
-function deriveNameFromEmail(email: string): string {
-  const local = email.split('@')[0];
-  return local
-    .replace(/[._\-+]/g, ' ')
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+function mapToAdminUser(data: AccountWithProfile): AdminUser {
+  const profile = profileRowToUserProfile(data.profile, data.account.email);
+  return {
+    name: profile.name || deriveNameFromEmail(data.account.email),
+    email: data.account.email.toLowerCase(),
+    role: data.account.role,
+  };
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | null>(null);
@@ -28,19 +37,71 @@ const AdminAuthContext = createContext<AdminAuthContextType | null>(null);
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
-  const adminLogin = (email: string, password: string) => {
-    if (!EMAIL_RE.test(email)) {
-      return { success: false, error: 'Please enter a valid email address.' };
+  const hydrateAdminSession = useCallback(async (authUserId: string) => {
+    const data = await fetchAccountWithProfileByAuthUserId(authUserId);
+    if (data && isRoleMatch(data.account, 'admin')) {
+      setAdminUser(mapToAdminUser(data));
+      return;
     }
-    if (!password || password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters.' };
+    setAdminUser(null);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted && session?.user) {
+        await hydrateAdminSession(session.user.id);
+      }
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      if (session?.user) {
+        await hydrateAdminSession(session.user.id);
+      } else {
+        setAdminUser(null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [hydrateAdminSession]);
+
+  const adminLogin = async (email: string, password: string): Promise<AuthResult> => {
+    const validationError = validateEmailPassword(email, password);
+    if (validationError) return validationError;
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (error) {
+      return { success: false, error: mapAuthError(error, 'Login failed. Please try again.') };
     }
-    const name = deriveNameFromEmail(email);
-    setAdminUser({ name, email: email.toLowerCase() });
+
+    const accountData = await fetchAccountWithProfileByAuthUserId(data.user.id);
+    if (!accountData || !isRoleMatch(accountData.account, 'admin')) {
+      await supabase.auth.signOut();
+      return { success: false, error: wrongRoleMessage('admin') };
+    }
+
+    setAdminUser(mapToAdminUser(accountData));
     return { success: true };
   };
 
-  const adminLogout = () => setAdminUser(null);
+  const adminLogout = async () => {
+    await supabase.auth.signOut();
+    setAdminUser(null);
+  };
 
   return (
     <AdminAuthContext.Provider value={{ adminUser, adminLogin, adminLogout }}>

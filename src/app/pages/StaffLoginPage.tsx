@@ -16,7 +16,7 @@ export default function StaffLoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!email.trim()) {
@@ -36,15 +36,13 @@ export default function StaffLoginPage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const result = staffLogin(email.trim(), password);
-      setLoading(false);
-      if (result.success) {
-        navigate('/staff-dashboard');
-      } else {
-        setError(result.error || 'Login failed.');
-      }
-    }, 600);
+    const result = await staffLogin(email.trim(), password);
+    setLoading(false);
+    if (result.success) {
+      navigate('/staff-dashboard');
+    } else {
+      setError(result.error || 'Login failed.');
+    }
   };
 
   return (

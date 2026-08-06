@@ -1,35 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Search, Pencil, Trash2, X, Check, UserCheck, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import {
+  createStaffAccount,
+  deleteManagedAccount,
+  fetchStaffDirectoryAccounts,
+  isStaffMemberLockedForAdmin,
+  staffRowToListItem,
+  updateStaffAccountFromForm,
+  type StaffDirectoryAccountRole,
+} from '../../lib/admin-service';
 
 // ── Types & Data ───────────────────────────────────────────────
 
 interface StaffMember {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  role: 'Coach' | 'Administrator';
+  role: 'Coach' | 'Administrator' | 'Dev' | 'Admin';
   specialty: string;
   status: 'active' | 'inactive';
+  accountRole: StaffDirectoryAccountRole;
 }
 
 const SPECIALTIES = [
   'Calisthenics', 'Yoga', 'Animal Flow', 'Groundworks',
   'Circuit Training', 'Mat Pilates', 'Kickboxing', 'Capoeira',
   'Personal Coaching', '—',
-];
-
-const INITIAL_STAFF: StaffMember[] = [
-  { id: 1, name: 'Rex Santos',    email: 'rex@balanse.com',     role: 'Coach',         specialty: 'Calisthenics',        status: 'active'   },
-  { id: 2, name: 'Jodi Reyes',    email: 'jodi@balanse.com',    role: 'Coach',         specialty: 'Yoga',                status: 'active'   },
-  { id: 3, name: 'Ephraim Cruz',  email: 'ephraim@balanse.com', role: 'Coach',         specialty: 'Animal Flow',         status: 'active'   },
-  { id: 4, name: 'Alec Bautista', email: 'alec@balanse.com',    role: 'Coach',         specialty: 'Groundworks',         status: 'active'   },
-  { id: 5, name: 'Rachelle Tan',  email: 'rachelle@balanse.com',role: 'Coach',         specialty: 'Circuit Training',    status: 'active'   },
-  { id: 6, name: 'Kate Mercado',  email: 'kate@balanse.com',    role: 'Coach',         specialty: 'Mat Pilates',         status: 'active'   },
-  { id: 7, name: 'Wolf Andrada',  email: 'wolf@balanse.com',    role: 'Coach',         specialty: 'Kickboxing',          status: 'active'   },
-  { id: 8, name: 'Studio Admin',  email: 'admin@balanse.com',   role: 'Administrator', specialty: '—',                   status: 'active'   },
 ];
 
 const EMPTY_FORM = { name: '', email: '', role: 'Coach' as 'Coach' | 'Administrator', specialty: 'Calisthenics', status: 'active' as 'active' | 'inactive', password: '' };
@@ -66,17 +65,30 @@ export default function AdminStaffPage() {
   const [pageTab, setPageTab]           = useState<'staff' | 'logs'>('staff');
   const [logTab, setLogTab]             = useState<'passwords' | 'deactivations' | 'deletions'>('passwords');
   const [deletionReqs, setDeletionReqs] = useState<DeletionRequest[]>(INITIAL_DELETION_REQS);
-  const [staff, setStaff]               = useState<StaffMember[]>(INITIAL_STAFF);
-  const [search, setSearch]             = useState('');
-  const [showModal, setShowModal]       = useState(false);
-  const [editingId, setEditingId]       = useState<number | null>(null);
-  const [deleteId, setDeleteId]         = useState<number | null>(null);
-  const [form, setForm]                 = useState(EMPTY_FORM);
-  const [formError, setFormError]       = useState('');
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [staffLoading, setStaffLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
+
+  const loadStaff = useCallback(async () => {
+    setStaffLoading(true);
+    const rows = await fetchStaffDirectoryAccounts();
+    setStaff(rows.map(staffRowToListItem));
+    setStaffLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!adminUser) navigate('/admin-login');
   }, [adminUser, navigate]);
+
+  useEffect(() => {
+    if (adminUser) void loadStaff();
+  }, [adminUser, loadStaff]);
 
   if (!adminUser) return null;
 
@@ -97,14 +109,22 @@ export default function AdminStaffPage() {
 
   // Open Edit
   const openEdit = (member: StaffMember) => {
-    setForm({ name: member.name, email: member.email, role: member.role, specialty: member.specialty, status: member.status, password: '' });
+    if (isStaffMemberLockedForAdmin(member, adminUser?.role)) return;
+    setForm({
+      name: member.name,
+      email: member.email,
+      role: member.role === 'Administrator' ? 'Administrator' : 'Coach',
+      specialty: member.specialty,
+      status: member.status,
+      password: '',
+    });
     setEditingId(member.id);
     setFormError('');
     setShowModal(true);
   };
 
   // Save
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       setFormError('Name and email are required.');
       return;
@@ -113,25 +133,54 @@ export default function AdminStaffPage() {
       setFormError('Password is required for new accounts.');
       return;
     }
+    if (editingId === null && form.password.trim().length < 6) {
+      setFormError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setSaving(true);
+    setFormError('');
+
     if (editingId !== null) {
-      setStaff((prev) => prev.map((s) => s.id === editingId ? { ...s, ...form } : s));
-    } else {
-      const newMember: StaffMember = {
-        id: Date.now(),
+      const result = await updateStaffAccountFromForm(editingId, {
         name: form.name.trim(),
         email: form.email.trim(),
-        role: form.role,
-        specialty: form.role === 'Administrator' ? '—' : form.specialty,
-        status: form.status,
-      };
-      setStaff((prev) => [...prev, newMember]);
+        specialty: form.specialty,
+        staffType: form.role,
+      });
+      setSaving(false);
+      if (!result.ok) {
+        setFormError(result.error || 'Failed to update staff account.');
+        return;
+      }
+    } else {
+      const result = await createStaffAccount({
+        email: form.email.trim(),
+        password: form.password,
+        name: form.name.trim(),
+        specialty: form.specialty,
+        staffType: form.role,
+      });
+      setSaving(false);
+      if (!result.ok) {
+        setFormError(result.error || 'Failed to create staff account.');
+        return;
+      }
     }
+
+    await loadStaff();
     setShowModal(false);
   };
 
   // Delete
-  const handleDelete = (id: number) => {
-    setStaff((prev) => prev.filter((s) => s.id !== id));
+  const handleDelete = async (id: string) => {
+    const result = await deleteManagedAccount(id);
+    if (!result.ok) {
+      setFormError(result.error || 'Failed to delete staff account.');
+      setDeleteId(null);
+      return;
+    }
+    await loadStaff();
     setDeleteId(null);
   };
 
@@ -206,11 +255,16 @@ export default function AdminStaffPage() {
                 ))}
               </div>
 
-              {filtered.length === 0 ? (
+              {staffLoading ? (
+                <div className="px-6 py-12 text-center text-[#B0A898] text-sm">Loading staff accounts…</div>
+              ) : filtered.length === 0 ? (
                 <div className="px-6 py-12 text-center text-[#B0A898] text-sm">No staff members match your search.</div>
               ) : (
                 <div className="divide-y divide-[#D4CDB5]/30">
-                  {filtered.map((member) => (
+                  {filtered.map((member) => {
+                    const actionsLocked = isStaffMemberLockedForAdmin(member, adminUser?.role);
+
+                    return (
                     <div
                       key={member.id}
                       className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px]"
@@ -222,12 +276,18 @@ export default function AdminStaffPage() {
                         <span className="text-[#1E2A35] text-sm font-semibold truncate">{member.name}</span>
                       </div>
                       <span className="text-[#8A7E6E] text-sm truncate">{member.email}</span>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#C49A3C]/12 text-[#A67E2A]'}`}>{member.role}</span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${
+                        member.role === 'Dev' ? 'bg-violet-50 text-violet-700 border border-violet-200' :
+                        member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' :
+                        'bg-[#C49A3C]/12 text-[#A67E2A]'
+                      }`}>{member.role}</span>
                       <span className="text-[#5A5048] text-sm truncate">{member.specialty}</span>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{member.status}</span>
                       {/* Actions — fixed 150px column */}
                       <div className="flex items-center gap-1 w-[150px]">
-                        {deleteId === member.id ? (
+                        {actionsLocked ? (
+                          <span className="text-[#B0A898] text-xs italic">Protected</span>
+                        ) : deleteId === member.id ? (
                           <>
                             <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Delete?</span>
                             <button onClick={() => handleDelete(member.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">Yes</button>
@@ -241,7 +301,8 @@ export default function AdminStaffPage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -502,10 +563,11 @@ export default function AdminStaffPage() {
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+                disabled={saving}
+                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
               >
-                {editingId !== null ? 'Save Changes' : 'Add Staff Member'}
+                {saving ? 'Saving…' : editingId !== null ? 'Save Changes' : 'Add Staff Member'}
               </button>
             </div>
           </div>

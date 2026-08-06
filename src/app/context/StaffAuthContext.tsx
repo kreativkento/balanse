@@ -1,4 +1,17 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { supabase } from '../../lib/supabase';
+import {
+  AuthResult,
+  deriveNameFromEmail,
+  mapAuthError,
+  profileRowToCoachProfile,
+  profileRowToUserProfile,
+  coachProfileToDbUpdate,
+  validateEmailPassword,
+  wrongRoleMessage,
+} from '../../lib/auth-helpers';
+import { fetchAccountWithProfileByAuthUserId, isRoleMatch, updateProfileByAuthUserId } from '../../lib/profile-service';
+import type { AccountWithProfile } from '../../lib/database.types';
 
 export interface CoachProfileData {
   displayName: string;
@@ -18,21 +31,18 @@ interface StaffAuthContextType {
   staffUser: StaffUser | null;
   staffProfile: CoachProfileData | null;
   isStaffAuthenticated: boolean;
-  staffLogin: (email: string, password: string) => { success: boolean; error?: string };
-  staffLogout: () => void;
+  staffLogin: (email: string, password: string) => Promise<AuthResult>;
+  staffLogout: () => Promise<void>;
   updateStaffProfile: (data: Partial<CoachProfileData>) => void;
 }
 
-const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-
-function deriveNameFromEmail(email: string): string {
-  const local = email.split('@')[0];
-  return local
-    .replace(/[._\-+]/g, ' ')
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+function mapToStaffUser(data: AccountWithProfile): StaffUser {
+  const profile = profileRowToUserProfile(data.profile, data.account.email);
+  return {
+    name: profile.name || deriveNameFromEmail(data.account.email),
+    email: data.account.email.toLowerCase(),
+    role: 'Coach',
+  };
 }
 
 const StaffAuthContext = createContext<StaffAuthContextType | null>(null);
@@ -41,37 +51,97 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
   const [staffProfile, setStaffProfile] = useState<CoachProfileData | null>(null);
 
-  const staffLogin = (email: string, password: string): { success: boolean; error?: string } => {
-    if (!EMAIL_RE.test(email)) {
-      return { success: false, error: 'Please enter a valid email address.' };
+  const hydrateStaffSession = useCallback(async (authUserId: string) => {
+    const data = await fetchAccountWithProfileByAuthUserId(authUserId);
+    if (data && isRoleMatch(data.account, 'coach')) {
+      setStaffUser(mapToStaffUser(data));
+      setStaffProfile(profileRowToCoachProfile(data.profile, data.account.email));
+      return;
     }
-    if (!password || password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters.' };
-    }
-    const name = deriveNameFromEmail(email);
-    setStaffUser({ name, email: email.toLowerCase(), role: 'Coach' });
-    setStaffProfile({
-      displayName: name,
-      photo: '',
-      bio: '',
-      experience: '',
-      classes: [],
+    setStaffUser(null);
+    setStaffProfile(null);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted && session?.user) {
+        await hydrateStaffSession(session.user.id);
+      }
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      if (session?.user) {
+        await hydrateStaffSession(session.user.id);
+      } else {
+        setStaffUser(null);
+        setStaffProfile(null);
+      }
     });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [hydrateStaffSession]);
+
+  const staffLogin = async (email: string, password: string): Promise<AuthResult> => {
+    const validationError = validateEmailPassword(email, password);
+    if (validationError) return validationError;
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (error) {
+      return { success: false, error: mapAuthError(error, 'Login failed. Please try again.') };
+    }
+
+    const accountData = await fetchAccountWithProfileByAuthUserId(data.user.id);
+    if (!accountData || !isRoleMatch(accountData.account, 'coach')) {
+      await supabase.auth.signOut();
+      return { success: false, error: wrongRoleMessage('coach') };
+    }
+
+    setStaffUser(mapToStaffUser(accountData));
+    setStaffProfile(profileRowToCoachProfile(accountData.profile, accountData.account.email));
     return { success: true };
   };
 
-  const staffLogout = () => {
+  const staffLogout = async () => {
+    await supabase.auth.signOut();
     setStaffUser(null);
     setStaffProfile(null);
   };
 
   const updateStaffProfile = (data: Partial<CoachProfileData>) => {
-    setStaffProfile(prev => prev ? { ...prev, ...data } : null);
+    setStaffProfile((prev) => (prev ? { ...prev, ...data } : null));
+    void (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await updateProfileByAuthUserId(authUser.id, coachProfileToDbUpdate(data));
+      }
+    })();
   };
 
   return (
     <StaffAuthContext.Provider
-      value={{ staffUser, staffProfile, isStaffAuthenticated: !!staffUser, staffLogin, staffLogout, updateStaffProfile }}
+      value={{
+        staffUser,
+        staffProfile,
+        isStaffAuthenticated: !!staffUser,
+        staffLogin,
+        staffLogout,
+        updateStaffProfile,
+      }}
     >
       {children}
     </StaffAuthContext.Provider>
