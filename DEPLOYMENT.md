@@ -105,3 +105,33 @@ Check that `dist/index.html` and `dist/assets/` exist.
 - [ ] No deploy command (Pages handles upload)
 - [ ] `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set in Cloudflare
 - [ ] Latest code pushed to `main` on GitHub
+
+---
+
+## White screen after deploy?
+
+The most common cause is **missing Supabase environment variables at build time**.
+
+Vite replaces `import.meta.env.VITE_*` when `npm run build` runs on Cloudflare — not when users visit the site. If variables were missing during the build, the app cannot connect to Supabase and may show a blank page.
+
+### Fix
+
+1. **Pages project → Settings → Environment variables**
+2. Add for **Production** (and **Preview** if you use preview URLs):
+
+   | Name | Value |
+   |------|--------|
+   | `VITE_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+   | `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → anon public key |
+
+3. **Deployments → Retry deployment** on the latest build (or push a new commit)
+
+4. Hard-refresh the site (`Ctrl+Shift+R`) after the new deploy finishes
+
+### Verify in the browser
+
+Open your site → **F12 → Console**. If you see `Missing Supabase environment variables`, the redeploy with env vars has not completed yet.
+
+### Still blank?
+
+Check **Network** tab — confirm `/assets/index-*.js` returns **200**, not 404. A 404 on the JS bundle usually means a wrong build output directory or a Worker/Pages misconfiguration.
