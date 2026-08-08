@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  ArrowLeft, ChevronLeft, ChevronRight,
-  Clock, Users, Check, CalendarDays, Sparkles,
+  ArrowLeft, ChevronLeft, ChevronRight, ChevronDown,
+  Clock, Users, Check, CalendarDays, User, Layers,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { WeekCalendarGrid, type WeekGridEvent } from '../components/calendar/WeekCalendarGrid';
+import { MonthCalendarGrid, type MonthGridEvent } from '../components/calendar/MonthCalendarGrid';
+import {
+  MONTH_NAMES, DAY_LABELS_SHORT, buildMonthGrid, toDateKeyFromParts, toDateKey,
+  getWeekDatesContaining, formatWeekRange, dateKeyToDate, getTodayLocal,
+} from '../components/calendar/weekCalendarUtils';
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -127,28 +134,8 @@ const CLASS_COLORS: Record<string, string> = {
 };
 
 // ─────────────────────────────────────────────
-// CALENDAR HELPERS
+// HELPERS
 // ─────────────────────────────────────────────
-
-const MONTH_NAMES = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-
-function buildGrid(year: number, month: number): (number | null)[] {
-  const first = new Date(year, month, 1).getDay();
-  const days  = new Date(year, month + 1, 0).getDate();
-  const grid: (number | null)[] = [];
-  for (let i = 0; i < first; i++) grid.push(null);
-  for (let d = 1; d <= days; d++) grid.push(d);
-  while (grid.length % 7 !== 0) grid.push(null);
-  return grid;
-}
-
-function toKey(y: number, m: number, d: number) {
-  return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-}
 
 function formatDateLabel(dateKey: string) {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -162,6 +149,10 @@ function formatDateShort(dateKey: string) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
   });
+}
+
+function parseDurationMinutes(duration: string): number {
+  return parseInt(duration, 10) || 60;
 }
 
 // ─────────────────────────────────────────────
@@ -310,6 +301,84 @@ function SlotCard({
 }
 
 // ─────────────────────────────────────────────
+// MULTI-SELECT FILTER
+// ─────────────────────────────────────────────
+
+function MultiSelectFilter({
+  label, icon, options, selected, onChange,
+}: {
+  label: string;
+  icon: ReactNode;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const toggleOption = (opt: string) => {
+    onChange(selected.includes(opt) ? selected.filter((o) => o !== opt) : [...selected, opt]);
+  };
+
+  const allSelected = selected.length === 0;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2.5 text-xs font-semibold transition-all ${
+          !allSelected
+            ? 'bg-[#C49A3C]/10 border-[#C49A3C]/40 text-[#A67E2A]'
+            : 'bg-white border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#C49A3C]/30'
+        }`}
+      >
+        {icon}
+        {label}
+        {!allSelected && (
+          <span className="w-4 h-4 rounded-full bg-[#C49A3C] text-white text-[9px] flex items-center justify-center">
+            {selected.length}
+          </span>
+        )}
+        <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 top-full left-0 mt-2 w-56 bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-[0_8px_28px_rgba(30,42,53,0.16)] p-2 max-h-72 overflow-y-auto">
+          <button
+            onClick={() => onChange([])}
+            className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#C49A3C] hover:bg-[#F5F2E8] transition-colors mb-1"
+          >
+            All {label}s
+          </button>
+          {options.map((opt) => (
+            <label
+              key={opt}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#F5F2E8] cursor-pointer transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggleOption(opt)}
+                className="w-3.5 h-3.5 rounded accent-[#C49A3C]"
+              />
+              <span className="text-xs text-[#1E2A35]">{opt}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────
 
@@ -321,38 +390,111 @@ export default function BookClassPage() {
     if (!profileComplete) navigate('/profile-setup');
   }, [profileComplete, navigate]);
 
-  const TODAY_KEY = '2026-04-06';
+  const today = useMemo(() => getTodayLocal(), []);
+  const todayKey = useMemo(() => toDateKey(today), [today]);
 
-  const [calYear, setCalYear]         = useState(2026);
-  const [calMonth, setCalMonth]       = useState(3);   // April
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot]       = useState<Slot | null>(null);
+  // Main calendar month view (unchanged)
+  const [calYear, setCalYear]   = useState(() => today.getFullYear());
+  const [calMonth, setCalMonth] = useState(() => today.getMonth());
 
-  const grid  = buildGrid(calYear, calMonth);
-  const slots = selectedDateKey ? (SCHEDULE[selectedDateKey] || []) : [];
+  // Small month calendar (left) — independent state, always opens to the current local month
+  const [miniCalYear, setMiniCalYear]   = useState(() => getTodayLocal().getFullYear());
+  const [miniCalMonth, setMiniCalMonth] = useState(() => getTodayLocal().getMonth());
 
+  // Main calendar: Week / Month toggle, week view is the default
+  const [view, setView]         = useState<'week' | 'month'>('week');
+  const [weekAnchor, setWeekAnchor] = useState(() => getTodayLocal());
+
+  // Coach & Class/Discipline filters (multi-select)
+  const [coachFilter, setCoachFilter] = useState<string[]>([]);
+  const [classFilter, setClassFilter] = useState<string[]>([]);
+
+  // Right-side day panel + booking
+  const [panelOpen, setPanelOpen]         = useState(false);
+  const [panelDateKey, setPanelDateKey]   = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot]   = useState<Slot | null>(null);
+
+  const ALL_TRAINERS = useMemo(
+    () => Array.from(new Set(Object.values(SCHEDULE).flat().map((s) => s.trainer))).sort(),
+    [],
+  );
+  const ALL_CLASSES = useMemo(
+    () => Array.from(new Set(Object.values(SCHEDULE).flat().map((s) => s.className))).sort(),
+    [],
+  );
+
+  const filteredSchedule = useMemo(() => {
+    const result: Record<string, Slot[]> = {};
+    Object.entries(SCHEDULE).forEach(([key, slots]) => {
+      const filtered = slots.filter((s) => {
+        if (coachFilter.length && !coachFilter.includes(s.trainer)) return false;
+        if (classFilter.length && !classFilter.includes(s.className)) return false;
+        return true;
+      });
+      if (filtered.length) result[key] = filtered;
+    });
+    return result;
+  }, [coachFilter, classFilter]);
+
+  const filtersActive = coachFilter.length > 0 || classFilter.length > 0;
+
+  const grid      = buildMonthGrid(miniCalYear, miniCalMonth);
+  const weekDates = useMemo(() => getWeekDatesContaining(weekAnchor), [weekAnchor]);
+  const panelSlots = panelDateKey ? (filteredSchedule[panelDateKey] || []) : [];
+
+  // ── Navigation ──
   const prevMonth = () => {
-    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
-    else setCalMonth(m => m - 1);
+    if (calMonth === 0) { setCalYear((y) => y - 1); setCalMonth(11); }
+    else setCalMonth((m) => m - 1);
   };
   const nextMonth = () => {
-    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); }
-    else setCalMonth(m => m + 1);
+    if (calMonth === 11) { setCalYear((y) => y + 1); setCalMonth(0); }
+    else setCalMonth((m) => m + 1);
+  };
+  const prevMiniMonth = () => {
+    if (miniCalMonth === 0) { setMiniCalYear((y) => y - 1); setMiniCalMonth(11); }
+    else setMiniCalMonth((m) => m - 1);
+  };
+  const nextMiniMonth = () => {
+    if (miniCalMonth === 11) { setMiniCalYear((y) => y + 1); setMiniCalMonth(0); }
+    else setMiniCalMonth((m) => m + 1);
+  };
+  const prevWeek = () => setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; });
+  const nextWeek = () => setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; });
+  const goToday  = () => {
+    const now = getTodayLocal();
+    setWeekAnchor(now);
+    setCalYear(now.getFullYear());
+    setCalMonth(now.getMonth());
+    setMiniCalYear(now.getFullYear());
+    setMiniCalMonth(now.getMonth());
   };
 
-  const handleDateSelect = (key: string) => {
-    setSelectedDateKey(key);
-    setSelectedSlot(null);
+  // ── Right-side day panel ──
+  const openDayPanel = (key: string, slot: Slot | null = null) => {
+    setPanelDateKey(key);
+    setSelectedSlot(slot);
+    setPanelOpen(true);
+  };
+
+  const handleMiniDateSelect = (key: string) => {
+    if (!filteredSchedule[key]?.length) return;
+    setWeekAnchor(dateKeyToDate(key));
+    openDayPanel(key);
+  };
+
+  const handleWeekDayHeaderClick = (date: Date) => {
+    openDayPanel(toDateKeyFromParts(date.getFullYear(), date.getMonth(), date.getDate()));
   };
 
   const handleProceed = () => {
-    if (!selectedSlot || !selectedDateKey) return;
+    if (!selectedSlot || !panelDateKey) return;
     navigate('/payment', {
       state: {
         booking: {
           className:  selectedSlot.className,
-          date:       selectedDateKey,
-          dateLabel:  formatDateShort(selectedDateKey),
+          date:       panelDateKey,
+          dateLabel:  formatDateShort(panelDateKey),
           time:       selectedSlot.time,
           duration:   selectedSlot.duration,
           trainer:    selectedSlot.trainer,
@@ -362,6 +504,56 @@ export default function BookClassPage() {
       },
     });
   };
+
+  // ── Week grid events (Google-Calendar-style, reusing the shared week grid) ──
+  const weekEvents = useMemo<WeekGridEvent[]>(() => {
+    const evts: WeekGridEvent[] = [];
+    weekDates.forEach((date, dayIdx) => {
+      const key = toDateKeyFromParts(date.getFullYear(), date.getMonth(), date.getDate());
+      const slots = filteredSchedule[key] || [];
+      slots.forEach((slot) => {
+        const fullyBooked = slot.spots === 0;
+        evts.push({
+          id: `${key}-${slot.id}`,
+          dayIndex: dayIdx,
+          time: slot.time,
+          duration: parseDurationMinutes(slot.duration),
+          title: slot.className,
+          subtitle: `${slot.time} · Coach ${slot.trainer}`,
+          color: CLASS_COLORS[slot.className] || '#C49A3C',
+          muted: fullyBooked,
+          mutedLabel: fullyBooked ? 'Full' : undefined,
+          onClick: () => openDayPanel(key, fullyBooked ? null : slot),
+        });
+      });
+    });
+    return evts;
+  }, [weekDates, filteredSchedule]);
+
+  // ── Month grid events ──
+  const monthEventsByDate = useMemo(() => {
+    const map: Record<string, MonthGridEvent[]> = {};
+    Object.entries(filteredSchedule).forEach(([key, slots]) => {
+      const [y, m] = key.split('-').map(Number);
+      if (y !== calYear || m - 1 !== calMonth) return;
+      map[key] = slots.map((slot) => ({
+        id: slot.id,
+        time: slot.time,
+        title: slot.className,
+        color: CLASS_COLORS[slot.className] || '#C49A3C',
+        muted: slot.spots === 0,
+      }));
+    });
+    return map;
+  }, [filteredSchedule, calYear, calMonth]);
+
+  const selectedDayIndex = useMemo(() => {
+    if (!panelDateKey) return null;
+    const idx = weekDates.findIndex(
+      (d) => toDateKeyFromParts(d.getFullYear(), d.getMonth(), d.getDate()) === panelDateKey,
+    );
+    return idx === -1 ? null : idx;
+  }, [panelDateKey, weekDates]);
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
@@ -383,23 +575,82 @@ export default function BookClassPage() {
               >
                 Book a Class
               </h1>
-              <p className="text-[#8A7E6E] text-xs mt-0.5">Pick a date, choose your class, and secure your spot</p>
+              <p className="text-[#8A7E6E] text-xs mt-0.5">Browse the calendar, tap a class or day, and secure your spot</p>
             </div>
           </div>
           <StepBar step={1} />
         </div>
 
-        {/* ── Two-panel body ── */}
-        <div className="py-6 pb-10 flex gap-6 items-start">
+        {/* ── Toolbar: date nav + filters + view toggle ── */}
+        <div className="pt-5 pb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={goToday}
+              className="text-xs font-bold text-[#1E2A35] bg-white border border-[#D4CDB5]/60 rounded-full px-4 py-2.5 hover:bg-[#F0EBE0] active:scale-95 transition-all"
+            >
+              Today
+            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={view === 'week' ? prevWeek : prevMonth}
+                className="w-9 h-9 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <button
+                onClick={view === 'week' ? nextWeek : nextMonth}
+                className="w-9 h-9 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+            <span
+              className="text-[#1E2A35] ml-1"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}
+            >
+              {view === 'week' ? formatWeekRange(weekDates) : `${MONTH_NAMES[calMonth]} ${calYear}`}
+            </span>
+          </div>
 
-          {/* ── LEFT: Calendar ── */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <MultiSelectFilter label="Coach" icon={<User size={13} />} options={ALL_TRAINERS} selected={coachFilter} onChange={setCoachFilter} />
+            <MultiSelectFilter label="Class" icon={<Layers size={13} />} options={ALL_CLASSES} selected={classFilter} onChange={setClassFilter} />
+            {filtersActive && (
+              <button
+                onClick={() => { setCoachFilter([]); setClassFilter([]); }}
+                className="text-[#C49A3C] text-xs font-semibold px-3 py-2 rounded-full border border-[#C49A3C]/40 hover:bg-[#C49A3C]/10 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+            <div className="flex items-center bg-[#EDE8D8] rounded-2xl p-1 border border-[#D4CDB5]/50">
+              {(['week', 'month'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-4 py-2 rounded-xl transition-all capitalize ${
+                    view === v ? 'bg-white text-[#1E2A35] shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                  }`}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em', fontSize: '0.8rem' }}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Two-panel body ── */}
+        <div className="pb-10 flex gap-6 items-start">
+
+          {/* ── LEFT: small month calendar (preserved) ── */}
           <div className="w-72 shrink-0">
             <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 sticky top-6">
 
               {/* Month nav */}
               <div className="flex items-center justify-between mb-5">
                 <button
-                  onClick={prevMonth}
+                  onClick={prevMiniMonth}
                   className="w-8 h-8 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all"
                 >
                   <ChevronLeft size={15} />
@@ -408,10 +659,10 @@ export default function BookClassPage() {
                   className="text-[#1E2A35]"
                   style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.1em' }}
                 >
-                  {MONTH_NAMES[calMonth]} {calYear}
+                  {MONTH_NAMES[miniCalMonth]} {miniCalYear}
                 </span>
                 <button
-                  onClick={nextMonth}
+                  onClick={nextMiniMonth}
                   className="w-8 h-8 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all"
                 >
                   <ChevronRight size={15} />
@@ -420,7 +671,7 @@ export default function BookClassPage() {
 
               {/* Day headers */}
               <div className="grid grid-cols-7 mb-1">
-                {DAY_LABELS.map(d => (
+                {DAY_LABELS_SHORT.map(d => (
                   <div
                     key={d}
                     className="text-center text-[#B0A898] py-1"
@@ -435,15 +686,15 @@ export default function BookClassPage() {
               <div className="grid grid-cols-7 gap-y-0.5">
                 {grid.map((day, idx) => {
                   if (!day) return <div key={`e-${idx}`} />;
-                  const key      = toKey(calYear, calMonth, day);
-                  const isSelected = key === selectedDateKey;
-                  const isToday    = key === TODAY_KEY;
-                  const hasClasses = !!SCHEDULE[key];
+                  const key      = toDateKeyFromParts(miniCalYear, miniCalMonth, day);
+                  const isSelected = key === panelDateKey;
+                  const isToday    = key === todayKey;
+                  const hasClasses = !!filteredSchedule[key]?.length;
 
                   return (
                     <button
                       key={key}
-                      onClick={() => hasClasses ? handleDateSelect(key) : undefined}
+                      onClick={() => hasClasses ? handleMiniDateSelect(key) : undefined}
                       disabled={!hasClasses}
                       className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${
                         isSelected
@@ -480,56 +731,81 @@ export default function BookClassPage() {
             </div>
           </div>
 
-          {/* ── RIGHT: Slots + Summary ── */}
-          <div className="flex-1 flex flex-col gap-4">
+          {/* ── CENTER: main Google-Calendar-inspired schedule ── */}
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
 
-            {/* Date label / empty state */}
-            {!selectedDateKey ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm">
-                  <CalendarDays size={26} className="text-[#C49A3C]/70" />
+            {view === 'week' ? (
+              <WeekCalendarGrid
+                weekDates={weekDates}
+                events={weekEvents}
+                today={today}
+                selectedDayIndex={selectedDayIndex}
+                onDayHeaderClick={handleWeekDayHeaderClick}
+              />
+            ) : (
+              <MonthCalendarGrid
+                year={calYear}
+                month={calMonth}
+                eventsByDate={monthEventsByDate}
+                todayKey={todayKey}
+                selectedDateKey={panelDateKey}
+                onSelectDate={openDayPanel}
+              />
+            )}
+
+            {/* Legend */}
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {ALL_CLASSES.map((name) => (
+                <div key={name} className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[name] || '#C49A3C' }} />
+                  <span className="text-[#8A7E6E] text-xs whitespace-nowrap">{name}</span>
                 </div>
-                <h3
-                  className="text-[#1E2A35] mb-1"
+              ))}
+            </div>
+
+            <p className="text-[#8A7E6E] text-xs text-center">
+              {view === 'week'
+                ? 'Tap a class to book it, or a day header to see its full schedule'
+                : 'Tap any day to see its full schedule'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── RIGHT: day schedule + booking panel ── */}
+      <Sheet
+        open={panelOpen}
+        onOpenChange={(open) => { setPanelOpen(open); if (!open) setSelectedSlot(null); }}
+      >
+        <SheetContent side="right" className="bg-[#FBF9F3] border-l border-[#D4CDB5]/60 w-full sm:max-w-md flex flex-col gap-0 p-0">
+          {panelDateKey && (
+            <>
+              <SheetHeader className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50 text-left space-y-1">
+                <SheetTitle
+                  className="text-[#1E2A35] leading-none"
                   style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
                 >
-                  Select a Date
-                </h3>
-                <p className="text-[#8A7E6E] text-sm max-w-xs leading-relaxed">
-                  Tap a highlighted date on the calendar to see all available classes and time slots.
+                  {formatDateLabel(panelDateKey)}
+                </SheetTitle>
+                <p className="text-[#8A7E6E] text-xs">
+                  {panelSlots.length > 0 ? `${panelSlots.length} class${panelSlots.length > 1 ? 'es' : ''} available` : 'No classes scheduled'}
                 </p>
-              </div>
-            ) : (
-              <>
-                {/* Date heading */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2
-                      className="text-[#1E2A35] leading-none"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.05em' }}
-                    >
-                      {formatDateLabel(selectedDateKey)}
-                    </h2>
-                    <p className="text-[#8A7E6E] text-xs mt-1">
-                      {slots.length > 0 ? `${slots.length} class${slots.length > 1 ? 'es' : ''} available` : 'No classes scheduled'}
-                    </p>
-                  </div>
-                  {selectedSlot && (
-                    <span className="flex items-center gap-1.5 bg-[#C49A3C]/10 text-[#A67E2A] text-xs font-bold px-3 py-1.5 rounded-full border border-[#C49A3C]/25">
-                      <Sparkles size={11} /> 1 class selected
-                    </span>
-                  )}
-                </div>
+              </SheetHeader>
 
-                {/* Slot cards */}
-                {slots.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-3xl border border-[#D4CDB5]/60">
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                {panelSlots.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-3 shadow-sm">
+                      <CalendarDays size={22} className="text-[#C49A3C]/60" />
+                    </div>
                     <p className="text-[#9A8E7E] text-sm">No classes on this day.</p>
-                    <p className="text-[#B0A898] text-xs mt-1">Try selecting another date.</p>
+                    {filtersActive && (
+                      <p className="text-[#B0A898] text-xs mt-1">Try adjusting your filters.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {slots.map(slot => (
+                    {panelSlots.map((slot) => (
                       <SlotCard
                         key={slot.id}
                         slot={slot}
@@ -539,16 +815,12 @@ export default function BookClassPage() {
                     ))}
                   </div>
                 )}
-              </>
-            )}
+              </div>
 
-            {/* ── Booking summary bar (appears when a slot is selected) ── */}
-            {selectedSlot && selectedDateKey && (
-              <div className="bg-white rounded-3xl border border-[#C49A3C]/35 shadow-[0_4px_24px_rgba(196,154,60,0.12)] p-5 mt-2">
-                <div className="flex items-center justify-between gap-4">
-                  {/* Summary info */}
-                  <div className="flex items-center gap-4">
-                    {/* Class color dot */}
+              {/* ── Booking summary (appears when a slot is selected) ── */}
+              {selectedSlot && (
+                <div className="border-t border-[#C49A3C]/30 bg-white px-6 py-5 shrink-0">
+                  <div className="flex items-center gap-3 mb-4">
                     <div
                       className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
                       style={{ backgroundColor: `${CLASS_COLORS[selectedSlot.className] || '#C49A3C'}18` }}
@@ -558,16 +830,16 @@ export default function BookClassPage() {
                         style={{ backgroundColor: CLASS_COLORS[selectedSlot.className] || '#C49A3C' }}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Your Selection</p>
                       <p
-                        className="text-[#1E2A35] leading-none"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.04em' }}
+                        className="text-[#1E2A35] leading-none truncate"
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}
                       >
                         {selectedSlot.className}
                       </p>
-                      <div className="flex items-center gap-3 text-[#8A7E6E] text-xs mt-1">
-                        <span>{formatDateShort(selectedDateKey)}</span>
+                      <div className="flex items-center gap-2 text-[#8A7E6E] text-xs mt-1 flex-wrap">
+                        <span>{formatDateShort(panelDateKey)}</span>
                         <span className="text-[#D4CDB5]">·</span>
                         <span>{selectedSlot.time}</span>
                         <span className="text-[#D4CDB5]">·</span>
@@ -576,31 +848,30 @@ export default function BookClassPage() {
                     </div>
                   </div>
 
-                  {/* Price + CTA */}
-                  <div className="flex items-center gap-5 shrink-0">
-                    <div className="text-right">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
                       <p className="text-[#8A7E6E] text-xs">Session fee</p>
                       <p
                         className="text-[#C49A3C] leading-none"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.02em' }}
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.02em' }}
                       >
                         ₱360
                       </p>
                     </div>
                     <button
                       onClick={handleProceed}
-                      className="flex items-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 px-7 shadow-[0_4px_16px_rgba(196,154,60,0.35)] hover:bg-[#A67E2A] active:scale-[0.97] transition-all whitespace-nowrap"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em', fontSize: '0.95rem' }}
+                      className="flex items-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 px-6 shadow-[0_4px_16px_rgba(196,154,60,0.35)] hover:bg-[#A67E2A] active:scale-[0.97] transition-all whitespace-nowrap"
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em', fontSize: '0.9rem' }}
                     >
                       Proceed to Payment <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+              )}
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

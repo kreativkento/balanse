@@ -1,4 +1,5 @@
-import { ArrowLeft, Check, Star, CalendarDays, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Check, Star, ChevronRight, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,6 +7,12 @@ const SINGLE_PASS_CLASSES = [
   'Calisthenics', 'Kickboxing', 'Mat Pilates', 'Yoga',
   'Animal Flow', 'Circuit Training', 'Groundworks', 'Capoeira',
 ];
+
+// Rotate through pairs of disciplines for the Single Class Pass preview pills
+const SINGLE_PASS_PAIRS = Array.from(
+  { length: Math.ceil(SINGLE_PASS_CLASSES.length / 2) },
+  (_, i) => SINGLE_PASS_CLASSES.slice(i * 2, i * 2 + 2),
+);
 
 const GOLD_TIERS = [
   { label: '1 Week', note: 'Unlimited all classes', price: '₱1,800' },
@@ -63,111 +70,125 @@ const RECOVERY_TIERS = [
   { label: 'All-in-One Therapy', price: '₱2,500' },
 ];
 
+const HERO_IMG =
+  'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
+
 export default function PricingPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
   const handleAction = () => navigate(isAuthenticated ? '/dashboard' : '/auth');
+  const handleSeeMore = () => navigate('/classes', { state: { tab: 'disciplines' } });
+
+  // Alternate which pair of disciplines is shown on the Single Class Pass card
+  const [pairIndex, setPairIndex] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPairIndex((i) => (i + 1) % SINGLE_PASS_PAIRS.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
 
-      {/* ── Header ── */}
-      <div className="border-b border-[#D4CDB5]/60">
-        <div className="max-w-6xl mx-auto flex items-center gap-4 px-4 md:px-8 pt-5 pb-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="md:hidden w-10 h-10 rounded-full bg-[#EDE8D8] flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] transition-colors active:scale-95 shrink-0"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1
-              className="text-[#1E2A35] leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', letterSpacing: '0.05em' }}
-            >
-              Pricing & Plans
-            </h1>
-            <p className="text-[#8A7E6E] text-xs mt-0.5">Official rates · No hidden fees</p>
-          </div>
-        </div>
-      </div>
+      {/* ── Hero: Pricing heading + Single Class Pass ── */}
+      <section className="relative overflow-hidden">
+        <img
+          src={HERO_IMG}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/25" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/50 md:bg-gradient-to-r md:from-black/65 md:via-black/45 md:to-black/35" />
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10 flex flex-col gap-5 md:gap-8">
-
-        {/* ── Desktop intro ── */}
-        <p className="hidden md:block text-[#8A7E6E] text-center text-sm max-w-2xl mx-auto leading-relaxed -mb-2">
-          Whether you're dropping in for the first time or committing to a full wellness journey, we have a plan built for you.
-        </p>
-
-        {/* ══════════════════════════════════════════════
-            1. SINGLE CLASS PASS
-        ══════════════════════════════════════════════ */}
-        <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-          <div className="px-5 md:px-7 pt-6 pb-5">
-            {/* Title row */}
-            <div className="flex items-start justify-between gap-3 mb-1">
-              <h2
-                className="text-[#1E2A35] leading-none"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '0.05em' }}
+        <div className="relative max-w-6xl mx-auto px-4 md:px-8 pt-5 md:pt-8 pb-8 md:pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-10 lg:gap-x-12 md:items-center pb-8 md:pb-10">
+            {/* Left: heading */}
+            <div className="min-w-0 md:pr-2">
+              <button
+                onClick={() => navigate(-1)}
+                className="md:hidden w-10 h-10 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/25 transition-colors active:scale-95 shrink-0 mb-3"
               >
-                Single Class Pass
-              </h2>
-              <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#EDE8D8] text-[#7A6A52] border border-[#D4CDB5]/60 px-2.5 py-1 rounded-full">
-                <Zap size={9} fill="currentColor" /> Flexible
-              </span>
+                <ArrowLeft size={18} />
+              </button>
+              <h1
+                className="text-white leading-none mb-2"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4.5vw, 3rem)', letterSpacing: '0.05em' }}
+              >
+                Pricing & Plans
+              </h1>
+              <p className="text-white/75 text-sm leading-relaxed max-w-sm">
+                Whether you&apos;re dropping in for the first time or committing to a full wellness journey — we have a plan built for you.
+              </p>
             </div>
-            <p className="text-[#8A7E6E] text-sm leading-relaxed mb-5">
-              Join us anytime with the flexibility of a one-time pass. Whether you're curious to try a class, exploring a new style, or fitting movement into a busy schedule, this option gives you access to the BALANSÉ experience without commitment.
-            </p>
 
-            <div className="flex flex-col md:flex-row md:items-center md:gap-10">
-              {/* Price */}
-              <div className="mb-5 md:mb-0 shrink-0">
-                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Per Session</p>
-                <span
+            {/* Right: Single Class Pass card */}
+            <div className="flex justify-start md:justify-end">
+              <div className="w-full max-w-sm">
+                <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm px-6 py-6">
+              {/* Title row */}
+              <div className="flex items-start justify-between gap-3 mb-1.5">
+                <h2
                   className="text-[#1E2A35] leading-none"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.8rem, 6vw, 3.8rem)', letterSpacing: '0.02em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.55rem', letterSpacing: '0.05em' }}
                 >
-                  ₱360
+                  Single Class Pass
+                </h2>
+                <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#EDE8D8] text-[#7A6A52] border border-[#D4CDB5]/60 px-2.5 py-1 rounded-full">
+                  <Zap size={9} fill="currentColor" /> Flexible
                 </span>
               </div>
 
-              <div className="flex-1">
-                {/* Available classes */}
-                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Available Classes</p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {SINGLE_PASS_CLASSES.map((c) => (
-                    <span key={c} className="text-xs bg-[#F0EBE0] border border-[#D4CDB5]/70 text-[#5A4E3E] px-3 py-1 rounded-full">
-                      {c}
-                    </span>
-                  ))}
-                </div>
-                {/* Note */}
-                <div className="flex items-start gap-2 bg-[#F8F3E8] border border-[#D4CDB5]/50 rounded-xl px-3.5 py-2.5">
-                  <CalendarDays size={13} className="text-[#C49A3C] mt-0.5 shrink-0" />
-                  <p className="text-[#7A6A52] text-xs leading-relaxed">
-                    The posted class schedule will serve as your guide. Schedule is updated every <span className="text-[#1E2A35]">Sunday night</span>.
-                  </p>
+              {/* Subtitle */}
+              <p className="text-[#8A7E6E] text-xs mb-5">Drop in to any class, no commitment required.</p>
+
+              {/* Price */}
+              <div className="flex items-baseline gap-1.5 mb-5">
+                <span
+                  className="text-[#1E2A35] leading-none"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.75rem', letterSpacing: '0.02em' }}
+                >
+                  ₱360
+                </span>
+                <span className="text-[#8A7E6E] text-sm">/session</span>
+              </div>
+
+              <div className="h-px bg-[#D4CDB5]/40 mb-5" />
+
+              {/* Available classes */}
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2.5">Available Classes</p>
+              <div key={pairIndex} className="flex flex-wrap gap-2 mb-5 animate-in fade-in duration-500">
+                {SINGLE_PASS_PAIRS[pairIndex].map((c) => (
+                  <span key={c} className="text-xs bg-[#F0EBE0] border border-[#D4CDB5]/70 text-[#5A4E3E] px-3 py-1 rounded-full">
+                    {c}
+                  </span>
+                ))}
+              </div>
+
+              {/* See More */}
+              <button
+                onClick={handleSeeMore}
+                className="inline-flex items-center gap-1 text-xs font-bold text-[#1E2A35] bg-white border border-[#D4CDB5] rounded-full px-4 py-2 hover:bg-[#F0EBE0] active:scale-[0.97] transition-all"
+              >
+                See More <ChevronRight size={12} />
+              </button>
                 </div>
               </div>
             </div>
           </div>
-          <div className="px-5 md:px-7 pb-6">
-            <button
-              onClick={handleAction}
-              className="w-full md:w-auto md:min-w-[180px] py-3.5 px-8 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5] hover:bg-[#E3DCC8] active:scale-[0.97] transition-all"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
-            >
-              View Schedule
-            </button>
-          </div>
-        </div>
 
-        {/* ══════════════════════════════════════════════
-            2 & 3. GOLD + SILVER MEMBERSHIPS (side-by-side on desktop)
-        ══════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 md:items-start">
+          <div className="h-px bg-white/25" aria-hidden="true" />
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════
+          2 & 3. GOLD + SILVER MEMBERSHIPS (side-by-side on desktop)
+      ══════════════════════════════════════════════ */}
+      <section className="bg-[#1E2A35] py-6 md:py-10">
+        <div className="max-w-6xl mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 md:items-start">
 
           {/* GOLD */}
           <div className="rounded-3xl bg-white border border-[#C49A3C]/50 shadow-[0_4px_32px_rgba(196,154,60,0.13)] overflow-hidden flex flex-col">
@@ -301,6 +322,10 @@ export default function PricingPage() {
             </div>
           </div>
         </div>
+        </div>
+      </section>
+
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:pb-10 flex flex-col gap-5 md:gap-8">
 
         {/* ══════════════════════════════════════════════
             SECTION DIVIDER

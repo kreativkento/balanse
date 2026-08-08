@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { ChevronRight, Check, Leaf, Users, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GymButton } from '../components/ui/GymButton';
+import { HelpSupportFab } from '../components/layout/HelpSupportFab';
 
 const HERO_IMG =
   'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
@@ -348,7 +349,7 @@ export default function HomePage() {
         </section>
 
         {/* ─── PERKS ─── */}
-        <section className="mx-4 md:mx-8 mb-14 md:mb-20 rounded-3xl border border-[#C49A3C]/25 px-5 md:px-10 py-8 md:py-14" style={{ backgroundColor: 'rgba(196,154,60,0.07)' }}>
+        <section id="why-balanse" className="mx-4 md:mx-8 mb-14 md:mb-20 rounded-3xl border border-[#C49A3C]/25 px-5 md:px-10 py-8 md:py-14 scroll-mt-24" style={{ backgroundColor: 'rgba(196,154,60,0.07)' }}>
           <h2
             className="text-[#1E2A35] mb-4 md:mb-6 md:text-center"
             style={{
@@ -372,6 +373,8 @@ export default function HomePage() {
         </section>
 
       </div>
+
+      <HelpSupportFab />
     </div>
   );
 }

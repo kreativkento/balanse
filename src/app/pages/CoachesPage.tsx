@@ -169,67 +169,137 @@ function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
   );
 }
 
-function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
+function CoachPhotoModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
   const [imgError, setImgError] = useState(false);
+  const largePhoto = coach.photo.replace(/w=\d+/, 'w=800').replace(/h=\d+/, 'h=800');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-4 overflow-hidden">
-        {/* Hero banner — background only, no avatar */}
-        <div className="relative h-32 overflow-hidden" style={{ backgroundColor: `${coach.color}20` }}>
-          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${coach.color}35 0%, ${coach.color}08 100%)` }} />
-          <div className="absolute top-4 right-4">
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-white/80 backdrop-blur-sm text-[#8A7E6E] hover:bg-white flex items-center justify-center transition-all shadow-sm"
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(30,42,53,0.75)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Photo of Coach ${coach.name}`}
+    >
+      <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close photo"
+          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#8A7E6E] shadow-md transition-all hover:bg-[#F8F3E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+        >
+          <X size={16} />
+        </button>
+        <div className="overflow-hidden rounded-2xl border-4 border-white bg-white shadow-2xl">
+          {!imgError ? (
+            <img
+              src={largePhoto}
+              alt={`Coach ${coach.name}`}
+              className="aspect-square w-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div
+              className="flex aspect-square w-full items-center justify-center"
+              style={{ backgroundColor: `${coach.color}18` }}
             >
-              <X size={16} />
-            </button>
-          </div>
-          {/* Accent bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ backgroundColor: coach.color }} />
+              <span
+                style={{
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontSize: '4rem',
+                  letterSpacing: '0.08em',
+                  color: coach.color,
+                }}
+              >
+                {coach.initials}
+              </span>
+            </div>
+          )}
         </div>
+        <p className="mt-3 text-center text-sm font-semibold text-white/80">{coach.name}</p>
+      </div>
+    </div>
+  );
+}
 
-        {/* Identity section — avatar fully inside, no overlap */}
-        <div className="px-8 pt-6 pb-5 border-b border-[#D4CDB5]/50">
-          <div className="flex items-start gap-5">
-            {/* Avatar — contained entirely in this section */}
-            <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 shadow-md shrink-0" style={{ borderColor: `${coach.color}40` }}>
+function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
+  const [imgError, setImgError] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+
+  return (
+    <>
+      {photoOpen && <CoachPhotoModal coach={coach} onClose={() => setPhotoOpen(false)} />}
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-4 overflow-hidden">
+          {/* Cover banner with overlapping profile photo */}
+          <div className="relative">
+            <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${coach.color}20` }}>
+              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${coach.color}35 0%, ${coach.color}08 100%)` }} />
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close profile"
+                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+              >
+                <X size={16} />
+              </button>
+              <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ backgroundColor: coach.color }} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPhotoOpen(true)}
+              aria-label={`View full photo of Coach ${coach.name}`}
+              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#C49A3C]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C] active:scale-[0.98] cursor-pointer"
+            >
               {!imgError ? (
                 <img
                   src={coach.photo}
                   alt={`Coach ${coach.name}`}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                   onError={() => setImgError(true)}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: `${coach.color}18` }}>
-                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.08em', color: coach.color }}>{coach.initials}</span>
+                <div
+                  className="flex h-full w-full items-center justify-center"
+                  style={{ backgroundColor: `${coach.color}18` }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      fontSize: '2rem',
+                      letterSpacing: '0.08em',
+                      color: coach.color,
+                    }}
+                  >
+                    {coach.initials}
+                  </span>
                 </div>
               )}
-            </div>
+            </button>
+          </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0 pt-1">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <h2 className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}>{coach.name}</h2>
-                  <p className="text-[#8A7E6E] text-sm font-semibold mt-0.5">{coach.role}</p>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: `${coach.color}18`, color: coach.color }}>{coach.experience} experience</span>
-                  </div>
+          {/* Identity section */}
+          <div className="border-b border-[#D4CDB5]/50 px-6 pb-5 pt-14 md:px-8 md:pt-16">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}>{coach.name}</h2>
+                <p className="mt-0.5 text-sm font-semibold text-[#8A7E6E]">{coach.role}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: `${coach.color}18`, color: coach.color }}>{coach.experience} experience</span>
                 </div>
-                <div className="flex flex-wrap gap-2 justify-end shrink-0">
-                  {coach.classes.map(cls => (
-                    <span key={cls} className="px-3 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: coach.color }}>{cls}</span>
-                  ))}
-                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap justify-start gap-2 sm:justify-end">
+                {coach.classes.map(cls => (
+                  <span key={cls} className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: coach.color }}>{cls}</span>
+                ))}
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="px-8 py-6 grid md:grid-cols-2 gap-6 max-h-[50vh] overflow-y-auto">
+        <div className="px-8 py-6 grid md:grid-cols-2 gap-6 max-h-[50vh] overflow-y-auto pb-8">
           {/* Left column */}
           <div className="flex flex-col gap-5">
             {/* Bio */}
@@ -275,18 +345,9 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
             </div>
           </div>
         </div>
-
-        <div className="px-8 pb-8">
-          <button
-            onClick={onClose}
-            className="w-full py-3 rounded-full text-white hover:opacity-90 active:scale-[0.97] transition-all"
-            style={{ backgroundColor: coach.color, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
-          >
-            Close Profile
-          </button>
-        </div>
       </div>
     </div>
+    </>
   );
 }
 
