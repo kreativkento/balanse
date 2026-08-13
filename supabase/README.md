@@ -38,6 +38,10 @@ This file is **safe on existing `accounts` + `profiles` tables** — it skips ob
 
 **If your database still uses the old `staff` role**, run `007_rename_staff_role_to_coach.sql` after the other migrations.
 
+**Disciplines catalog (event tags):** after `001_profiles.sql`, run `008_disciplines.sql`. This creates `public.disciplines` and seeds the gym’s discipline list (Calisthenics, Yoga, kids classes, etc.). Admins/devs can add or deactivate rows later; tag events by `discipline.id` (stable), not by name.
+
+**Events / classes:** after `008_disciplines.sql`, run `009_events.sql`. This creates `public.events` plus `event_coaches` and `event_enrollments` (Google Classroom style: admin assigns ≥1 coach, enrolls many students up to `class_limit`). Admin UI: `/admin-events`.
+
 This creates or syncs:
 
 | Table | Purpose |
@@ -45,6 +49,10 @@ This creates or syncs:
 | `auth.users` | Email + password (Supabase Auth, not in public schema) |
 | `public.accounts` | Login identity (email) + role, linked to `auth.users` |
 | `public.profiles` | System-generated profile UUID + profile fields, linked to `accounts` |
+| `public.disciplines` | Dynamic discipline list for event/class tagging (`008_disciplines.sql`) |
+| `public.events` | Class/event shell: name, discipline tag, date, capacity, status, creator (`009_events.sql`) |
+| `public.event_coaches` | Coaches assigned to an event (min 1) |
+| `public.event_enrollments` | Students enrolled in an event (capped by `class_limit`) |
 
 ## 4. Auth settings (recommended)
 

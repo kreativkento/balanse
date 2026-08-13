@@ -1,63 +1,55 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
-  Crown, LogOut, LayoutDashboard, Users, UserCheck,
-  CalendarDays, CreditCard, Images, ChevronDown,
-  Tag, ShieldCheck, Menu, X, AlertOctagon, Clock, Layers, CalendarRange,
+  Code2, LogOut, Ticket, Bot, Menu, ChevronDown, ScrollText,
+  UserCog, UserRound, Landmark, Headphones,
 } from 'lucide-react';
-import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useDevAuth } from '../../context/DevAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
 
 const NAV_LINKS = [
-  { label: 'Dashboard',  path: '/admin-dashboard', icon: LayoutDashboard },
-  { label: 'Staff',      path: '/admin-staff',     icon: UserCheck },
-  { label: 'Students',   path: '/admin-students',  icon: Users },
-  { label: 'Schedule',   path: '/admin-schedule',  icon: CalendarDays },
-  { label: 'Payments',   path: '/admin-payments',  icon: CreditCard },
-  { label: 'Gallery',    path: '/admin-gallery',   icon: Images },
-  { label: 'Disciplines', path: '/admin-disciplines', icon: Layers },
-  { label: 'Events', path: '/admin-events', icon: CalendarRange },
-  { label: 'Absence Tracker',      path: '/admin-absence',             icon: AlertOctagon },
-  { label: 'Coach Availability',   path: '/admin-coach-availability',  icon: Clock },
+  { label: 'Ticket Management', path: '/development/tickets', icon: Ticket },
+  { label: 'AI Setup', path: '/development/ai-setup', icon: Bot },
 ];
 
-const MANAGE_LINKS = [
-  { label: 'Subscriptions', path: '/admin-subscriptions', icon: CreditCard,  desc: 'Plans & session credits' },
-  { label: 'Promos',        path: '/admin-promos',        icon: Tag,         desc: 'Discounts & eligibility' },
-  { label: 'Policies',      path: '/admin-policies',      icon: ShieldCheck, desc: 'Business rules & limits' },
+const SYSTEM_LOG_LINKS = [
+  { label: 'Account Logs', path: '/development/logs/accounts', icon: UserCog, desc: 'Account create/role/email changes' },
+  { label: 'Profile Logs', path: '/development/logs/profiles', icon: UserRound, desc: 'Profile field changes' },
+  { label: 'Transaction Logs', path: '/development/logs/transactions', icon: Landmark, desc: 'Payments & money movement' },
+  { label: 'Customer Support Logs', path: '/development/logs/support', icon: Headphones, desc: 'Tickets & support activity' },
 ];
 
-interface AdminSidebarProps {
+interface DevSidebarProps {
   children: React.ReactNode;
 }
 
-export function AdminSidebar({ children }: AdminSidebarProps) {
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const { adminUser, adminLogout } = useAdminAuth();
+export function DevSidebar({ children }: DevSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { devUser, devLogout } = useDevAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(() => location.pathname.startsWith('/development/logs'));
 
-  const handleLogout = () => { adminLogout(); navigate('/admin-login'); };
-  const initials = adminUser?.name.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? 'SA';
-
-  const manageActive = MANAGE_LINKS.some(l => location.pathname === l.path);
+  const handleLogout = () => {
+    devLogout();
+    navigate('/development');
+  };
+  const initials = devUser?.name.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? 'DV';
+  const logsActive = SYSTEM_LOG_LINKS.some((l) => location.pathname === l.path);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Brand */}
       <div className="px-5 py-5 border-b border-[#D4CDB5]/30">
-        <Link to="/admin-dashboard" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
+        <Link to="/development/dashboard" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
           <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
           <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-            <Crown size={8} className="text-[#C49A3C]" />
-            <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
+            <Code2 size={8} className="text-[#C49A3C]" />
+            <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Dev</span>
           </div>
         </Link>
       </div>
 
-      {/* Nav Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">Navigation</p>
         <div className="flex flex-col gap-0.5">
@@ -78,22 +70,21 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
             );
           })}
 
-          {/* Manage section */}
           <div className="mt-3">
-            <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">Manage</p>
+            <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">System Logs</p>
             <button
-              onClick={() => setManageOpen(v => !v)}
+              onClick={() => setLogsOpen((v) => !v)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                manageActive ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
+                logsActive ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
               }`}
             >
-              <ShieldCheck size={16} className={manageActive ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
-              <span className="flex-1 text-left">Settings</span>
-              <ChevronDown size={14} className={`transition-transform ${manageOpen ? 'rotate-180' : ''}`} />
+              <ScrollText size={16} className={logsActive ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
+              <span className="flex-1 text-left">System Logs</span>
+              <ChevronDown size={14} className={`transition-transform ${logsOpen ? 'rotate-180' : ''}`} />
             </button>
-            {manageOpen && (
+            {logsOpen && (
               <div className="mt-1 ml-3 flex flex-col gap-0.5 pl-6 border-l-2 border-[#D4CDB5]/50">
-                {MANAGE_LINKS.map(l => {
+                {SYSTEM_LOG_LINKS.map((l) => {
                   const active = location.pathname === l.path;
                   return (
                     <Link
@@ -115,15 +106,14 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         </div>
       </nav>
 
-      {/* User section */}
       <div className="px-4 py-4 border-t border-[#D4CDB5]/30">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-xs">{initials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[#1E2A35] text-xs font-semibold leading-none truncate">{adminUser?.name}</p>
-            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Super Admin</p>
+            <p className="text-[#1E2A35] text-xs font-semibold leading-none truncate">{devUser?.name}</p>
+            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Developer</p>
           </div>
         </div>
 
@@ -148,7 +138,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
               </div>
               <div>
                 <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.05em' }}>Log Out?</h3>
-                <p className="text-[#8A7E6E] text-sm mt-1">You'll be signed out of the BALANSÉ Admin Portal.</p>
+                <p className="text-[#8A7E6E] text-sm mt-1">You'll be signed out of the development portal.</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -162,12 +152,11 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           </div>
         </div>
       )}
-      {/* Desktop sidebar */}
+
       <aside className="hidden md:flex w-56 bg-white border-r border-[#D4CDB5]/60 shadow-sm flex-col shrink-0 z-30">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-[#1E2A35]/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
@@ -177,9 +166,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         </div>
       )}
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile top bar */}
         <div className="md:hidden bg-white border-b border-[#D4CDB5]/60 px-4 py-3 flex items-center gap-3 shrink-0">
           <button
             onClick={() => setMobileOpen(true)}
@@ -187,16 +174,15 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           >
             <Menu size={18} />
           </button>
-          <Link to="/admin-dashboard" className="flex items-center gap-2 min-w-0">
+          <Link to="/development/dashboard" className="flex items-center gap-2 min-w-0">
             <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto object-contain shrink-0" />
             <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-              <Crown size={8} className="text-[#C49A3C]" />
-              <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
+              <Code2 size={8} className="text-[#C49A3C]" />
+              <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Dev</span>
             </div>
           </Link>
         </div>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>

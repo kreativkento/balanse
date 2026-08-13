@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
-import { Calendar, ShieldCheck } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import logoFooter from 'figma:asset/logo_footer.svg';
 
 interface BottomCTAProps {
   label?: string;
@@ -59,17 +60,11 @@ export function BottomCTA({ label = 'Book / Schedule' }: BottomCTAProps) {
         </div>
 
         {/* Staff access footer strip */}
-        <div className="border-t border-white/08 max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
+        <div className="border-t border-white/08 max-w-6xl mx-auto px-8 py-5 flex items-center justify-between gap-6">
+          <img src={logoFooter} alt="BALANSÉ Wellness Hub" className="h-14 w-auto object-contain shrink-0" />
           <p className="text-white/25 text-xs tracking-wide">
-            © 2026 BALANSÉ Wellness Hub · All rights reserved
+            © 2026 · All rights reserved
           </p>
-          <button
-            onClick={() => navigate('/staff-login')}
-            className="flex items-center gap-2 text-white/35 text-xs hover:text-white/65 transition-colors group"
-          >
-            <ShieldCheck size={12} className="opacity-60 group-hover:opacity-100 transition-opacity" />
-            <span>Log in as Staff</span>
-          </button>
         </div>
       </div>
     </>

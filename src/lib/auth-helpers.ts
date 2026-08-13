@@ -129,5 +129,8 @@ export function wrongRoleMessage(expected: UserRole): string {
   if (expected === 'coach') {
     return 'Access denied. This account is not authorized for the coach portal.';
   }
+  if (expected === 'dev') {
+    return 'Access denied. This account is not authorized for the development portal.';
+  }
   return 'Access denied. This account is not authorized for the admin portal.';
 }

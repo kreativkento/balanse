@@ -29,12 +29,22 @@ import AdminPromosPage from './pages/AdminPromosPage';
 import AdminPoliciesPage from './pages/AdminPoliciesPage';
 import AdminAbsenceTrackerPage from './pages/AdminAbsenceTrackerPage';
 import AdminCoachAvailabilityPage from './pages/AdminCoachAvailabilityPage';
+import AdminDisciplinesPage from './pages/AdminDisciplinesPage';
+import AdminEventsPage from './pages/AdminEventsPage';
 import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
 import StaffProfilePage from './pages/StaffProfilePage';
 import NewsPage from './pages/NewsPage';
 import CoachesPage from './pages/CoachesPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import StudentPaymentHistoryPage from './pages/StudentPaymentHistoryPage';
+import DevelopmentLoginPage from './pages/DevelopmentLoginPage';
+import DevDashboardPage from './pages/DevDashboardPage';
+import DevTicketsPage from './pages/DevTicketsPage';
+import DevAiSetupPage from './pages/DevAiSetupPage';
+import DevAccountLogsPage from './pages/DevAccountLogsPage';
+import DevProfileLogsPage from './pages/DevProfileLogsPage';
+import DevTransactionLogsPage from './pages/DevTransactionLogsPage';
+import DevSupportLogsPage from './pages/DevSupportLogsPage';
 
 export const router = createBrowserRouter([
   {
@@ -71,11 +81,21 @@ export const router = createBrowserRouter([
       { path: 'admin-schedule',   Component: AdminSchedulePage },
       { path: 'admin-payments',   Component: AdminPaymentsPage },
       { path: 'admin-gallery',    Component: AdminGalleryPage },
+      { path: 'admin-disciplines', Component: AdminDisciplinesPage },
+      { path: 'admin-events', Component: AdminEventsPage },
       { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
       { path: 'admin-promos',     Component: AdminPromosPage },
       { path: 'admin-policies',   Component: AdminPoliciesPage },
       { path: 'admin-absence',             Component: AdminAbsenceTrackerPage },
       { path: 'admin-coach-availability',  Component: AdminCoachAvailabilityPage },
+      { path: 'development', Component: DevelopmentLoginPage },
+      { path: 'development/dashboard', Component: DevDashboardPage },
+      { path: 'development/tickets', Component: DevTicketsPage },
+      { path: 'development/ai-setup', Component: DevAiSetupPage },
+      { path: 'development/logs/accounts', Component: DevAccountLogsPage },
+      { path: 'development/logs/profiles', Component: DevProfileLogsPage },
+      { path: 'development/logs/transactions', Component: DevTransactionLogsPage },
+      { path: 'development/logs/support', Component: DevSupportLogsPage },
     ],
   },
 ]);

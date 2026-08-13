@@ -195,8 +195,10 @@ export default function SignupPage() {
                   <p className="text-red-500 text-xs">
                     This email is already registered.{' '}
                     <button onClick={() => navigate('/login')} className="text-[#C49A3C] underline font-medium">
-                      Please log in.
-                    </button>
+                      Please log in
+                    </button>{' '}
+                    with the same password. If you deleted the account from Supabase Table Editor, remove it from{' '}
+                    <strong>Authentication → Users</strong> as well, or log in to restore it.
                   </p>
                 </div>
               </div>

@@ -73,6 +73,9 @@ const RECOVERY_TIERS = [
 const HERO_IMG =
   'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
 
+const PRICING_CARD_HOVER =
+  'transition-[transform,box-shadow] duration-300 ease-out hover:scale-[1.02] hover:-translate-y-0.5';
+
 export default function PricingPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -127,7 +130,7 @@ export default function PricingPage() {
             {/* Right: Single Class Pass card */}
             <div className="flex justify-start md:justify-end">
               <div className="w-full max-w-sm">
-                <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm px-6 py-6">
+                <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm px-6 py-6 ${PRICING_CARD_HOVER}`}>
               {/* Title row */}
               <div className="flex items-start justify-between gap-3 mb-1.5">
                 <h2
@@ -191,7 +194,7 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 md:items-start">
 
           {/* GOLD */}
-          <div className="rounded-3xl bg-white border border-[#C49A3C]/50 shadow-[0_4px_32px_rgba(196,154,60,0.13)] overflow-hidden flex flex-col">
+          <div className={`rounded-3xl bg-white border border-[#C49A3C]/50 shadow-[0_4px_32px_rgba(196,154,60,0.13)] overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
             {/* Gold header band */}
             <div className="px-5 md:px-6 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, rgba(196,154,60,0.10) 0%, rgba(248,243,232,0.40) 100%)' }}>
               <div className="flex items-start justify-between gap-2 mb-1">
@@ -259,7 +262,7 @@ export default function PricingPage() {
           </div>
 
           {/* SILVER */}
-          <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col">
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
             <div className="px-5 md:px-6 pt-6 pb-5">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h2
@@ -342,7 +345,7 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 md:items-start">
 
           {/* PERSONAL COACHING */}
-          <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col">
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
             <div className="px-5 pt-5 pb-4">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
@@ -401,7 +404,7 @@ export default function PricingPage() {
           </div>
 
           {/* PRIVATE CLASS */}
-          <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col">
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
             <div className="px-5 pt-5 pb-4">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
@@ -457,7 +460,7 @@ export default function PricingPage() {
           </div>
 
           {/* SPORTS RECOVERY */}
-          <div className="rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col">
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
             <div className="px-5 pt-5 pb-4">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"

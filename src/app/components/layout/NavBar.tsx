@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStaffAuth } from '../../context/StaffAuthContext';
-import logoImg from 'figma:asset/bbdd3c4813a82e401f4feb97932ab9a28f6161ee.png';
+import logoMain from 'figma:asset/logo_main.svg';
 
 export function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,27 +45,8 @@ export function NavBar() {
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setMenuOpen(false)}>
-            <img src={logoImg} alt="BALANSÉ logo" className="w-8 h-8 object-contain" />
-            <div className="flex flex-col leading-none">
-              <span
-                className="text-[#1E2A35] tracking-widest uppercase"
-                style={{
-                  fontFamily: "'Cormorant Garant', serif",
-                  fontSize: '1.05rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                BALANSÉ
-              </span>
-              <span
-                className="text-[#C49A3C] uppercase tracking-widest"
-                style={{ fontSize: '0.48rem', letterSpacing: '0.2em', fontFamily: "'Inter', sans-serif" }}
-              >
-                WELLNESS HUB
-              </span>
-            </div>
+          <Link to="/" className="flex items-center shrink-0" onClick={() => setMenuOpen(false)}>
+            <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
           </Link>
 
           {/* Desktop centre nav links */}
@@ -162,27 +143,8 @@ export function NavBar() {
       >
         {/* Drawer header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#D4CDB5]/60">
-          <div className="flex items-center gap-2.5">
-            <img src={logoImg} alt="BALANSÉ logo" className="w-7 h-7 object-contain" />
-            <div className="flex flex-col leading-none">
-              <span
-                className="text-[#1E2A35] tracking-widest uppercase"
-                style={{
-                  fontFamily: "'Cormorant Garant', serif",
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                BALANSÉ
-              </span>
-              <span
-                className="text-[#C49A3C] uppercase tracking-widest"
-                style={{ fontSize: '0.44rem', letterSpacing: '0.2em', fontFamily: "'Inter', sans-serif" }}
-              >
-                WELLNESS HUB
-              </span>
-            </div>
+          <div className="flex items-center">
+            <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-7 w-auto object-contain" />
           </div>
           <button
             onClick={() => setMenuOpen(false)}

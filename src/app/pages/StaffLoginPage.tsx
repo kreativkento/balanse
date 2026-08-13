@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft, Crown } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
-import logoImg from 'figma:asset/bbdd3c4813a82e401f4feb97932ab9a28f6161ee.png';
+import logoMainWhite from 'figma:asset/logo_main_white.svg';
+import logoMain from 'figma:asset/logo_main.svg';
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
@@ -59,24 +60,13 @@ export default function StaffLoginPage() {
         <div className="absolute bottom-[-60px] left-[-60px] w-64 h-64 rounded-full border border-[#C49A3C]/10" />
 
         {/* Logo */}
-        <div>
-          <Link to="/" className="flex items-center gap-3 mb-14">
-            <img src={logoImg} alt="BALANSÉ" className="w-9 h-9 object-contain opacity-90" />
-            <div className="flex flex-col leading-none">
-              <span
-                className="text-white tracking-widest uppercase"
-                style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.18em' }}
-              >
-                BALANSÉ
-              </span>
-              <span className="text-[#C49A3C]/80 uppercase tracking-widest" style={{ fontSize: '0.44rem', letterSpacing: '0.2em' }}>
-                WELLNESS HUB
-              </span>
-            </div>
+        <div className="flex flex-col items-start">
+          <Link to="/" className="inline-block mb-14">
+            <img src={logoMainWhite} alt="BALANSÉ Wellness Hub" className="h-10 w-auto object-contain" />
           </Link>
 
           {/* Staff badge */}
-          <div className="inline-flex items-center gap-2 bg-[#C49A3C]/15 border border-[#C49A3C]/30 rounded-full px-4 py-1.5 mb-6">
+          <div className="flex items-center gap-2 bg-[#C49A3C]/15 border border-[#C49A3C]/30 rounded-full px-4 py-1.5 mb-6">
             <ShieldCheck size={13} className="text-[#C49A3C]" />
             <span className="text-[#C49A3C] text-xs font-bold uppercase tracking-widest">Staff Access</span>
           </div>
@@ -114,18 +104,12 @@ export default function StaffLoginPage() {
         <div className="w-full max-w-md mx-auto">
 
           {/* Mobile logo */}
-          <div className="md:hidden flex items-center gap-2 mb-8">
-            <img src={logoImg} alt="BALANSÉ" className="w-8 h-8 object-contain" />
-            <span
-              className="text-[#1E2A35] tracking-widest"
-              style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1rem', fontWeight: 700, letterSpacing: '0.18em' }}
-            >
-              BALANSÉ
-            </span>
+          <div className="md:hidden mb-8">
+            <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
           </div>
 
           <div className="mb-8">
-            <div className="inline-flex items-center gap-1.5 bg-[#C49A3C]/10 border border-[#C49A3C]/25 rounded-full px-3 py-1 mb-3">
+            <div className="flex items-center gap-1.5 bg-[#C49A3C]/10 border border-[#C49A3C]/25 rounded-full px-3 py-1 mb-3 w-fit">
               <ShieldCheck size={11} className="text-[#C49A3C]" />
               <span className="text-[#A67E2A] text-xs font-bold uppercase tracking-widest">Staff Portal</span>
             </div>

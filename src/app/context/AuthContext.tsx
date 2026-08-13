@@ -11,7 +11,12 @@ import {
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId, isRoleMatch, updateProfileByAuthUserId } from '../../lib/profile-service';
+import {
+  fetchAccountWithProfileByAuthUserId,
+  fetchOrRepairAccountWithProfileByAuthUserId,
+  isRoleMatch,
+  updateProfileByAuthUserId,
+} from '../../lib/profile-service';
 import type { AccountWithProfile } from '../../lib/database.types';
 
 export interface UserProfile {
@@ -140,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: mapAuthError(error, 'Login failed. Please try again.') };
     }
 
-    const accountData = await fetchAccountWithProfileByAuthUserId(data.user.id);
+    const accountData = await fetchOrRepairAccountWithProfileByAuthUserId(data.user.id);
     if (!accountData || !isRoleMatch(accountData.account, 'user')) {
       await supabase.auth.signOut();
       return { success: false, error: wrongRoleMessage('user') };
@@ -194,30 +199,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (data.user.identities?.length === 0) {
-      return { success: false, error: 'ACCOUNT_EXISTS' };
-    }
-
-    const accountData = await fetchAccountWithProfileByAuthUserId(data.user.id);
-
-    if (data.session && accountData) {
-      setUser(mapToUser(accountData));
-    } else if (accountData) {
-      setUser(mapToUser(accountData));
-    } else {
-      const fullName = buildFullName(trimmedFirst, trimmedMiddle, trimmedLast);
-      setUser({
-        name: fullName || deriveNameFromEmail(normalizedEmail),
+      // auth.users still exists (e.g. row deleted only from public.accounts) — try login + repair
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
-        profile: {
-          ...defaultProfile(),
+        password,
+      });
+
+      if (loginError) {
+        return { success: false, error: 'ACCOUNT_EXISTS' };
+      }
+
+      const repairedAccount = await fetchOrRepairAccountWithProfileByAuthUserId(loginData.user.id);
+      if (!repairedAccount || !isRoleMatch(repairedAccount.account, 'user')) {
+        await supabase.auth.signOut();
+        return { success: false, error: 'ACCOUNT_EXISTS' };
+      }
+
+      const fullName = buildFullName(trimmedFirst, trimmedMiddle, trimmedLast);
+      await updateProfileByAuthUserId(
+        loginData.user.id,
+        userProfileToDbUpdate({
           firstName: trimmedFirst,
           lastName: trimmedLast,
           middleInitial: trimmedMiddle,
           name: fullName,
-        },
-      });
+        }),
+      );
+
+      const refreshedAccount = await fetchAccountWithProfileByAuthUserId(loginData.user.id);
+      setUser(mapToUser(refreshedAccount ?? repairedAccount));
+      return { success: true };
     }
 
+    if (data.session) {
+      const accountData = await fetchOrRepairAccountWithProfileByAuthUserId(data.user.id);
+
+      if (!accountData) {
+        return {
+          success: false,
+          error: 'Account was created but profile setup failed. Please try logging in, or contact support.',
+        };
+      }
+
+      if (!isRoleMatch(accountData.account, 'user')) {
+        await supabase.auth.signOut();
+        return { success: false, error: wrongRoleMessage('user') };
+      }
+
+      setUser(mapToUser(accountData));
+      return { success: true };
+    }
+
+    // Email confirmation enabled — auth user created; confirm via email before login
     return { success: true };
   };
 

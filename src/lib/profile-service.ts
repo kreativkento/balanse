@@ -33,6 +33,29 @@ export async function fetchAccountWithProfileByAuthUserId(
   return { account, profile };
 }
 
+export async function repairOrphanedUserAccount(): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('repair_orphaned_user_account');
+
+  if (error) {
+    console.error('Failed to repair orphaned user account:', error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function fetchOrRepairAccountWithProfileByAuthUserId(
+  authUserId: string,
+): Promise<AccountWithProfile | null> {
+  let accountData = await fetchAccountWithProfileByAuthUserId(authUserId);
+  if (accountData) return accountData;
+
+  const repair = await repairOrphanedUserAccount();
+  if (!repair.ok) return null;
+
+  return fetchAccountWithProfileByAuthUserId(authUserId);
+}
+
 export async function updateProfileByAuthUserId(
   authUserId: string,
   update: Record<string, unknown>,

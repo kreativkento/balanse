@@ -4,11 +4,12 @@ import { BottomCTA } from './components/layout/BottomCTA';
 import { AuthProvider } from './context/AuthContext';
 import { StaffAuthProvider } from './context/StaffAuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
+import { DevAuthProvider } from './context/DevAuthContext';
 
 const PAGES_WITH_CTA = ['/', '/gallery', '/pricing', '/classes'];
 
 // Paths that are standalone portals — hide the public NavBar
-const PORTAL_PREFIXES = ['/staff-login', '/staff-dashboard', '/staff-schedule', '/staff-gallery', '/staff-account', '/staff-availability', '/staff-profile', '/admin-login', '/admin-dashboard', '/admin-staff', '/admin-students', '/admin-schedule', '/admin-payments', '/admin-gallery', '/admin-subscriptions', '/admin-promos', '/admin-policies', '/admin-absence', '/admin-coach-availability'];
+const PORTAL_PREFIXES = ['/development', '/staff-login', '/staff-dashboard', '/staff-schedule', '/staff-gallery', '/staff-account', '/staff-availability', '/staff-profile', '/admin-login', '/admin-dashboard', '/admin-staff', '/admin-students', '/admin-schedule', '/admin-payments', '/admin-gallery', '/admin-disciplines', '/admin-events', '/admin-subscriptions', '/admin-promos', '/admin-policies', '/admin-absence', '/admin-coach-availability'];
 
 function Shell() {
   const location = useLocation();
@@ -36,12 +37,14 @@ function Shell() {
 
 export function Root() {
   return (
-    <AdminAuthProvider>
-      <StaffAuthProvider>
-        <AuthProvider>
-          <Shell />
-        </AuthProvider>
-      </StaffAuthProvider>
-    </AdminAuthProvider>
+    <DevAuthProvider>
+      <AdminAuthProvider>
+        <StaffAuthProvider>
+          <AuthProvider>
+            <Shell />
+          </AuthProvider>
+        </StaffAuthProvider>
+      </AdminAuthProvider>
+    </DevAuthProvider>
   );
 }
