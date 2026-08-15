@@ -185,7 +185,7 @@ export default function AdminSchedulePage() {
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Schedule</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-              Schedule Manager
+              Schedule Management
             </h1>
           </div>
           {activeTab === 'calendar' && (

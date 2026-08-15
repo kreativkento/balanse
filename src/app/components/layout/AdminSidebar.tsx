@@ -1,30 +1,63 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
-  Crown, LogOut, LayoutDashboard, Users, UserCheck,
-  CalendarDays, CreditCard, Images, ChevronDown,
-  Tag, ShieldCheck, Menu, X, AlertOctagon, Clock, Layers, CalendarRange,
+  Crown, LogOut, LayoutDashboard, Users,
+  CalendarDays, CreditCard, Images,
+  Tag, ShieldCheck, Menu, Layers, CalendarRange, Newspaper,
+  Award, Briefcase,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
 
-const NAV_LINKS = [
-  { label: 'Dashboard',  path: '/admin-dashboard', icon: LayoutDashboard },
-  { label: 'Staff',      path: '/admin-staff',     icon: UserCheck },
-  { label: 'Students',   path: '/admin-students',  icon: Users },
-  { label: 'Schedule',   path: '/admin-schedule',  icon: CalendarDays },
-  { label: 'Payments',   path: '/admin-payments',  icon: CreditCard },
-  { label: 'Gallery',    path: '/admin-gallery',   icon: Images },
-  { label: 'Disciplines', path: '/admin-disciplines', icon: Layers },
-  { label: 'Events', path: '/admin-events', icon: CalendarRange },
-  { label: 'Absence Tracker',      path: '/admin-absence',             icon: AlertOctagon },
-  { label: 'Coach Availability',   path: '/admin-coach-availability',  icon: Clock },
-];
+type NavItem = {
+  label: string;
+  path: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+};
 
-const MANAGE_LINKS = [
-  { label: 'Subscriptions', path: '/admin-subscriptions', icon: CreditCard,  desc: 'Plans & session credits' },
-  { label: 'Promos',        path: '/admin-promos',        icon: Tag,         desc: 'Discounts & eligibility' },
-  { label: 'Policies',      path: '/admin-policies',      icon: ShieldCheck, desc: 'Business rules & limits' },
+type NavSection = {
+  label?: string;
+  items: NavItem[];
+};
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { label: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Community',
+    items: [
+      { label: 'Clients', path: '/admin-students', icon: Users },
+      { label: 'Coaches', path: '/admin-coaches', icon: Award },
+      { label: 'Disciplines', path: '/admin-disciplines', icon: Layers },
+    ],
+  },
+  {
+    label: 'Schedule Management',
+    items: [
+      { label: 'Time Blocking', path: '/admin-schedule', icon: CalendarDays },
+      { label: 'Class Schedule', path: '/admin-classes', icon: CalendarRange },
+    ],
+  },
+  {
+    label: 'Marketing',
+    items: [
+      { label: 'Gallery', path: '/admin-gallery', icon: Images },
+      { label: 'News & Updates', path: '/admin-news', icon: Newspaper },
+      { label: 'Promotions', path: '/admin-promos', icon: Tag },
+    ],
+  },
+  {
+    label: 'Finance & Admin',
+    items: [
+      { label: 'Staffing', path: '/admin-staff', icon: Briefcase },
+      { label: 'Payments', path: '/admin-payments', icon: CreditCard },
+      { label: 'Subscriptions', path: '/admin-subscriptions', icon: CreditCard },
+      { label: 'Policies', path: '/admin-policies', icon: ShieldCheck },
+    ],
+  },
 ];
 
 interface AdminSidebarProps {
@@ -32,21 +65,17 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ children }: AdminSidebarProps) {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { adminUser, adminLogout } = useAdminAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => { adminLogout(); navigate('/admin-login'); };
   const initials = adminUser?.name.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? 'SA';
 
-  const manageActive = MANAGE_LINKS.some(l => location.pathname === l.path);
-
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Brand */}
       <div className="px-5 py-5 border-b border-[#D4CDB5]/30">
         <Link to="/admin-dashboard" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
           <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
@@ -57,65 +86,50 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         </Link>
       </div>
 
-      {/* Nav Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">Navigation</p>
-        <div className="flex flex-col gap-0.5">
-          {NAV_LINKS.map(({ label, path, icon: Icon }) => {
-            const active = location.pathname === path;
-            return (
-              <Link
-                key={path}
-                to={path}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  active ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
-                }`}
-              >
-                <Icon size={16} className={active ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
-                {label}
-              </Link>
-            );
-          })}
+        <div className="flex flex-col gap-3">
+          {NAV_SECTIONS.map((section, sectionIndex) => (
+            <div key={section.label ?? `section-${sectionIndex}`}>
+              {section.label ? (
+                <div className="px-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest shrink-0">
+                      {section.label}
+                    </p>
+                    <div className="h-px flex-1 bg-[#D4CDB5]/50" />
+                  </div>
+                </div>
+              ) : sectionIndex > 0 ? (
+                <div className="px-3 mb-2">
+                  <div className="h-px w-full bg-[#D4CDB5]/40" />
+                </div>
+              ) : null}
 
-          {/* Manage section */}
-          <div className="mt-3">
-            <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">Manage</p>
-            <button
-              onClick={() => setManageOpen(v => !v)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                manageActive ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
-              }`}
-            >
-              <ShieldCheck size={16} className={manageActive ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
-              <span className="flex-1 text-left">Settings</span>
-              <ChevronDown size={14} className={`transition-transform ${manageOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {manageOpen && (
-              <div className="mt-1 ml-3 flex flex-col gap-0.5 pl-6 border-l-2 border-[#D4CDB5]/50">
-                {MANAGE_LINKS.map(l => {
-                  const active = location.pathname === l.path;
+              <div className="flex flex-col gap-0.5">
+                {section.items.map(({ label, path, icon: Icon }) => {
+                  const active = location.pathname === path;
                   return (
                     <Link
-                      key={l.path}
-                      to={l.path}
+                      key={path}
+                      to={path}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                        active ? 'bg-[#C49A3C]/15 text-[#A67E2A]' : 'text-[#5A5048] hover:bg-[#EDE8D8]'
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        active
+                          ? 'bg-[#1E2A35] text-white shadow-sm'
+                          : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
                       }`}
                     >
-                      <l.icon size={13} className={active ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
-                      {l.label}
+                      <Icon size={16} className={active ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
+                      {label}
                     </Link>
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
       </nav>
 
-      {/* User section */}
       <div className="px-4 py-4 border-t border-[#D4CDB5]/30">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0">
@@ -162,12 +176,10 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           </div>
         </div>
       )}
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 bg-white border-r border-[#D4CDB5]/60 shadow-sm flex-col shrink-0 z-30">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-[#1E2A35]/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
@@ -177,9 +189,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         </div>
       )}
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile top bar */}
         <div className="md:hidden bg-white border-b border-[#D4CDB5]/60 px-4 py-3 flex items-center gap-3 shrink-0">
           <button
             onClick={() => setMobileOpen(true)}
@@ -196,7 +206,6 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           </Link>
         </div>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>

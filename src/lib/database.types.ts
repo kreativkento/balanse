@@ -1,5 +1,16 @@
-export type UserRole = 'user' | 'coach' | 'admin' | 'dev';
-export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
+export type UserRole = 'user' | 'coach' | 'admin' | 'dev' | 'frontdesk' | 'marketing';
+/** Roles that use profiles_staff (never profiles_client). */
+export type StaffUserRole = 'coach' | 'admin' | 'dev' | 'frontdesk' | 'marketing';
+export const STAFF_USER_ROLES: StaffUserRole[] = [
+  'coach',
+  'admin',
+  'dev',
+  'frontdesk',
+  'marketing',
+];
+export type ClassStatus = 'draft' | 'published' | 'cancelled' | 'completed';
+/** @deprecated Use ClassStatus */
+export type EventStatus = ClassStatus;
 export type TicketType = 'bug' | 'feature' | 'support' | 'incident' | 'other';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -46,12 +57,19 @@ export interface Database {
         };
         Update: Partial<AccountRow>;
       };
-      profiles: {
-        Row: ProfileRow;
+      profiles_client: {
+        Row: ProfileClientRow;
         Insert: {
           account_id: string;
-        } & Partial<Omit<ProfileRow, 'id' | 'account_id' | 'created_at' | 'updated_at'>>;
-        Update: Partial<ProfileRow>;
+        } & Partial<Omit<ProfileClientRow, 'id' | 'account_id' | 'created_at' | 'updated_at'>>;
+        Update: Partial<ProfileClientRow>;
+      };
+      profiles_staff: {
+        Row: ProfileStaffRow;
+        Insert: {
+          account_id: string;
+        } & Partial<Omit<ProfileStaffRow, 'id' | 'account_id' | 'created_at' | 'updated_at'>>;
+        Update: Partial<ProfileStaffRow>;
       };
       disciplines: {
         Row: DisciplineRow;
@@ -70,31 +88,39 @@ export interface Database {
         } & Partial<Omit<StatusDisciplineRow, 'id' | 'name' | 'slug' | 'hue' | 'created_at' | 'updated_at'>>;
         Update: Partial<StatusDisciplineRow>;
       };
-      events: {
-        Row: EventRow;
+      classes: {
+        Row: ClassRow;
         Insert: {
           name: string;
           discipline_id: string;
           starts_at: string;
           created_by: string;
-        } & Partial<Omit<EventRow, 'id' | 'name' | 'discipline_id' | 'starts_at' | 'created_by' | 'created_at' | 'updated_at'>>;
-        Update: Partial<EventRow>;
+        } & Partial<Omit<ClassRow, 'id' | 'name' | 'discipline_id' | 'starts_at' | 'created_by' | 'created_at' | 'updated_at'>>;
+        Update: Partial<ClassRow>;
       };
-      event_coaches: {
-        Row: EventCoachRow;
+      class_coaches: {
+        Row: ClassCoachRow;
         Insert: {
-          event_id: string;
+          class_id: string;
           account_id: string;
-        } & Partial<Omit<EventCoachRow, 'event_id' | 'account_id' | 'assigned_at'>>;
-        Update: Partial<EventCoachRow>;
+        } & Partial<Omit<ClassCoachRow, 'class_id' | 'account_id' | 'assigned_at'>>;
+        Update: Partial<ClassCoachRow>;
       };
-      event_enrollments: {
-        Row: EventEnrollmentRow;
+      class_students: {
+        Row: ClassStudentRow;
         Insert: {
-          event_id: string;
+          class_id: string;
           account_id: string;
-        } & Partial<Omit<EventEnrollmentRow, 'event_id' | 'account_id' | 'enrolled_at'>>;
-        Update: Partial<EventEnrollmentRow>;
+        } & Partial<Omit<ClassStudentRow, 'class_id' | 'account_id' | 'enrolled_at'>>;
+        Update: Partial<ClassStudentRow>;
+      };
+      coach_disciplines: {
+        Row: CoachDisciplineRow;
+        Insert: {
+          account_id: string;
+          discipline_id: string;
+        } & Partial<Omit<CoachDisciplineRow, 'account_id' | 'discipline_id' | 'tagged_at'>>;
+        Update: Partial<CoachDisciplineRow>;
       };
       account_logs: {
         Row: AccountLogRow;
@@ -170,37 +196,44 @@ export interface Database {
         };
         Returns: string;
       };
-      admin_create_event: {
+      set_coach_disciplines: {
         Args: {
-          p_name: string;
-          p_discipline_id: string;
-          p_starts_at: string;
-          p_class_limit: number;
-          p_coach_account_ids: string[];
-          p_status?: EventStatus;
-          p_description?: string;
-          p_ends_at?: string | null;
-          p_enroll_account_ids?: string[];
-        };
-        Returns: string;
-      };
-      admin_update_event: {
-        Args: {
-          p_event_id: string;
-          p_name: string;
-          p_discipline_id: string;
-          p_starts_at: string;
-          p_class_limit: number;
-          p_coach_account_ids: string[];
-          p_status: EventStatus;
-          p_description?: string;
-          p_ends_at?: string | null;
-          p_enroll_account_ids?: string[] | null;
+          p_account_id: string;
+          p_discipline_ids: string[];
         };
         Returns: undefined;
       };
-      admin_delete_event: {
-        Args: { p_event_id: string };
+      admin_create_class: {
+        Args: {
+          p_name: string;
+          p_discipline_id: string;
+          p_starts_at: string;
+          p_class_limit: number;
+          p_coach_account_ids: string[];
+          p_status?: ClassStatus;
+          p_description?: string;
+          p_ends_at?: string | null;
+          p_student_account_ids?: string[];
+        };
+        Returns: string;
+      };
+      admin_update_class: {
+        Args: {
+          p_class_id: string;
+          p_name: string;
+          p_discipline_id: string;
+          p_starts_at: string;
+          p_class_limit: number;
+          p_coach_account_ids: string[];
+          p_status: ClassStatus;
+          p_description?: string;
+          p_ends_at?: string | null;
+          p_student_account_ids?: string[] | null;
+        };
+        Returns: undefined;
+      };
+      admin_delete_class: {
+        Args: { p_class_id: string };
         Returns: undefined;
       };
     };
@@ -216,7 +249,7 @@ export interface AccountRow {
   updated_at: string;
 }
 
-export interface ProfileRow {
+export interface ProfileClientRow {
   id: string;
   account_id: string;
   first_name: string;
@@ -226,7 +259,7 @@ export interface ProfileRow {
   birthday: string | null;
   sex: string;
   phone: string;
-  cell_number: string;
+  nationality: string;
   address: string;
   weight: string;
   height: string;
@@ -235,18 +268,70 @@ export interface ProfileRow {
   terms_accepted: boolean;
   share_availability: boolean;
   profile_complete: boolean;
-  display_name: string;
-  photo: string;
-  bio: string;
-  experience: string;
-  classes: string[];
   created_at: string;
   updated_at: string;
 }
 
-export interface AccountWithProfile {
+export interface ProfileStaffRow {
+  id: string;
+  account_id: string;
+  first_name: string;
+  last_name: string;
+  middle_initial: string;
+  name: string;
+  phone: string;
+  nationality: string;
+  display_name: string;
+  photo: string;
+  bio: string;
+  experience: string;
+  /** @deprecated Legacy free-text labels. Prefer coach_disciplines → disciplines.id */
+  classes: string[];
+  staff_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Coach specialty tags: many disciplines per coach account (role = coach). */
+export interface CoachDisciplineRow {
+  account_id: string;
+  discipline_id: string;
+  tagged_at: string;
+  tagged_by: string | null;
+}
+
+/** @deprecated Use ProfileClientRow or ProfileStaffRow */
+export type ProfileRow = ProfileClientRow | ProfileStaffRow;
+/** @deprecated Use ProfileClientRow */
+export type ProfileStudentRow = ProfileClientRow;
+
+export interface AccountWithClientProfile {
   account: AccountRow;
-  profile: ProfileRow;
+  profile: ProfileClientRow;
+}
+
+export interface AccountWithStaffProfile {
+  account: AccountRow;
+  profile: ProfileStaffRow;
+}
+
+/** @deprecated Use AccountWithClientProfile */
+export type AccountWithStudentProfile = AccountWithClientProfile;
+
+export type AccountWithProfile = AccountWithClientProfile | AccountWithStaffProfile;
+
+export function isStaffUserRole(role: UserRole): role is StaffUserRole {
+  return (
+    role === 'coach'
+    || role === 'admin'
+    || role === 'dev'
+    || role === 'frontdesk'
+    || role === 'marketing'
+  );
+}
+
+export function hasAdminPrivileges(role: UserRole): boolean {
+  return role === 'admin' || role === 'frontdesk' || role === 'marketing' || role === 'dev';
 }
 
 export interface DisciplineRow {
@@ -273,7 +358,7 @@ export interface StatusDisciplineRow {
   updated_at: string;
 }
 
-export interface EventRow {
+export interface ClassRow {
   id: string;
   name: string;
   description: string;
@@ -281,25 +366,40 @@ export interface EventRow {
   starts_at: string;
   ends_at: string | null;
   class_limit: number;
-  status: EventStatus;
+  status: ClassStatus;
   created_by: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface EventCoachRow {
-  event_id: string;
+/** @deprecated Use ClassRow */
+export type EventRow = ClassRow;
+
+export interface ClassCoachRow {
+  class_id: string;
   account_id: string;
   assigned_at: string;
   assigned_by: string | null;
 }
 
-export interface EventEnrollmentRow {
-  event_id: string;
+export interface CoachDisciplineTag {
+  disciplineId: string;
+  name: string;
+  slug: string;
+}
+
+/** @deprecated Use ClassCoachRow */
+export type EventCoachRow = ClassCoachRow & { event_id?: string };
+
+export interface ClassStudentRow {
+  class_id: string;
   account_id: string;
   enrolled_at: string;
   enrolled_by: string | null;
 }
+
+/** @deprecated Use ClassStudentRow */
+export type EventEnrollmentRow = ClassStudentRow & { event_id?: string };
 
 interface SystemLogBase {
   id: string;
@@ -383,7 +483,7 @@ export interface AuthLogRow {
 }
 
 export interface EventLogRow extends SystemLogBase {
-  event_id: string | null;
+  class_id: string | null;
   event_name: string | null;
   discipline_id: string | null;
   status_from: string | null;
@@ -397,7 +497,7 @@ export interface EnrollmentLogRow {
   id: string;
   occurred_at: string;
   action: LogAction;
-  event_id: string | null;
+  class_id: string | null;
   student_account_id: string | null;
   coach_account_id: string | null;
   actor_account_id: string | null;

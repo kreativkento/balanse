@@ -17,7 +17,7 @@ import {
   isRoleMatch,
   updateProfileByAuthUserId,
 } from '../../lib/profile-service';
-import type { AccountWithProfile } from '../../lib/database.types';
+import type { AccountWithClientProfile } from '../../lib/database.types';
 
 export interface UserProfile {
   firstName: string;
@@ -27,7 +27,7 @@ export interface UserProfile {
   birthday: string;
   sex: 'male' | 'female' | 'prefer_not_to_say' | '';
   phone: string;
-  cellNumber: string;
+  nationality: string;
   address: string;
   weight: string;
   height: string;
@@ -69,7 +69,7 @@ const defaultProfile = (): UserProfile => ({
   birthday: '',
   sex: '',
   phone: '',
-  cellNumber: '',
+  nationality: '',
   address: '',
   weight: '',
   height: '',
@@ -80,7 +80,7 @@ const defaultProfile = (): UserProfile => ({
   profileComplete: false,
 });
 
-function mapToUser(data: AccountWithProfile): User {
+function mapToUser(data: AccountWithClientProfile): User {
   const profile = profileRowToUserProfile(data.profile, data.account.email);
   return {
     name: profile.name || deriveNameFromEmail(data.account.email),
@@ -96,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hydrateUserSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
-    if (data && isRoleMatch(data.account, 'user')) {
-      setUser(mapToUser(data));
+    if (data && data.account.role === 'user' && isRoleMatch(data.account, 'user')) {
+      setUser(mapToUser(data as AccountWithClientProfile));
       return;
     }
     setUser(null);
@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('user') };
     }
 
-    setUser(mapToUser(accountData));
+    setUser(mapToUser(accountData as AccountWithClientProfile));
     return { success: true };
   };
 
@@ -227,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       const refreshedAccount = await fetchAccountWithProfileByAuthUserId(loginData.user.id);
-      setUser(mapToUser(refreshedAccount ?? repairedAccount));
+      setUser(mapToUser((refreshedAccount ?? repairedAccount) as AccountWithClientProfile));
       return { success: true };
     }
 
@@ -246,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: wrongRoleMessage('user') };
       }
 
-      setUser(mapToUser(accountData));
+      setUser(mapToUser(accountData as AccountWithClientProfile));
       return { success: true };
     }
 

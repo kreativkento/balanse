@@ -1,30 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Trash2, X } from 'lucide-react';
 import {
-  EVENT_STATUSES,
-  formatEventDateTime,
-  type EventDisplay,
-  type EventStatus,
-  type EventUpsertInput,
-} from '../../../lib/event-service';
+  CLASS_STATUSES,
+  formatClassDateTime,
+  type ClassDisplay,
+  type ClassStatus,
+  type ClassUpsertInput,
+} from '../../../lib/class-service';
 import type { DisciplineDisplay } from '../../../lib/discipline-service';
 import { isDisciplineActive } from '../../../lib/discipline-service';
 
-export interface EventPersonOption {
+export interface ClassPersonOption {
   accountId: string;
   name: string;
   email: string;
 }
 
-interface AdminEventModalProps {
+interface AdminClassModalProps {
   mode: 'create' | 'edit';
-  initial: EventUpsertInput;
-  event?: EventDisplay | null;
+  initial: ClassUpsertInput;
+  classItem?: ClassDisplay | null;
   disciplines: DisciplineDisplay[];
-  coaches: EventPersonOption[];
-  students: EventPersonOption[];
+  coaches: ClassPersonOption[];
+  students: ClassPersonOption[];
   onClose: () => void;
-  onSave: (input: EventUpsertInput) => Promise<{ success: boolean; error: string | null }>;
+  onSave: (input: ClassUpsertInput) => Promise<{ success: boolean; error: string | null }>;
   onDelete?: () => Promise<{ success: boolean; error: string | null }>;
 }
 
@@ -46,25 +46,25 @@ function fromLocalInputValue(value: string): string | null {
 const inputClass =
   'w-full px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50';
 
-const STATUS_LABEL: Record<EventStatus, string> = {
+const STATUS_LABEL: Record<ClassStatus, string> = {
   draft: 'Draft',
   published: 'Published',
   cancelled: 'Cancelled',
   completed: 'Completed',
 };
 
-export function AdminEventModal({
+export function AdminClassModal({
   mode,
   initial,
-  event,
+  classItem,
   disciplines,
   coaches,
   students,
   onClose,
   onSave,
   onDelete,
-}: AdminEventModalProps) {
-  const [form, setForm] = useState<EventUpsertInput>(initial);
+}: AdminClassModalProps) {
+  const [form, setForm] = useState<ClassUpsertInput>(initial);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -105,7 +105,7 @@ export function AdminEventModal({
     );
   }, [students, studentQuery]);
 
-  const toggleId = (field: 'coachAccountIds' | 'enrollAccountIds', accountId: string) => {
+  const toggleId = (field: 'coachAccountIds' | 'studentAccountIds', accountId: string) => {
     setForm((current) => {
       const exists = current[field].includes(accountId);
       const next = exists
@@ -118,7 +118,7 @@ export function AdminEventModal({
   const handleSaveClick = () => {
     setError('');
     if (!form.name.trim()) {
-      setError('Event name is required.');
+      setError('Class name is required.');
       return;
     }
     if (!form.disciplineId) {
@@ -129,8 +129,8 @@ export function AdminEventModal({
       setError('Assign at least one coach.');
       return;
     }
-    if (form.enrollAccountIds.length > form.classLimit) {
-      setError(`Enrollment (${form.enrollAccountIds.length}) exceeds class limit (${form.classLimit}).`);
+    if (form.studentAccountIds.length > form.classLimit) {
+      setError(`Enrollment (${form.studentAccountIds.length}) exceeds class limit (${form.classLimit}).`);
       return;
     }
     setShowConfirm(true);
@@ -142,7 +142,7 @@ export function AdminEventModal({
     const result = await onSave(form);
     setSaving(false);
     if (!result.success) {
-      setError(result.error ?? 'Failed to save event.');
+      setError(result.error ?? 'Failed to save class.');
       setShowConfirm(false);
       return;
     }
@@ -156,7 +156,7 @@ export function AdminEventModal({
     const result = await onDelete();
     setDeleting(false);
     if (!result.success) {
-      setError(result.error ?? 'Failed to delete event.');
+      setError(result.error ?? 'Failed to delete class.');
       setShowDeleteConfirm(false);
       return;
     }
@@ -176,17 +176,17 @@ export function AdminEventModal({
         <div className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3 sticky top-0 bg-white z-10">
           <div>
             <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">
-              {mode === 'create' ? 'New class / event' : 'Edit class / event'}
+              {mode === 'create' ? 'New class' : 'Edit class'}
             </p>
             <h2
               className="text-[#1E2A35] leading-none"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', letterSpacing: '0.04em' }}
             >
-              {form.name.trim() || (mode === 'create' ? 'Untitled Event' : event?.name || 'Event')}
+              {form.name.trim() || (mode === 'create' ? 'Untitled Class' : classItem?.name || 'Class')}
             </h2>
-            {mode === 'edit' && event && (
+            {mode === 'edit' && classItem && (
               <p className="text-[#8A7E6E] text-xs mt-2">
-                Created {formatEventDateTime(event.createdAt)} by {event.createdByName}
+                Created {formatClassDateTime(classItem.createdAt)} by {classItem.createdByName}
               </p>
             )}
           </div>
@@ -232,10 +232,10 @@ export function AdminEventModal({
               <label className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2 block">Status</label>
               <select
                 value={form.status}
-                onChange={(e) => setForm((c) => ({ ...c, status: e.target.value as EventStatus }))}
+                onChange={(e) => setForm((c) => ({ ...c, status: e.target.value as ClassStatus }))}
                 className={inputClass}
               >
-                {EVENT_STATUSES.map((status) => (
+                {CLASS_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {STATUS_LABEL[status]}
                   </option>
@@ -342,7 +342,7 @@ export function AdminEventModal({
               <div className="mb-3">
                 <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Enrolled students</p>
                 <p className="text-[#1E2A35] text-sm font-semibold mt-0.5">
-                  {form.enrollAccountIds.length} / {form.classLimit} seats
+                  {form.studentAccountIds.length} / {form.classLimit} seats
                 </p>
               </div>
               <input
@@ -356,9 +356,9 @@ export function AdminEventModal({
                   <p className="text-[#8A7E6E] text-sm px-1 py-2">No students found.</p>
                 )}
                 {filteredStudents.map((student) => {
-                  const checked = form.enrollAccountIds.includes(student.accountId);
+                  const checked = form.studentAccountIds.includes(student.accountId);
                   const atLimit =
-                    !checked && form.enrollAccountIds.length >= form.classLimit;
+                    !checked && form.studentAccountIds.length >= form.classLimit;
                   return (
                     <label
                       key={student.accountId}
@@ -374,7 +374,7 @@ export function AdminEventModal({
                         type="checkbox"
                         checked={checked}
                         disabled={atLimit}
-                        onChange={() => toggleId('enrollAccountIds', student.accountId)}
+                        onChange={() => toggleId('studentAccountIds', student.accountId)}
                         className="mt-1 accent-[#C49A3C]"
                       />
                       <span className="min-w-0">
@@ -397,10 +397,10 @@ export function AdminEventModal({
           {showConfirm && (
             <div className="rounded-2xl border border-[#C49A3C]/30 bg-[#C49A3C]/08 px-4 py-4">
               <p className="text-[#1E2A35] text-sm font-semibold mb-1">
-                {mode === 'create' ? 'Create this event?' : 'Save event changes?'}
+                {mode === 'create' ? 'Create this class?' : 'Save class changes?'}
               </p>
               <p className="text-[#8A7E6E] text-sm mb-4">
-                {form.coachAccountIds.length} coach(es), {form.enrollAccountIds.length} student(s), status{' '}
+                {form.coachAccountIds.length} coach(es), {form.studentAccountIds.length} student(s), status{' '}
                 {STATUS_LABEL[form.status].toLowerCase()}.
               </p>
               <div className="flex gap-2">
@@ -427,9 +427,9 @@ export function AdminEventModal({
 
           {showDeleteConfirm && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
-              <p className="text-red-700 text-sm font-semibold mb-1">Delete this event?</p>
+              <p className="text-red-700 text-sm font-semibold mb-1">Delete this class?</p>
               <p className="text-red-600 text-sm mb-4">
-                This permanently removes the event, coach assignments, and enrollments.
+                This permanently removes the class, coach assignments, and student enrollments.
               </p>
               <div className="flex gap-2">
                 <button
@@ -438,7 +438,7 @@ export function AdminEventModal({
                   disabled={deleting}
                   className="flex-1 py-2.5 rounded-full border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-100 transition-all disabled:opacity-60"
                 >
-                  Keep Event
+                  Keep Class
                 </button>
                 <button
                   type="button"
@@ -482,7 +482,7 @@ export function AdminEventModal({
               className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] transition-all disabled:opacity-60"
               style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
             >
-              {mode === 'create' ? 'Create Event' : 'Save Changes'}
+              {mode === 'create' ? 'Create Class' : 'Save Changes'}
             </button>
           </div>
         </div>

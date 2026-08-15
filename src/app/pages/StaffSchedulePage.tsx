@@ -6,6 +6,7 @@ import {
   X, AlertCircle, ToggleLeft, ToggleRight, Trash2,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -379,7 +380,7 @@ export default function StaffSchedulePage() {
               <p className="text-[#B0A898] text-xs">{APPROVED_SCHEDULE.length} approved blocks · tap to view students</p>
             </div>
             {classesByDay.map(({ day, classes }) => (
-              <div key={day} className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+              <div key={day} className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                 <div className="px-5 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/60">
                   <p className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.06em' }}>{day}</p>
                 </div>
@@ -437,7 +438,7 @@ export default function StaffSchedulePage() {
               const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
               const hasReq  = cancelRequests.some(r => r.id === cls.id);
               return (
-                <div key={cls.id} className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+                <div key={cls.id} className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                   <div className="flex items-center gap-4 px-5 py-4">
                     <div className="w-1.5 h-14 rounded-full shrink-0" style={{ backgroundColor: color }} />
                     <div className="flex-1 min-w-0">
@@ -483,7 +484,7 @@ export default function StaffSchedulePage() {
 
             {/* Submitted cancellation requests */}
             {cancelRequests.length > 0 && (
-              <div className="bg-white rounded-3xl border border-amber-200/60 shadow-sm overflow-hidden">
+              <div className={`bg-white rounded-3xl border border-amber-200/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                 <div className="px-5 py-4 border-b border-amber-100 bg-amber-50/40 flex items-center gap-2">
                   <AlertCircle size={15} className="text-amber-600" />
                   <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Submitted Cancellation Requests</h2>
@@ -549,7 +550,7 @@ export default function StaffSchedulePage() {
             <div className="flex-1 flex flex-col gap-5">
               {/* Saved availability list */}
               {availSlots.length > 0 && (
-                <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+                <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                   <div className="px-5 py-4 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/60 flex items-center gap-2">
                     <CalendarDays size={15} className="text-[#C49A3C]" />
                     <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Saved Availability</h2>
@@ -590,7 +591,7 @@ export default function StaffSchedulePage() {
               )}
 
               {selectedAvailDate && (
-                <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+                <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                   <div className="px-5 py-4 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/60">
                     <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}>{formatDateFull(selectedAvailDate)}</h2>
                     <p className="text-[#8A7E6E] text-xs mt-0.5">Select the time slots you are available to coach</p>

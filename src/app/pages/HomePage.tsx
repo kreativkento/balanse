@@ -3,6 +3,7 @@ import { ChevronRight, Check, Leaf, Users, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GymButton } from '../components/ui/GymButton';
 import { HelpSupportFab } from '../components/layout/HelpSupportFab';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 const HERO_IMG =
   'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
@@ -232,7 +233,7 @@ export default function HomePage() {
                 {pricingPlans.map((plan) => (
                   <div
                     key={plan.name}
-                    className={`flex items-center justify-between p-4 rounded-2xl border ${
+                    className={`flex items-center justify-between p-4 rounded-2xl border ${CARD_HOVER_GROW} ${
                       plan.highlight
                         ? 'bg-[#C49A3C]/10 border-[#C49A3C]/50'
                         : 'bg-[#F8F3E8] border-[#D4CDB5]/60'
@@ -301,7 +302,7 @@ export default function HomePage() {
             {classPreview.map((cls) => (
               <div
                 key={cls.name}
-                className="rounded-2xl overflow-hidden bg-white border border-[#D4CDB5]/60 shadow-sm"
+                className={`rounded-2xl overflow-hidden bg-white border border-[#D4CDB5]/60 shadow-sm ${CARD_HOVER_GROW} hover:shadow-md`}
               >
                 <img src={cls.img} alt={cls.name} className="w-full h-44 object-cover" />
                 <div className="p-4">

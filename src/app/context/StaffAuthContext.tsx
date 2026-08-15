@@ -5,13 +5,12 @@ import {
   deriveNameFromEmail,
   mapAuthError,
   profileRowToCoachProfile,
-  profileRowToUserProfile,
   coachProfileToDbUpdate,
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
 import { fetchAccountWithProfileByAuthUserId, isRoleMatch, updateProfileByAuthUserId } from '../../lib/profile-service';
-import type { AccountWithProfile } from '../../lib/database.types';
+import type { AccountWithStaffProfile } from '../../lib/database.types';
 
 export interface CoachProfileData {
   displayName: string;
@@ -19,6 +18,7 @@ export interface CoachProfileData {
   bio: string;
   experience: string;
   classes: string[];
+  nationality: string;
 }
 
 interface StaffUser {
@@ -36,10 +36,13 @@ interface StaffAuthContextType {
   updateStaffProfile: (data: Partial<CoachProfileData>) => void;
 }
 
-function mapToStaffUser(data: AccountWithProfile): StaffUser {
-  const profile = profileRowToUserProfile(data.profile, data.account.email);
+function mapToStaffUser(data: AccountWithStaffProfile): StaffUser {
+  const name =
+    data.profile.name?.trim()
+    || data.profile.display_name?.trim()
+    || deriveNameFromEmail(data.account.email);
   return {
-    name: profile.name || deriveNameFromEmail(data.account.email),
+    name,
     email: data.account.email.toLowerCase(),
     role: 'Coach',
   };
@@ -53,9 +56,10 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
 
   const hydrateStaffSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
-    if (data && isRoleMatch(data.account, 'coach')) {
-      setStaffUser(mapToStaffUser(data));
-      setStaffProfile(profileRowToCoachProfile(data.profile, data.account.email));
+    if (data && isRoleMatch(data.account, 'coach') && data.account.role !== 'user') {
+      const staffData = data as AccountWithStaffProfile;
+      setStaffUser(mapToStaffUser(staffData));
+      setStaffProfile(profileRowToCoachProfile(staffData.profile, staffData.account.email));
       return;
     }
     setStaffUser(null);
@@ -106,13 +110,14 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const accountData = await fetchAccountWithProfileByAuthUserId(data.user.id);
-    if (!accountData || !isRoleMatch(accountData.account, 'coach')) {
+    if (!accountData || !isRoleMatch(accountData.account, 'coach') || accountData.account.role === 'user') {
       await supabase.auth.signOut();
       return { success: false, error: wrongRoleMessage('coach') };
     }
 
-    setStaffUser(mapToStaffUser(accountData));
-    setStaffProfile(profileRowToCoachProfile(accountData.profile, accountData.account.email));
+    const staffData = accountData as AccountWithStaffProfile;
+    setStaffUser(mapToStaffUser(staffData));
+    setStaffProfile(profileRowToCoachProfile(staffData.profile, staffData.account.email));
     return { success: true };
   };
 

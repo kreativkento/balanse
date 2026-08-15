@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ─────────────────────────────────────────────
 // DATE HELPERS
@@ -287,7 +288,7 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
   const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
 
   return (
-    <div className="bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden">
+    <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
       <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between">
         <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.06em' }}>My Calendar</h2>
         <Calendar size={18} className="text-[#C49A3C]" />
@@ -484,7 +485,7 @@ export default function DashboardPage() {
 
           {/* Membership status + credits */}
           {profileComplete ? (
-            <div className="bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+            <div className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <div className="w-8 h-8 bg-[#C49A3C]/10 rounded-xl flex items-center justify-center">
                   <CheckCircle2 size={16} className="text-[#C49A3C]" />
@@ -517,7 +518,7 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+            <div className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               <div className="flex items-center gap-4 px-4 py-4">
                 <div className="w-9 h-9 bg-[#EDE8D8] rounded-xl flex items-center justify-center shrink-0">
                   <CreditCard size={17} className="text-[#B0A898]" />
@@ -541,7 +542,7 @@ export default function DashboardPage() {
         {/* ── Attendance Stats ── */}
         <div className="grid grid-cols-3 gap-3 py-5 border-b border-[#D4CDB5]/50">
           {STATS.map(stat => (
-            <div key={stat.label} className="bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm px-4 py-4 flex flex-col gap-1.5">
+            <div key={stat.label} className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm px-4 py-4 flex flex-col gap-1.5 ${CARD_HOVER_GROW}`}>
               <div className="flex items-center gap-2">
                 {stat.icon}
                 <span className="text-[#9A8E7E]" style={{ fontSize: '0.67rem', letterSpacing: '0.04em' }}>{stat.label}</span>
@@ -563,7 +564,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-5">
 
             {/* ── Upcoming Bookings card ── */}
-            <div className="bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden flex flex-col" style={{ height: '22rem' }}>
+            <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW}`} style={{ height: '22rem' }}>
               {/* Fixed header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#D4CDB5]/50 shrink-0">
                 <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.05em' }}>Bookings</h2>
@@ -658,7 +659,7 @@ export default function DashboardPage() {
             </div>
 
             {/* ── Past Sessions card ── */}
-            <div className="bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden flex flex-col" style={{ height: '20rem' }}>
+            <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW}`} style={{ height: '20rem' }}>
               {/* Fixed header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#D4CDB5]/50 shrink-0">
                 <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.05em' }}>Past Sessions</h2>
@@ -710,7 +711,7 @@ export default function DashboardPage() {
           <div className="mt-6 md:mt-0 flex flex-col gap-4">
 
             {/* Book a Class */}
-            <div className="bg-white border border-[#D4CDB5]/60 rounded-3xl overflow-hidden shadow-sm">
+            <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl overflow-hidden shadow-sm ${CARD_HOVER_GROW}`}>
               <div className="px-5 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between">
                 <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>Book a Class</h2>
                 <Calendar size={18} className="text-[#C49A3C]" />
@@ -743,7 +744,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Profile & Logout */}
-            <div className="bg-white border border-[#D4CDB5]/60 rounded-3xl overflow-hidden shadow-sm p-4 flex flex-col gap-2">
+            <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl overflow-hidden shadow-sm p-4 flex flex-col gap-2 ${CARD_HOVER_GROW}`}>
               <button
                 onClick={() => navigate('/profile')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] text-sm font-medium hover:border-[#C49A3C]/40 hover:bg-[#EDE8D8] active:scale-95 transition-all"

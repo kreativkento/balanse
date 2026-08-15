@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { DISCIPLINES, type Discipline } from '../../data/disciplines';
+import { CARD_HOVER_GROW } from '../../../lib/motion-classes';
 
 interface DisciplineCardsGridProps {
   disciplines?: Discipline[];
@@ -19,7 +20,7 @@ export function DisciplineCardsGrid({
         {disciplines.map((discipline) => (
           <div
             key={discipline.id}
-            className="rounded-3xl overflow-hidden bg-white border border-[#D4CDB5]/60 shadow-sm flex flex-col"
+            className={`rounded-3xl overflow-hidden bg-white border border-[#D4CDB5]/60 shadow-sm flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}
           >
             <div className="relative h-48 overflow-hidden shrink-0">
               <img

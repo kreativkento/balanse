@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Newspaper, Tag, Calendar, ChevronRight, Search, X } from 'lucide-react';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Mock news data (in production this comes from the admin panel) ──
 
@@ -224,7 +225,7 @@ function NewsCard({ post, onClick, featured }: { post: NewsPost; onClick: () => 
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.98] transition-all group ${featured ? 'ring-1 ring-[#C49A3C]/20' : ''}`}
+      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.98] group ${CARD_HOVER_GROW} ${featured ? 'ring-1 ring-[#C49A3C]/20' : ''}`}
     >
       <div className="p-5">
         <div className="flex items-center justify-between mb-3">

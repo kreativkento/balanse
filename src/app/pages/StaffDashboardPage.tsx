@@ -7,6 +7,7 @@ import {
   User, Pencil,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Mock Data ──────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ function StatCard({ label, value, sub, icon, gold, amber }: {
   label: string; value: string; sub: string; icon: React.ReactNode; gold?: boolean; amber?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${gold ? 'border-[#C49A3C]/40' : amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
+    <div className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${gold ? 'border-[#C49A3C]/40' : amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${gold ? 'bg-[#C49A3C]/12' : amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>
         {icon}
       </div>
@@ -259,7 +260,7 @@ export default function StaffDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-5 md:items-stretch gap-6 pb-10">
 
           {/* ── Row 1 Left: Upcoming Classes ── */}
-          <div className="md:col-span-3 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-hidden">
+          <div className={`md:col-span-3 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-5 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between shrink-0">
               <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }} className="text-[#1E2A35]">
                 Today's Schedule
@@ -309,7 +310,7 @@ export default function StaffDashboardPage() {
           </div>
 
           {/* ── Row 1 Right: Quick Actions ── */}
-          <div className="md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-hidden">
+          <div className={`md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-5 py-4 border-b border-[#D4CDB5]/50 shrink-0">
               <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }} className="text-[#1E2A35]">Quick Actions</h2>
             </div>
@@ -373,7 +374,7 @@ export default function StaffDashboardPage() {
           </div>
 
           {/* ── Row 2 Left: Schedule Requests ── */}
-          <div className="md:col-span-3 bg-white rounded-3xl border border-amber-200/50 shadow-sm flex flex-col overflow-hidden">
+          <div className={`md:col-span-3 bg-white rounded-3xl border border-amber-200/50 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-5 py-4 border-b border-amber-100 bg-amber-50/40 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <SendHorizonal size={15} className="text-amber-600" />
@@ -408,7 +409,7 @@ export default function StaffDashboardPage() {
           </div>
 
           {/* ── Row 2 Right: Today at a Glance ── */}
-          <div className="md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 flex flex-col">
+          <div className={`md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 flex flex-col ${CARD_HOVER_GROW}`}>
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4 shrink-0">Today at a Glance</p>
             <div className="flex flex-col gap-3">
               {[

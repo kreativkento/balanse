@@ -2,13 +2,11 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { supabase } from '../../lib/supabase';
 import {
   AuthResult,
-  deriveNameFromEmail,
   mapAuthError,
-  profileRowToUserProfile,
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId } from '../../lib/profile-service';
+import { fetchAccountWithProfileByAuthUserId, getProfileDisplayName } from '../../lib/profile-service';
 import type { AccountWithProfile } from '../../lib/database.types';
 
 export interface DevUser {
@@ -23,9 +21,8 @@ interface DevAuthContextType {
 }
 
 function mapToDevUser(data: AccountWithProfile): DevUser {
-  const profile = profileRowToUserProfile(data.profile, data.account.email);
   return {
-    name: profile.name || deriveNameFromEmail(data.account.email),
+    name: getProfileDisplayName(data.profile, data.account.email),
     email: data.account.email.toLowerCase(),
   };
 }

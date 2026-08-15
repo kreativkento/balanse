@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { CreditCard, Pencil, Plus, X, Check, ChevronDown, Users, TrendingUp } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { CARD_HOVER_GROW, HOVER_SCALE_SMOOTH } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ export default function AdminSubscriptionsPage() {
             { label: 'Silver Members',      value: String(silverCount), sub: '12 sessions/month',  icon: <CreditCard size={18} className="text-[#7A9A8A]" />,  gold: false },
             { label: 'Credits Remaining',   value: String(totalCreditsRemaining), sub: 'Across active plans', icon: <TrendingUp size={18} className="text-amber-600" />, gold: false, amber: true },
           ].map(s => (
-            <div key={s.label} className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${s.gold ? 'border-[#C49A3C]/40' : s.amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
+            <div key={s.label} className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${s.gold ? 'border-[#C49A3C]/40' : s.amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${s.gold ? 'bg-[#C49A3C]/12' : s.amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>{s.icon}</div>
               <div>
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
@@ -158,7 +159,7 @@ export default function AdminSubscriptionsPage() {
           <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4">Current Plans</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map(plan => (
-              <div key={plan.id} className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden transition-all ${savedPlanId === plan.id ? 'ring-2 ring-green-400/40' : ''}`}>
+              <div key={plan.id} className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW} hover:shadow-md ${savedPlanId === plan.id ? 'ring-2 ring-green-400/40' : ''}`}>
                 <div className="h-1.5" style={{ backgroundColor: plan.color }} />
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-1">
@@ -283,7 +284,7 @@ export default function AdminSubscriptionsPage() {
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Accent Color</label>
                 <div className="flex gap-3">
                   {['#C49A3C', '#7A9A8A', '#8A7E6E', '#3A4A5A', '#B86A4A', '#9A7A8A'].map(c => (
-                    <button key={c} onClick={() => setPlanForm(f => ({ ...f, color: c }))} className={`w-7 h-7 rounded-full transition-transform ${planForm.color === c ? 'scale-125 ring-2 ring-offset-1 ring-[#1E2A35]' : 'hover:scale-110'}`} style={{ backgroundColor: c }} />
+                    <button key={c} onClick={() => setPlanForm(f => ({ ...f, color: c }))} className={`w-7 h-7 rounded-full ${HOVER_SCALE_SMOOTH} ${planForm.color === c ? 'scale-125 ring-2 ring-offset-1 ring-[#1E2A35]' : 'hover:scale-110'}`} style={{ backgroundColor: c }} />
                   ))}
                 </div>
               </div>

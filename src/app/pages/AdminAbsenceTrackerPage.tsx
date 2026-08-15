@@ -6,7 +6,6 @@ import {
   Star, Clock,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -196,21 +195,15 @@ function CoachAbsenceSummary({ classes }: { classes: ScheduledClass[] }) {
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────
+// ── Main Panel (embeddable in Coaches Management tabs) ─────────
 
-export default function AdminAbsenceTrackerPage() {
-  const navigate = useNavigate();
-  const { adminUser } = useAdminAuth();
-
+export function AdminAbsenceTrackerPanel() {
   const [classes, setClasses]             = useState<ScheduledClass[]>(INITIAL_CLASSES);
   const [search, setSearch]               = useState('');
   const [filterCoach, setFilterCoach]     = useState('All');
   const [filterStatus, setFilterStatus]   = useState<'all' | AbsenceStatus>('all');
   const [activeModal, setActiveModal]     = useState<ScheduledClass | null>(null);
   const [showCoachFilter, setShowCoachFilter] = useState(false);
-
-  useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
-  if (!adminUser) return null;
 
   const coaches = ['All', ...Array.from(new Set(classes.map(c => c.coach)))];
 
@@ -236,7 +229,7 @@ export default function AdminAbsenceTrackerPage() {
   const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
-    <AdminSidebar>
+    <>
       {activeModal && (
         <AbsenceModal
           item={activeModal}
@@ -245,160 +238,144 @@ export default function AdminAbsenceTrackerPage() {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <p className="text-[#8A7E6E] text-sm mb-5">Mark coaches absent or log class evaluations for scheduled sessions.</p>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-7 flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <UserX size={14} className="text-[#C49A3C]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Absence Tracker</span>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'Present',    value: presentCount, icon: <CheckCircle size={17} className="text-green-600" />,    bg: 'bg-green-50',    border: 'border-green-200' },
+          { label: 'Absent',     value: absentCount,  icon: <UserX size={17} className="text-red-500" />,            bg: 'bg-red-50',      border: 'border-red-200'   },
+          { label: 'Evaluations',value: evalCount,    icon: <Star size={17} className="text-[#C49A3C]" />,           bg: 'bg-[#C49A3C]/10', border: 'border-[#C49A3C]/30' },
+        ].map(s => (
+          <div key={s.label} className={`bg-white rounded-2xl border shadow-sm px-4 py-4 flex items-center gap-3 ${s.border}`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>{s.icon}</div>
+            <div>
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
+              <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>{s.value}</p>
             </div>
-            <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-              Coach Absence Tracker
-            </h1>
-            <p className="text-[#8A7E6E] text-sm mt-1">Mark coaches absent or log class evaluations for scheduled sessions.</p>
           </div>
+        ))}
+      </div>
+
+      <CoachAbsenceSummary classes={classes} />
+
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <div className="relative flex-1 min-w-48">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search coach, class, date…" className={INP} />
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {[
-            { label: 'Present',    value: presentCount, icon: <CheckCircle size={17} className="text-green-600" />,    bg: 'bg-green-50',    border: 'border-green-200' },
-            { label: 'Absent',     value: absentCount,  icon: <UserX size={17} className="text-red-500" />,            bg: 'bg-red-50',      border: 'border-red-200'   },
-            { label: 'Evaluations',value: evalCount,    icon: <Star size={17} className="text-[#C49A3C]" />,           bg: 'bg-[#C49A3C]/10', border: 'border-[#C49A3C]/30' },
-          ].map(s => (
-            <div key={s.label} className={`bg-white rounded-2xl border shadow-sm px-4 py-4 flex items-center gap-3 ${s.border}`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>{s.icon}</div>
-              <div>
-                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
-                <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>{s.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Coach summary */}
-        <CoachAbsenceSummary classes={classes} />
-
-        {/* Filters row */}
-        <div className="flex items-center gap-3 mb-5 flex-wrap">
-          <div className="relative flex-1 min-w-48">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search coach, class, date…" className={INP} />
-          </div>
-          {/* Coach dropdown */}
-          <div className="relative">
-            <button onClick={() => setShowCoachFilter(v => !v)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#5A5048] text-sm font-medium hover:bg-[#EDE8D8] transition-all shadow-sm">
-              {filterCoach} <ChevronDown size={14} className={`transition-transform ${showCoachFilter ? 'rotate-180' : ''}`} />
-            </button>
-            {showCoachFilter && (
-              <div className="absolute top-full mt-1 left-0 bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-lg z-20 min-w-32 overflow-hidden">
-                {coaches.map(c => (
-                  <button key={c} onClick={() => { setFilterCoach(c); setShowCoachFilter(false); }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${filterCoach === c ? 'bg-[#1E2A35] text-white' : 'text-[#5A5048] hover:bg-[#F8F3E8]'}`}>
-                    {c}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {/* Status filter pills */}
-          <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm">
-            {([['all', 'All'], ['present', 'Present'], ['absent', 'Absent'], ['evaluation', 'Evaluations']] as const).map(([val, label]) => (
-              <button key={val} onClick={() => setFilterStatus(val)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${filterStatus === val ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Class list */}
-        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-          {/* Head */}
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_160px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-            {['Coach', 'Class / Date', 'Time', 'Students', 'Status', 'Notes', 'Actions'].map(h => (
-              <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-            ))}
-          </div>
-
-          {filtered.length === 0 ? (
-            <div className="px-6 py-14 text-center">
-              <Calendar size={24} className="mx-auto text-[#D4CDB5] mb-3" />
-              <p className="text-[#B0A898] text-sm">No classes found.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#D4CDB5]/30">
-              {filtered.map(c => (
-                <div key={c.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_160px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/40 transition-colors min-h-[64px]">
-                  {/* Coach */}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.coachColor + '25' }}>
-                      <span className="text-xs font-bold" style={{ color: c.coachColor }}>{c.coachInitials}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[#1E2A35] text-sm font-semibold truncate">{c.coach}</p>
-                      <p className="text-[#B0A898] text-xs">{c.dayLabel}</p>
-                    </div>
-                  </div>
-                  {/* Class / Date */}
-                  <div className="min-w-0">
-                    <p className="text-[#1E2A35] text-sm font-medium truncate">{c.class}</p>
-                    <p className="text-[#9A8E7E] text-xs">{c.date}</p>
-                  </div>
-                  {/* Time */}
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-[#B0A898]" />
-                    <span className="text-[#5A5048] text-sm">{c.time}</span>
-                  </div>
-                  {/* Students */}
-                  <p className="text-[#5A5048] text-sm">{c.students}<span className="text-[#B0A898]">/{c.capacity}</span></p>
-                  {/* Status badge */}
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit border flex items-center gap-1 ${
-                    c.status === 'present'    ? 'bg-green-50 text-green-700 border-green-200' :
-                    c.status === 'absent'     ? 'bg-red-50 text-red-600 border-red-200' :
-                    'bg-[#C49A3C]/10 text-[#A67E2A] border-[#C49A3C]/30'
-                  }`}>
-                    {c.status === 'present'    ? <><CheckCircle size={10} /> Present</> :
-                     c.status === 'absent'     ? <><UserX size={10} /> Absent</> :
-                     <><Star size={10} /> Eval {c.evaluationScore && `· ${c.evaluationScore}★`}</>}
-                  </span>
-                  {/* Notes */}
-                  <p className="text-[#9A8E7E] text-xs truncate">{c.note || '—'}</p>
-                  {/* Actions — fixed 160px column */}
-                  <div className="flex items-center gap-1 w-[160px]">
-                    <button
-                      onClick={() => setActiveModal(c)}
-                      className={`h-7 px-2.5 border text-xs font-medium rounded-lg active:scale-95 transition-all whitespace-nowrap ${
-                        c.status === 'present'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 flex items-center gap-1'
-                          : 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5]/60 hover:bg-[#EDE8D8]'
-                      }`}
-                    >
-                      {c.status === 'present' ? <><AlertCircle size={11} /> Mark</> : 'Edit'}
-                    </button>
-                    {c.status !== 'present' && (
-                      <button
-                        onClick={() => handleSave(c.id, 'present', '')}
-                        className="h-7 px-2.5 bg-green-50 text-green-700 border border-green-200 text-xs font-medium rounded-lg hover:bg-green-100 active:scale-95 transition-all whitespace-nowrap"
-                      >
-                        Restore
-                      </button>
-                    )}
-                  </div>
-                </div>
+        <div className="relative">
+          <button onClick={() => setShowCoachFilter(v => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#5A5048] text-sm font-medium hover:bg-[#EDE8D8] transition-all shadow-sm">
+            {filterCoach} <ChevronDown size={14} className={`transition-transform ${showCoachFilter ? 'rotate-180' : ''}`} />
+          </button>
+          {showCoachFilter && (
+            <div className="absolute top-full mt-1 left-0 bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-lg z-20 min-w-32 overflow-hidden">
+              {coaches.map(c => (
+                <button key={c} onClick={() => { setFilterCoach(c); setShowCoachFilter(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${filterCoach === c ? 'bg-[#1E2A35] text-white' : 'text-[#5A5048] hover:bg-[#F8F3E8]'}`}>
+                  {c}
+                </button>
               ))}
             </div>
           )}
         </div>
-
-        <p className="text-[#B0A898] text-xs mt-4 text-right">
-          {filtered.length} session{filtered.length !== 1 ? 's' : ''} shown
-        </p>
+        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm">
+          {([['all', 'All'], ['present', 'Present'], ['absent', 'Absent'], ['evaluation', 'Evaluations']] as const).map(([val, label]) => (
+            <button key={val} onClick={() => setFilterStatus(val)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${filterStatus === val ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
-    </AdminSidebar>
+
+      <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_160px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
+          {['Coach', 'Class / Date', 'Time', 'Students', 'Status', 'Notes', 'Actions'].map(h => (
+            <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="px-6 py-14 text-center">
+            <Calendar size={24} className="mx-auto text-[#D4CDB5] mb-3" />
+            <p className="text-[#B0A898] text-sm">No classes found.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#D4CDB5]/30">
+            {filtered.map(c => (
+              <div key={c.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_160px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/40 transition-colors min-h-[64px]">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.coachColor + '25' }}>
+                    <span className="text-xs font-bold" style={{ color: c.coachColor }}>{c.coachInitials}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[#1E2A35] text-sm font-semibold truncate">{c.coach}</p>
+                    <p className="text-[#B0A898] text-xs">{c.dayLabel}</p>
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[#1E2A35] text-sm font-medium truncate">{c.class}</p>
+                  <p className="text-[#9A8E7E] text-xs">{c.date}</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={12} className="text-[#B0A898]" />
+                  <span className="text-[#5A5048] text-sm">{c.time}</span>
+                </div>
+                <p className="text-[#5A5048] text-sm">{c.students}<span className="text-[#B0A898]">/{c.capacity}</span></p>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit border flex items-center gap-1 ${
+                  c.status === 'present'    ? 'bg-green-50 text-green-700 border-green-200' :
+                  c.status === 'absent'     ? 'bg-red-50 text-red-600 border-red-200' :
+                  'bg-[#C49A3C]/10 text-[#A67E2A] border-[#C49A3C]/30'
+                }`}>
+                  {c.status === 'present'    ? <><CheckCircle size={10} /> Present</> :
+                   c.status === 'absent'     ? <><UserX size={10} /> Absent</> :
+                   <><Star size={10} /> Eval {c.evaluationScore && `· ${c.evaluationScore}★`}</>}
+                </span>
+                <p className="text-[#9A8E7E] text-xs truncate">{c.note || '—'}</p>
+                <div className="flex items-center gap-1 w-[160px]">
+                  <button
+                    onClick={() => setActiveModal(c)}
+                    className={`h-7 px-2.5 border text-xs font-medium rounded-lg active:scale-95 transition-all whitespace-nowrap ${
+                      c.status === 'present'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 flex items-center gap-1'
+                        : 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5]/60 hover:bg-[#EDE8D8]'
+                    }`}
+                  >
+                    {c.status === 'present' ? <><AlertCircle size={11} /> Mark</> : 'Edit'}
+                  </button>
+                  {c.status !== 'present' && (
+                    <button
+                      onClick={() => handleSave(c.id, 'present', '')}
+                      className="h-7 px-2.5 bg-green-50 text-green-700 border border-green-200 text-xs font-medium rounded-lg hover:bg-green-100 active:scale-95 transition-all whitespace-nowrap"
+                    >
+                      Restore
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="text-[#B0A898] text-xs mt-4 text-right">
+        {filtered.length} session{filtered.length !== 1 ? 's' : ''} shown
+      </p>
+    </>
   );
+}
+
+export default function AdminAbsenceTrackerPage() {
+  const navigate = useNavigate();
+  const { adminUser } = useAdminAuth();
+
+  useEffect(() => {
+    if (!adminUser) navigate('/admin-login');
+    else navigate('/admin-coaches?tab=absence', { replace: true });
+  }, [adminUser, navigate]);
+
+  return null;
 }

@@ -3,10 +3,11 @@ import { useNavigate, Link } from 'react-router';
 import {
   Clock, Star, Pencil, Check, ChevronDown,
   ArrowUpRight, ArrowDownRight,
-  BookOpen, AlertCircle,
+  BookOpen, AlertCircle, CalendarDays,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -78,12 +79,23 @@ export default function AdminDashboardPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
 
         {/* ── Header ── */}
-        <div className="mb-8">
-          <p className="text-[#9A8E7E] text-sm mb-1">{greeting}, {adminUser.name.split(' ')[0]}</p>
-          <h1 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4vw, 2.8rem)', letterSpacing: '0.04em', lineHeight: 1 }}>
-            Admin Dashboard
-          </h1>
-          <p className="text-[#B0A898] text-xs mt-1.5">Monday, July 27, 2026 · BALANSÉ Wellness Hub</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[#9A8E7E] text-sm mb-1">{greeting}, {adminUser.name.split(' ')[0]}</p>
+            <h1 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4vw, 2.8rem)', letterSpacing: '0.04em', lineHeight: 1 }}>
+              Admin Dashboard
+            </h1>
+          </div>
+          <div className="shrink-0 flex items-center gap-3 rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#C49A3C]/12 border border-[#C49A3C]/25 flex items-center justify-center shrink-0">
+              <CalendarDays size={18} className="text-[#C49A3C]" />
+            </div>
+            <div className="text-right sm:text-left">
+              <p className="text-[#B0A898] text-[10px] uppercase tracking-widest leading-none mb-1">Today</p>
+              <p className="text-[#1E2A35] text-sm font-semibold leading-tight">Monday, July 27, 2026</p>
+              <p className="text-[#8A7E6E] text-xs mt-0.5">BALANSÉ Wellness Hub</p>
+            </div>
+          </div>
         </div>
 
         {/* ── Overview Stats ── */}
@@ -94,7 +106,7 @@ export default function AdminDashboardPage() {
             { label: 'Pending Payments',  value: '4',   sub: '₱1,440 pending',   accent: '#E07B39', trend: null   },
             { label: 'Classes This Week', value: '12',  sub: '↑ from 9 last wk', accent: '#6B8E6B', trend: 'up'   },
           ] as const).map(({ label, value, sub, accent, trend }) => (
-            <div key={label} className="bg-white rounded-2xl border border-[#E8E2D2]/80 px-5 py-4 shadow-sm">
+            <div key={label} className={`bg-white rounded-2xl border border-[#E8E2D2]/80 px-5 py-4 shadow-sm ${CARD_HOVER_GROW}`}>
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">{label}</p>
               <p className="text-[#1E2A35] leading-none mb-1.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.04em', color: accent }}>
                 {value}
@@ -108,7 +120,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* ── Payment Metrics ── */}
-        <div className="bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm overflow-hidden mb-10">
+        <div className={`bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm overflow-hidden mb-10 ${CARD_HOVER_GROW}`}>
           {/* Panel header */}
           <div className="px-7 py-5 border-b border-[#E8E2D2]/70 flex items-center justify-between flex-wrap gap-3">
             <div>
@@ -198,7 +210,7 @@ export default function AdminDashboardPage() {
                 <span className="text-xs">Today, Jul 27</span>
               </div>
             </div>
-            <div className="bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm overflow-hidden">
+            <div className={`bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               {RECENT_ACTIVITY.map((item, i) => (
                 <div key={i} className={`px-6 py-4 flex items-start gap-4 hover:bg-[#FDFAF5] transition-colors ${i < RECENT_ACTIVITY.length - 1 ? 'border-b border-[#F0EBE0]' : ''}`}>
                   <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: item.dot + '20' }}>
@@ -220,7 +232,7 @@ export default function AdminDashboardPage() {
             {/* Quick info */}
             <div>
               <h2 className="text-[#1E2A35] mb-4" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}>Studio Today</h2>
-              <div className="bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm p-5">
+              <div className={`bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
                 <div className="flex flex-col gap-3">
                   {[
                     { label: "Today's Classes",  value: '3',    color: '#1E2A35' },
@@ -263,7 +275,7 @@ export default function AdminDashboardPage() {
                   </button>
                 )}
               </div>
-              <div className="bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm p-5">
+              <div className={`bg-white rounded-3xl border border-[#E8E2D2]/80 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
                 {!editing ? (
                   <div>
                     <div className="flex items-center gap-2 mb-3">

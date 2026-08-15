@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ export default function StudentPaymentHistoryPage() {
 
         {/* Profile gate */}
         {!profileComplete && (
-          <div className="bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm">
+          <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm ${CARD_HOVER_GROW}`}>
             <ProfileIncompleteState
               description="Complete your profile to view your payment history and track your class payments."
             />
@@ -240,7 +241,7 @@ export default function StudentPaymentHistoryPage() {
         </div>
 
         {/* List */}
-        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+        <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
           {filtered.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <Receipt size={24} className="mx-auto text-[#D4CDB5] mb-3" />

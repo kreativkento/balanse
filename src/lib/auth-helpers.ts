@@ -1,7 +1,7 @@
 import type { AuthError } from '@supabase/supabase-js';
 import type { UserProfile } from '../app/context/AuthContext';
 import type { CoachProfileData } from '../app/context/StaffAuthContext';
-import type { ProfileRow, UserRole } from './database.types';
+import type { ProfileClientRow, ProfileStaffRow, UserRole } from './database.types';
 
 export const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
@@ -48,7 +48,7 @@ export function mapAuthError(error: AuthError | null | undefined, fallback: stri
   return error.message || fallback;
 }
 
-export function profileRowToUserProfile(row: ProfileRow, email: string): UserProfile {
+export function profileRowToUserProfile(row: ProfileClientRow, email: string): UserProfile {
   return {
     firstName: row.first_name ?? '',
     lastName: row.last_name ?? '',
@@ -57,7 +57,7 @@ export function profileRowToUserProfile(row: ProfileRow, email: string): UserPro
     birthday: row.birthday ?? '',
     sex: (row.sex as UserProfile['sex']) || '',
     phone: row.phone ?? '',
-    cellNumber: row.cell_number ?? '',
+    nationality: row.nationality ?? '',
     address: row.address ?? '',
     weight: row.weight ?? '',
     height: row.height ?? '',
@@ -69,13 +69,14 @@ export function profileRowToUserProfile(row: ProfileRow, email: string): UserPro
   };
 }
 
-export function profileRowToCoachProfile(row: ProfileRow, email: string): CoachProfileData {
+export function profileRowToCoachProfile(row: ProfileStaffRow, email: string): CoachProfileData {
   return {
     displayName: row.display_name || row.name || deriveNameFromEmail(email),
     photo: row.photo ?? '',
     bio: row.bio ?? '',
     experience: row.experience ?? '',
     classes: row.classes ?? [],
+    nationality: row.nationality ?? '',
   };
 }
 
@@ -89,7 +90,7 @@ export function userProfileToDbUpdate(data: Partial<UserProfile>): Record<string
   if (data.birthday !== undefined) update.birthday = data.birthday || null;
   if (data.sex !== undefined) update.sex = data.sex;
   if (data.phone !== undefined) update.phone = data.phone;
-  if (data.cellNumber !== undefined) update.cell_number = data.cellNumber;
+  if (data.nationality !== undefined) update.nationality = data.nationality;
   if (data.address !== undefined) update.address = data.address;
   if (data.weight !== undefined) update.weight = data.weight;
   if (data.height !== undefined) update.height = data.height;
@@ -112,6 +113,7 @@ export function coachProfileToDbUpdate(data: Partial<CoachProfileData>): Record<
   if (data.bio !== undefined) update.bio = data.bio;
   if (data.experience !== undefined) update.experience = data.experience;
   if (data.classes !== undefined) update.classes = data.classes;
+  if (data.nationality !== undefined) update.nationality = data.nationality;
 
   return update;
 }
@@ -131,6 +133,9 @@ export function wrongRoleMessage(expected: UserRole): string {
   }
   if (expected === 'dev') {
     return 'Access denied. This account is not authorized for the development portal.';
+  }
+  if (expected === 'frontdesk' || expected === 'marketing') {
+    return 'Access denied. This account is not authorized for the admin portal.';
   }
   return 'Access denied. This account is not authorized for the admin portal.';
 }

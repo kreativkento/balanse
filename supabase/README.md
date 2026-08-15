@@ -40,7 +40,23 @@ This file is **safe on existing `accounts` + `profiles` tables** — it skips ob
 
 **Disciplines catalog (event tags):** after `001_profiles.sql`, run `008_disciplines.sql`. This creates `public.disciplines` and seeds the gym’s discipline list (Calisthenics, Yoga, kids classes, etc.). Admins/devs can add or deactivate rows later; tag events by `discipline.id` (stable), not by name.
 
-**Events / classes:** after `008_disciplines.sql`, run `009_events.sql`. This creates `public.events` plus `event_coaches` and `event_enrollments` (Google Classroom style: admin assigns ≥1 coach, enrolls many students up to `class_limit`). Admin UI: `/admin-events`.
+**Events / classes:** after `008_disciplines.sql`, run `009_events.sql`, then **`013_rename_events_to_classes.sql`** which renames `events` → `classes`, `event_coaches` → `class_coaches`, `event_enrollments` → `class_students` (`event_id` → `class_id`). Admin UI: `/admin-classes`.
+
+**Split profiles + ops roles:** after the above (and `900` if installed), run **in two separate SQL Editor executions**:
+1. `011a_add_ops_roles.sql` (adds `frontdesk` / `marketing` — must commit first)
+2. `011_split_profiles_and_ops_roles.sql` (creates `profiles_staff`, wires admin-equivalent privileges)
+
+Postgres rejects using new enum values in the same transaction that adds them (`55P04`).
+
+**Client profile rename + nationality:** after `011`, run `012_profiles_client_nationality.sql`. Renames `profiles_student` → `profiles_client`, drops `cell_number`, adds `nationality`, and stores setup phone in `phone`.
+
+**Profile role exclusivity:** after `012`, run `014_enforce_profile_role_exclusivity.sql`:
+- `profiles_client` → `accounts.role = user` only
+- `profiles_staff` → `coach` / `admin` / `dev` / `frontdesk` / `marketing` only
+
+**Coach discipline tags:** after `014`, run `015_coach_disciplines.sql`. Creates `public.coach_disciplines` (many disciplines per coach) and `set_coach_disciplines(account_id, discipline_ids[])`.
+
+**Staff nationality:** after `016`, run `017_profiles_staff_nationality.sql` (adds `profiles_staff.nationality`).
 
 This creates or syncs:
 
@@ -48,11 +64,13 @@ This creates or syncs:
 |-------|---------|
 | `auth.users` | Email + password (Supabase Auth, not in public schema) |
 | `public.accounts` | Login identity (email) + role, linked to `auth.users` |
-| `public.profiles` | System-generated profile UUID + profile fields, linked to `accounts` |
+| `public.profiles_client` | Client/member profile (`role = user`) — run `012_profiles_client_nationality.sql` |
+| `public.profiles_staff` | Staff/ops profile (coach, admin, dev, frontdesk, marketing) |
+| `public.coach_disciplines` | Multi-tags: coach account ↔ `disciplines` (`015`) |
 | `public.disciplines` | Dynamic discipline list for event/class tagging (`008_disciplines.sql`) |
-| `public.events` | Class/event shell: name, discipline tag, date, capacity, status, creator (`009_events.sql`) |
-| `public.event_coaches` | Coaches assigned to an event (min 1) |
-| `public.event_enrollments` | Students enrolled in an event (capped by `class_limit`) |
+| `public.classes` | Class shell: name, discipline tag, date, capacity, status, creator (`013`) |
+| `public.class_coaches` | Coaches assigned to a class (min 1) |
+| `public.class_students` | Students enrolled in a class (capped by `class_limit`) |
 
 ## 4. Auth settings (recommended)
 
@@ -118,9 +136,11 @@ update public.accounts set role = 'coach' where email = 'coach@example.com';
 
 | Role  | Login route     | Signup | Access |
 |-------|-----------------|--------|--------|
-| user  | `/login`        | `/signup` | Own profile only |
-| coach | `/staff-login`  | None | Coach portal + own profile |
-| admin | `/admin-login`  | None | Admin portal; manage all user + coach data |
+| user  | `/login`        | `/signup` | Own `profiles_client` only |
+| coach | `/staff-login`  | None | Coach portal + `profiles_staff` |
+| admin | `/admin-login`  | None | Admin portal; manage user + coach data |
+| frontdesk | `/admin-login` | None | Same privileges as admin (for now) |
+| marketing | `/admin-login` | None | Same privileges as admin (for now) |
 | dev   | Any portal      | None | Full access to all accounts/profiles |
 
 Each portal verifies the account `role` in `public.accounts` after Supabase Auth sign-in. The `dev` role passes all portal checks and has full database access via RLS.

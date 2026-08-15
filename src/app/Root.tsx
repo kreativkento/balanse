@@ -8,12 +8,16 @@ import { DevAuthProvider } from './context/DevAuthContext';
 
 const PAGES_WITH_CTA = ['/', '/gallery', '/pricing', '/classes'];
 
-// Paths that are standalone portals — hide the public NavBar
-const PORTAL_PREFIXES = ['/development', '/staff-login', '/staff-dashboard', '/staff-schedule', '/staff-gallery', '/staff-account', '/staff-availability', '/staff-profile', '/admin-login', '/admin-dashboard', '/admin-staff', '/admin-students', '/admin-schedule', '/admin-payments', '/admin-gallery', '/admin-disciplines', '/admin-events', '/admin-subscriptions', '/admin-promos', '/admin-policies', '/admin-absence', '/admin-coach-availability'];
+// Standalone portals — hide the public NavBar
+const PORTAL_PREFIXES = [
+  '/development',
+  '/staff-',
+  '/admin',
+];
 
 function Shell() {
   const location = useLocation();
-  const isPortal    = PORTAL_PREFIXES.some((p) => location.pathname.startsWith(p));
+  const isPortal = PORTAL_PREFIXES.some((p) => location.pathname.startsWith(p));
   const showBottomCTA = PAGES_WITH_CTA.includes(location.pathname);
 
   if (isPortal) {

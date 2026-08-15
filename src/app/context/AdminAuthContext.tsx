@@ -4,11 +4,10 @@ import {
   AuthResult,
   deriveNameFromEmail,
   mapAuthError,
-  profileRowToUserProfile,
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId, isRoleMatch } from '../../lib/profile-service';
+import { fetchAccountWithProfileByAuthUserId, getProfileDisplayName, isRoleMatch } from '../../lib/profile-service';
 import type { AccountWithProfile, UserRole } from '../../lib/database.types';
 
 export interface AdminUser {
@@ -24,9 +23,8 @@ interface AdminAuthContextType {
 }
 
 function mapToAdminUser(data: AccountWithProfile): AdminUser {
-  const profile = profileRowToUserProfile(data.profile, data.account.email);
   return {
-    name: profile.name || deriveNameFromEmail(data.account.email),
+    name: getProfileDisplayName(data.profile, data.account.email),
     email: data.account.email.toLowerCase(),
     role: data.account.role,
   };

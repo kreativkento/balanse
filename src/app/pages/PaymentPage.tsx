@@ -5,6 +5,7 @@ import {
   X, ShieldCheck, ChevronRight, Info, Receipt,
   CreditCard, Smartphone, QrCode,
 } from 'lucide-react';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ─────────────────────────────────────────────
 // STEP INDICATOR (reused pattern)
@@ -165,7 +166,7 @@ export default function PaymentPage() {
           <div className="w-72 shrink-0 sticky top-6">
 
             {/* Booking card */}
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               {/* Color band */}
               <div className="h-2" style={{ backgroundColor: classColor }} />
 
@@ -229,7 +230,7 @@ export default function PaymentPage() {
           <div className="flex-1 flex flex-col gap-5">
 
             {/* Payment method */}
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
               <p
                 className="text-[#1E2A35] mb-4"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
@@ -270,7 +271,7 @@ export default function PaymentPage() {
             </div>
 
             {/* Payment instructions */}
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
               <p
                 className="text-[#1E2A35] mb-1"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
@@ -354,7 +355,7 @@ export default function PaymentPage() {
             {/* Upload proof */}
             {true && (
               <>
-                <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+                <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
                   <p
                     className="text-[#1E2A35] mb-1"
                     style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
@@ -420,7 +421,7 @@ export default function PaymentPage() {
                 </div>
 
                 {/* Reference number + notes */}
-                <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+                <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
                   <p
                     className="text-[#1E2A35] mb-4"
                     style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
@@ -468,7 +469,7 @@ export default function PaymentPage() {
             )}
 
             {/* Receipt Request */}
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Receipt size={17} className="text-[#C49A3C]" />
@@ -520,7 +521,7 @@ export default function PaymentPage() {
             </div>
 
             {/* Submit */}
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
               <button
                 onClick={handleSubmit}
                 className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(196,154,60,0.35)] hover:bg-[#A67E2A] active:scale-[0.97] transition-all"

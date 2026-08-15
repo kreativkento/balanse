@@ -10,26 +10,27 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import {
-  AdminEventModal,
-  type EventPersonOption,
-} from '../components/events/AdminEventModal';
+  AdminClassModal,
+  type ClassPersonOption,
+} from '../components/classes/AdminClassModal';
 import { fetchDisciplinesForAdmin, isDisciplineActive, type DisciplineDisplay } from '../../lib/discipline-service';
 import { fetchManagedAccountsWithProfiles } from '../../lib/admin-service';
 import {
-  createEmptyEventDraft,
-  createEvent,
-  deleteEvent,
-  eventToUpsertInput,
-  fetchEventsForAdmin,
-  formatEventDateTime,
-  updateEvent,
-  type EventDisplay,
-  type EventStatus,
-  type EventUpsertInput,
-} from '../../lib/event-service';
+  createEmptyClassDraft,
+  createClass,
+  deleteClass,
+  classToUpsertInput,
+  fetchClassesForAdmin,
+  formatClassDateTime,
+  updateClass,
+  type ClassDisplay,
+  type ClassStatus,
+  type ClassUpsertInput,
+} from '../../lib/class-service';
 
-const STATUS_STYLES: Record<EventStatus, string> = {
+const STATUS_STYLES: Record<ClassStatus, string> = {
   draft: 'bg-[#EDE8D8] text-[#5A5048] border border-[#D4CDB5]/70',
   published: 'bg-green-50 text-green-700 border border-green-200',
   cancelled: 'bg-red-50 text-red-700 border border-red-200',
@@ -38,8 +39,8 @@ const STATUS_STYLES: Record<EventStatus, string> = {
 
 function toPersonOption(row: {
   account: { id: string; email: string };
-  profile: { name: string; display_name: string };
-}): EventPersonOption {
+  profile: { name: string; display_name?: string };
+}): ClassPersonOption {
   return {
     accountId: row.account.id,
     name: row.profile.name || row.profile.display_name || row.account.email,
@@ -47,26 +48,26 @@ function toPersonOption(row: {
   };
 }
 
-export default function AdminEventsPage() {
+export default function AdminClassesPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
-  const [events, setEvents] = useState<EventDisplay[]>([]);
+  const [events, setEvents] = useState<ClassDisplay[]>([]);
   const [disciplines, setDisciplines] = useState<DisciplineDisplay[]>([]);
-  const [coaches, setCoaches] = useState<EventPersonOption[]>([]);
-  const [students, setStudents] = useState<EventPersonOption[]>([]);
+  const [coaches, setCoaches] = useState<ClassPersonOption[]>([]);
+  const [students, setStudents] = useState<ClassPersonOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | EventStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | ClassStatus>('all');
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<EventDisplay | null>(null);
-  const [draft, setDraft] = useState<EventUpsertInput | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ClassDisplay | null>(null);
+  const [draft, setDraft] = useState<ClassUpsertInput | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     const [eventsResult, disciplinesResult, coachRows, studentRows] = await Promise.all([
-      fetchEventsForAdmin(),
+      fetchClassesForAdmin(),
       fetchDisciplinesForAdmin(),
       fetchManagedAccountsWithProfiles('coach'),
       fetchManagedAccountsWithProfiles('user'),
@@ -102,7 +103,7 @@ export default function AdminEventsPage() {
   }, [events, query, statusFilter]);
 
   const openCreate = () => {
-    const next = createEmptyEventDraft();
+    const next = createEmptyClassDraft();
     const firstActive = disciplines.find((item) => isDisciplineActive(item));
     if (firstActive) next.disciplineId = firstActive.id;
     setDraft(next);
@@ -110,9 +111,9 @@ export default function AdminEventsPage() {
     setModalMode('create');
   };
 
-  const openEdit = (event: EventDisplay) => {
+  const openEdit = (event: ClassDisplay) => {
     setSelectedEvent(event);
-    setDraft(eventToUpsertInput(event));
+    setDraft(classToUpsertInput(event));
     setModalMode('edit');
   };
 
@@ -122,27 +123,27 @@ export default function AdminEventsPage() {
     setDraft(null);
   };
 
-  const handleSave = async (input: EventUpsertInput) => {
+  const handleSave = async (input: ClassUpsertInput) => {
     if (modalMode === 'create') {
-      const result = await createEvent(input);
+      const result = await createClass(input);
       if (result.success) await loadAll();
       return { success: result.success, error: result.error };
     }
 
     if (!selectedEvent) {
-      return { success: false, error: 'No event selected.' };
+      return { success: false, error: 'No class selected.' };
     }
 
-    const result = await updateEvent(selectedEvent.id, input);
+    const result = await updateClass(selectedEvent.id, input);
     if (result.success) await loadAll();
     return result;
   };
 
   const handleDelete = async () => {
     if (!selectedEvent) {
-      return { success: false, error: 'No event selected.' };
+      return { success: false, error: 'No class selected.' };
     }
-    const result = await deleteEvent(selectedEvent.id);
+    const result = await deleteClass(selectedEvent.id);
     if (result.success) await loadAll();
     return result;
   };
@@ -152,10 +153,10 @@ export default function AdminEventsPage() {
   return (
     <AdminSidebar>
       {modalMode && draft && (
-        <AdminEventModal
+        <AdminClassModal
           mode={modalMode}
           initial={draft}
-          event={selectedEvent}
+          classItem={selectedEvent}
           disciplines={disciplines}
           coaches={coaches}
           students={students}
@@ -169,33 +170,33 @@ export default function AdminEventsPage() {
         <div className="flex items-start justify-between gap-4 mb-8">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <CalendarDays size={18} className="text-[#C49A3C]" />
-              <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Classrooms</p>
+              <CalendarDays size={14} className="text-[#C49A3C]" />
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Class Management</p>
             </div>
             <h1
               className="text-[#1E2A35] leading-none"
               style={{
                 fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(2rem, 4vw, 2.8rem)',
+                fontSize: 'clamp(1.8rem, 3vw, 2.4rem)',
                 letterSpacing: '0.04em',
               }}
             >
-              Events
+              Classes
             </h1>
             <p className="text-[#8A7E6E] text-sm mt-2 max-w-xl">
               Create classes with a discipline tag, assign at least one coach, set capacity, and enroll students.
-              Only admins can create, update, or delete events.
+              Only admins can create, update, or delete classes.
             </p>
           </div>
           {!loading && (
             <button
               type="button"
               onClick={openCreate}
-              className="shrink-0 flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm font-bold shadow-sm"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+              className="shrink-0 flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
             >
               <Plus size={16} />
-              Add Event
+              Add Class
             </button>
           )}
         </div>
@@ -212,7 +213,7 @@ export default function AdminEventsPage() {
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | EventStatus)}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | ClassStatus)}
             className="sm:w-44 px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25"
           >
             <option value="all">All statuses</option>
@@ -226,7 +227,7 @@ export default function AdminEventsPage() {
         {loading && (
           <div className="flex items-center justify-center gap-2 py-20 text-[#8A7E6E]">
             <Loader2 size={18} className="animate-spin" />
-            <span className="text-sm">Loading events…</span>
+            <span className="text-sm">Loading classes…</span>
           </div>
         )}
 
@@ -234,10 +235,10 @@ export default function AdminEventsPage() {
           <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 flex items-start gap-3 mb-6">
             <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-red-700 text-sm font-semibold">Could not load events</p>
+              <p className="text-red-700 text-sm font-semibold">Could not load classes</p>
               <p className="text-red-600 text-sm mt-1">{loadError}</p>
               <p className="text-red-600/80 text-xs mt-2">
-                Make sure you ran <code>supabase/migrations/009_events.sql</code> after disciplines.
+                Make sure you ran <code>supabase/migrations/013_rename_events_to_classes.sql</code> after disciplines.
               </p>
             </div>
           </div>
@@ -245,32 +246,33 @@ export default function AdminEventsPage() {
 
         {!loading && !loadError && filteredEvents.length === 0 && (
           <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-5 py-10 text-center">
-            <p className="text-[#1E2A35] text-sm font-semibold">No events found</p>
+            <p className="text-[#1E2A35] text-sm font-semibold">No classes found</p>
             <p className="text-[#8A7E6E] text-sm mt-1 mb-5">
               {events.length === 0
-                ? 'Create your first class event to assign coaches and enroll students.'
+                ? 'Create your first class to assign coaches and enroll students.'
                 : 'Try a different search or status filter.'}
             </p>
             {events.length === 0 && (
               <button
                 type="button"
                 onClick={openCreate}
-                className="inline-flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] rounded-full px-5 py-2.5 text-sm font-bold"
+                className="inline-flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 shadow-sm leading-none"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
               >
-                <Plus size={16} />
-                Add Event
+                <Plus size={16} className="shrink-0" />
+                <span>Add Class</span>
               </button>
             )}
           </div>
         )}
 
         {!loading && filteredEvents.length > 0 && (
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 overflow-hidden">
+          <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-                    <th className="text-left text-[#9A8E7E] text-[0.65rem] uppercase tracking-widest font-semibold px-5 py-3">Event</th>
+                    <th className="text-left text-[#9A8E7E] text-[0.65rem] uppercase tracking-widest font-semibold px-5 py-3">Class</th>
                     <th className="text-left text-[#9A8E7E] text-[0.65rem] uppercase tracking-widest font-semibold px-5 py-3">When</th>
                     <th className="text-left text-[#9A8E7E] text-[0.65rem] uppercase tracking-widest font-semibold px-5 py-3">Coaches</th>
                     <th className="text-left text-[#9A8E7E] text-[0.65rem] uppercase tracking-widest font-semibold px-5 py-3">Seats</th>
@@ -289,9 +291,9 @@ export default function AdminEventsPage() {
                         <p className="text-[#8A7E6E] text-xs mt-0.5">{event.disciplineName}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="text-[#1E2A35] text-sm">{formatEventDateTime(event.startsAt)}</p>
+                        <p className="text-[#1E2A35] text-sm">{formatClassDateTime(event.startsAt)}</p>
                         {event.endsAt && (
-                          <p className="text-[#8A7E6E] text-xs mt-0.5">to {formatEventDateTime(event.endsAt)}</p>
+                          <p className="text-[#8A7E6E] text-xs mt-0.5">to {formatClassDateTime(event.endsAt)}</p>
                         )}
                       </td>
                       <td className="px-5 py-4">

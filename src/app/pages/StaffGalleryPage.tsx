@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Upload, Images, X, Check, Pencil, Trash2, Tag } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -273,10 +274,10 @@ export default function StaffGalleryPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-10">
             {filtered.map(photo => (
-              <div key={photo.id} className="group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+              <div key={photo.id} className={`group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md ${CARD_HOVER_GROW}`}>
                 {/* Image */}
                 <div className="relative overflow-hidden">
-                  <img src={photo.url} alt={photo.caption} className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img src={photo.url} alt={photo.caption} className={`w-full h-48 object-cover ${IMAGE_HOVER_ZOOM}`} />
                   <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/15 transition-colors" />
                   {/* Category badge */}
                   <div className="absolute top-2.5 left-2.5">
@@ -336,7 +337,7 @@ export default function StaffGalleryPage() {
               onClick={openUpload}
               className="flex flex-col items-center justify-center h-48 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#C49A3C]/40 hover:text-[#C49A3C] hover:bg-[#C49A3C]/04 transition-all group"
             >
-              <Upload size={22} className="mb-2 transition-transform group-hover:scale-110" />
+              <Upload size={22} className={`mb-2 ${ICON_HOVER_GROW}`} />
               <span className="text-xs font-medium">Post a Photo</span>
             </button>
           </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, ChevronLeft, ChevronRight, Play, Tag, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { CARD_HOVER_GROW, HOVER_FADE_UP, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
 const STUDIO_VIDEOS = [
   {
@@ -241,16 +242,16 @@ export default function GalleryPage() {
                 {PERSONAL_PHOTOS.map(photo => (
                   <div
                     key={photo.id}
-                    className="rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm cursor-pointer"
+                    className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm cursor-pointer ${CARD_HOVER_GROW}`}
                   >
                     <img
                       src={photo.url}
                       alt={photo.alt}
-                      className={`w-full object-cover transition-transform duration-500 group-hover:scale-105 ${photo.tall ? 'h-64' : 'h-48'}`}
+                      className={`w-full object-cover ${IMAGE_HOVER_ZOOM} ${photo.tall ? 'h-64' : 'h-48'}`}
                     />
                     {/* Tag overlay */}
                     <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/30 transition-colors flex items-end p-3">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300 w-full">
+                      <div className={`opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${HOVER_FADE_UP} w-full`}>
                         <div className="flex items-center gap-1.5 mb-1">
                           <Tag size={11} className="text-[#C49A3C]" />
                           <span className="text-[#C49A3C] text-xs font-bold uppercase tracking-widest">Tagged</span>
@@ -373,7 +374,7 @@ export default function GalleryPage() {
                         <div className={`absolute inset-0 transition-colors ${isActive ? 'bg-[#1E2A35]/40' : 'bg-[#1E2A35]/30'}`} />
                         {/* Play button */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/60 flex items-center justify-center transition-all group-hover:scale-110 ${isActive ? 'w-14 h-14' : 'w-10 h-10'}`}>
+                          <div className={`rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/60 flex items-center justify-center ${ICON_HOVER_GROW} ${isActive ? 'w-14 h-14' : 'w-10 h-10'}`}>
                             <Play size={isActive ? 22 : 16} className="text-white fill-white ml-0.5" />
                           </div>
                         </div>
@@ -427,7 +428,7 @@ export default function GalleryPage() {
             <div className="md:hidden flex gap-3">
               <div className="flex-1 flex flex-col gap-3">
                 {leftCol.map((img) => (
-                  <div key={img.id} className="rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm">
+                  <div key={img.id} className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm ${CARD_HOVER_GROW}`}>
                     <img
                       src={img.url}
                       alt={img.alt}
@@ -439,7 +440,7 @@ export default function GalleryPage() {
               </div>
               <div className="flex-1 flex flex-col gap-3 mt-6">
                 {rightCol.map((img) => (
-                  <div key={img.id} className="rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm">
+                  <div key={img.id} className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm ${CARD_HOVER_GROW}`}>
                     <img
                       src={img.url}
                       alt={img.alt}
@@ -462,17 +463,17 @@ export default function GalleryPage() {
                   {col.map((img) => (
                     <div
                       key={img.id}
-                      className="rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm cursor-pointer"
+                      className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm cursor-pointer ${CARD_HOVER_GROW}`}
                     >
                       <img
                         src={img.url}
                         alt={img.alt}
-                        className={`w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                        className={`w-full object-cover ${IMAGE_HOVER_ZOOM} ${
                           img.tall ? 'h-72' : 'h-48'
                         }`}
                       />
                       <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/20 transition-colors rounded-2xl flex items-end p-4">
-                        <p className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
+                        <p className={`text-white text-sm font-medium opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${HOVER_FADE_UP}`}>
                           {img.alt}
                         </p>
                       </div>

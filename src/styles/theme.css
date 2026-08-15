@@ -179,3 +179,77 @@
     line-height: 1.5;
   }
 }
+
+/* ── Hover grow: ease-in-out both ways (slow start + soft settle) ── */
+.motion-card-hover-grow {
+  transition-property: transform, box-shadow;
+  transition-duration: 0.32s;
+  transition-timing-function: ease-in-out;
+  will-change: transform;
+}
+
+.motion-card-hover-grow:hover {
+  transform: scale(1.02) translateY(-2px);
+  transition-timing-function: ease-in-out;
+}
+
+.motion-image-hover-zoom {
+  transition-property: transform;
+  transition-duration: 0.4s;
+  transition-timing-function: ease-in-out;
+  will-change: transform;
+}
+
+.group:hover .motion-image-hover-zoom {
+  transform: scale(1.05);
+  transition-timing-function: ease-in-out;
+}
+
+.motion-icon-hover-grow {
+  transition-property: transform;
+  transition-duration: 0.32s;
+  transition-timing-function: ease-in-out;
+  will-change: transform;
+}
+
+.group:hover .motion-icon-hover-grow {
+  transform: scale(1.1);
+  transition-timing-function: ease-in-out;
+}
+
+.motion-hover-scale-smooth {
+  transition-property: transform;
+  transition-duration: 0.32s;
+  transition-timing-function: ease-in-out;
+  will-change: transform;
+}
+
+.motion-hover-scale-smooth:hover {
+  transition-timing-function: ease-in-out;
+}
+
+.motion-hover-fade-up {
+  transition-property: opacity, transform;
+  transition-duration: 0.32s;
+  transition-timing-function: ease-in-out;
+}
+
+.group:hover .motion-hover-fade-up {
+  transition-timing-function: ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-card-hover-grow,
+  .motion-card-hover-grow:hover,
+  .motion-image-hover-zoom,
+  .group:hover .motion-image-hover-zoom,
+  .motion-icon-hover-grow,
+  .group:hover .motion-icon-hover-grow,
+  .motion-hover-scale-smooth,
+  .motion-hover-scale-smooth:hover,
+  .motion-hover-fade-up,
+  .group:hover .motion-hover-fade-up {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

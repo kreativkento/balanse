@@ -26,11 +26,13 @@ import AdminPaymentsPage from './pages/AdminPaymentsPage';
 import AdminGalleryPage from './pages/AdminGalleryPage';
 import AdminSubscriptionsPage from './pages/AdminSubscriptionsPage';
 import AdminPromosPage from './pages/AdminPromosPage';
+import AdminNewsPage from './pages/AdminNewsPage';
 import AdminPoliciesPage from './pages/AdminPoliciesPage';
 import AdminAbsenceTrackerPage from './pages/AdminAbsenceTrackerPage';
 import AdminCoachAvailabilityPage from './pages/AdminCoachAvailabilityPage';
 import AdminDisciplinesPage from './pages/AdminDisciplinesPage';
-import AdminEventsPage from './pages/AdminEventsPage';
+import AdminClassesPage from './pages/AdminClassesPage';
+import AdminCoachesPage from './pages/AdminCoachesPage';
 import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
 import StaffProfilePage from './pages/StaffProfilePage';
 import NewsPage from './pages/NewsPage';
@@ -77,14 +79,17 @@ export const router = createBrowserRouter([
       { path: 'admin-login', Component: AdminLoginPage },
       { path: 'admin-dashboard', Component: AdminDashboardPage },
       { path: 'admin-staff', Component: AdminStaffPage },
+      { path: 'admin-coaches', Component: AdminCoachesPage },
       { path: 'admin-students', Component: AdminStudentsPage },
       { path: 'admin-schedule',   Component: AdminSchedulePage },
       { path: 'admin-payments',   Component: AdminPaymentsPage },
       { path: 'admin-gallery',    Component: AdminGalleryPage },
       { path: 'admin-disciplines', Component: AdminDisciplinesPage },
-      { path: 'admin-events', Component: AdminEventsPage },
+      { path: 'admin-classes', Component: AdminClassesPage },
+      { path: 'admin-events', Component: AdminClassesPage },
       { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
       { path: 'admin-promos',     Component: AdminPromosPage },
+      { path: 'admin-news',       Component: AdminNewsPage },
       { path: 'admin-policies',   Component: AdminPoliciesPage },
       { path: 'admin-absence',             Component: AdminAbsenceTrackerPage },
       { path: 'admin-coach-availability',  Component: AdminCoachAvailabilityPage },

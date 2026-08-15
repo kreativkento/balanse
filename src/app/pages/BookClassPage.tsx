@@ -5,6 +5,7 @@ import {
   Clock, Users, Check, CalendarDays, User, Layers,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { WeekCalendarGrid, type WeekGridEvent } from '../components/calendar/WeekCalendarGrid';
 import { MonthCalendarGrid, type MonthGridEvent } from '../components/calendar/MonthCalendarGrid';
@@ -216,7 +217,7 @@ function SlotCard({
     <button
       onClick={fullyBooked ? undefined : onSelect}
       disabled={fullyBooked}
-      className={`w-full text-left flex items-stretch rounded-2xl border transition-all group ${
+      className={`w-full text-left flex items-stretch rounded-2xl border group ${CARD_HOVER_GROW} ${
         fullyBooked
           ? 'border-[#D4CDB5]/40 bg-[#F5F2EC] opacity-70 cursor-not-allowed'
           : isSelected

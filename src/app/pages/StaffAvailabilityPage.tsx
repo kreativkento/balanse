@@ -6,6 +6,7 @@ import {
   Info, Pencil, CheckCircle, AlarmClock,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -362,7 +363,7 @@ export default function StaffAvailabilityPage() {
 
           {/* ─── Col 1: Calendar ─── */}
           <div className="w-72 shrink-0">
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
 
               <div className="flex items-center justify-between mb-4">
                 <button onClick={prevMonth} className="w-7 h-7 rounded-full bg-[#EDE8D8] flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all">
@@ -431,7 +432,7 @@ export default function StaffAvailabilityPage() {
           {/* ─── Col 2: Editor ─── */}
           <div className="w-80 shrink-0">
             {!selectedDate ? (
-              <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 flex flex-col items-center justify-center text-center gap-3 min-h-[300px]">
+              <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 flex flex-col items-center justify-center text-center gap-3 min-h-[300px] ${CARD_HOVER_GROW}`}>
                 <div className="w-12 h-12 bg-[#EDE8D8] rounded-2xl flex items-center justify-center">
                   <CalendarDays size={22} className="text-[#B0A898]" />
                 </div>
@@ -441,7 +442,7 @@ export default function StaffAvailabilityPage() {
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+              <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                 {/* Header */}
                 <div className="px-5 pt-5 pb-4 border-b border-[#D4CDB5]/50">
                   <div className="flex items-center justify-between">
@@ -556,7 +557,7 @@ export default function StaffAvailabilityPage() {
 
           {/* ─── Col 3: Saved entries list ─── */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+            <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               <div className="px-5 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between">
                 <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>
                   Saved Availability

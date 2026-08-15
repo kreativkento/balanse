@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { CheckCircle2, Clock, Calendar, User, ArrowRight, LayoutDashboard, Phone } from 'lucide-react';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ─────────────────────────────────────────────
 // CLASS ACCENT COLORS
@@ -91,7 +92,7 @@ export default function BookingPendingPage() {
         </div>
 
         {/* ── Booking Summary Card ── */}
-        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+        <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
           <div className="h-1.5" style={{ backgroundColor: classColor }} />
 
           <div className="p-6">
@@ -179,7 +180,7 @@ export default function BookingPendingPage() {
         </div>
 
         {/* ── What Happens Next ── */}
-        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6">
+        <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`}>
           <p
             className="text-[#1E2A35] mb-4"
             style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}

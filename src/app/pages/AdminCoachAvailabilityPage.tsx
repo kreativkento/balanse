@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  CalendarDays, ChevronLeft, ChevronRight, Info, Users, Clock, X,
+  ChevronLeft, ChevronRight, Info, Users, Clock, X,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -190,19 +189,13 @@ function EntryDetailPanel({ entry, onClose }: { entry: AvailabilityEntry; onClos
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────
+// ── Main Panel (embeddable in Coaches Management tabs) ─────────
 
-export default function AdminCoachAvailabilityPage() {
-  const navigate = useNavigate();
-  const { adminUser } = useAdminAuth();
-
+export function AdminCoachAvailabilityPanel() {
   const [selectedCoachId, setSelectedCoachId] = useState<number>(COACHES[0].id);
   const [calYear, setCalYear]   = useState(2026);
   const [calMonth, setCalMonth] = useState(6);
   const [viewingEntry, setViewingEntry] = useState<AvailabilityEntry | null>(null);
-
-  useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
-  if (!adminUser) return null;
 
   const coach = COACHES.find(c => c.id === selectedCoachId)!;
   const grid  = buildGrid(calYear, calMonth);
@@ -215,30 +208,17 @@ export default function AdminCoachAvailabilityPage() {
   const periodCount      = coach.availability.reduce((n, e) => n + e.periods.length, 0);
 
   return (
-    <AdminSidebar>
+    <>
       {viewingEntry && (
         <EntryDetailPanel entry={viewingEntry} onClose={() => setViewingEntry(null)} />
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="flex items-center gap-2 mb-5">
+        <Info size={13} className="text-[#B0A898] shrink-0" />
+        <p className="text-[#9A8E7E] text-sm">Read-only view. Coaches manage their own availability from the Staff Portal.</p>
+      </div>
 
-        {/* Header */}
-        <div className="mb-7">
-          <div className="flex items-center gap-2 mb-1">
-            <CalendarDays size={14} className="text-[#C49A3C]" />
-            <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Coach Availability</span>
-          </div>
-          <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-            Coach Availability
-          </h1>
-          <div className="flex items-center gap-2 mt-1.5">
-            <Info size={13} className="text-[#B0A898] shrink-0" />
-            <p className="text-[#9A8E7E] text-sm">Read-only view. Coaches manage their own availability from the Staff Portal.</p>
-          </div>
-        </div>
-
-        <div className="flex gap-6 items-start">
-
+      <div className="flex gap-6 items-start">
           {/* ── Coach List (left) ── */}
           <div className="w-56 shrink-0">
             <p className="text-[#9A8E7E] text-xs uppercase tracking-widest px-1 mb-2">Coaches</p>
@@ -401,7 +381,20 @@ export default function AdminCoachAvailabilityPage() {
             </div>
           </div>
         </div>
-      </div>
-    </AdminSidebar>
+    </>
   );
+}
+
+// ── Standalone page (redirects into Coaches Management) ────────
+
+export default function AdminCoachAvailabilityPage() {
+  const navigate = useNavigate();
+  const { adminUser } = useAdminAuth();
+
+  useEffect(() => {
+    if (!adminUser) navigate('/admin-login');
+    else navigate('/admin-coaches?tab=availability', { replace: true });
+  }, [adminUser, navigate]);
+
+  return null;
 }

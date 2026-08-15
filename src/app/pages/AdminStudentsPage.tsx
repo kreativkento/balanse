@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Search, Pencil, Trash2, X, Check, Users, ChevronDown, Eye, Activity, Flame, CalendarDays, Clock } from 'lucide-react';
+import {
+  Plus, Search, Pencil, Trash2, X, Users, ChevronDown,
+  Activity, Flame, CalendarDays, Clock, Mail, Phone, MapPin, Check,
+} from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
 
@@ -17,13 +20,19 @@ interface Student {
   subscriptionEnd: string;
 }
 
-// ── CRM Data ──
-const STUDENT_CRM: Record<number, {
-  phone: string; address: string; availability: string;
-  totalSessions: number; thisMonth: number; streak: number; favoriteClass: string;
+interface StudentCrm {
+  phone: string;
+  address: string;
+  availability: string;
+  totalSessions: number;
+  thisMonth: number;
+  streak: number;
+  favoriteClass: string;
   renewalDate: string;
   recentBookings: { class: string; date: string; time: string; status: string }[];
-}> = {
+}
+
+const STUDENT_CRM: Record<number, StudentCrm> = {
   1:  { phone: '+63 917 111 2233', address: 'Makati City, Metro Manila', availability: 'Mornings (Mon–Fri)', totalSessions: 24, thisMonth: 6, streak: 5, favoriteClass: 'Yoga',            renewalDate: 'Apr 30, 2026', recentBookings: [{ class: 'Yoga', date: 'Apr 7', time: '8:00 AM', status: 'confirmed' }, { class: 'Mat Pilates', date: 'Mar 31', time: '10:00 AM', status: 'confirmed' }, { class: 'Animal Flow', date: 'Mar 24', time: '6:00 PM', status: 'confirmed' }] },
   2:  { phone: '+63 918 222 3344', address: 'Quezon City, Metro Manila', availability: 'Weekends, Tue/Thu', totalSessions: 18, thisMonth: 4, streak: 3, favoriteClass: 'Mat Pilates',     renewalDate: 'May 3, 2026',  recentBookings: [{ class: 'Mat Pilates', date: 'Apr 6', time: '10:00 AM', status: 'confirmed' }, { class: 'Yoga', date: 'Mar 30', time: '8:00 AM', status: 'confirmed' }, { class: 'Groundworks', date: 'Mar 22', time: '11:00 AM', status: 'confirmed' }] },
   3:  { phone: '+63 919 333 4455', address: 'Pasig City, Metro Manila',  availability: 'Flexible',         totalSessions: 3,  thisMonth: 1, streak: 1, favoriteClass: 'Calisthenics',    renewalDate: 'N/A',          recentBookings: [{ class: 'Calisthenics', date: 'Apr 8', time: '7:00 AM', status: 'pending' }] },
@@ -44,6 +53,12 @@ const MEMBERSHIP_COLORS: Record<string, string> = {
   'Single Pass': 'bg-[#EDE8D8] text-[#7A6A52] border border-[#D4CDB5]/60',
 };
 
+const MEMBERSHIP_ACCENT: Record<Student['membership'], string> = {
+  Gold: '#C49A3C',
+  Silver: '#8A7E6E',
+  'Single Pass': '#7A6A52',
+};
+
 const INITIAL_STUDENTS: Student[] = [
   { id:  1, name: 'Alex Johnson',    email: 'alex.j@email.com',      membership: 'Gold',        joinDate: 'Jan 15, 2026', status: 'active',   subscriptionStart: 'Apr 1, 2026',  subscriptionEnd: 'Apr 30, 2026'  },
   { id:  2, name: 'Maria Santos',    email: 'maria.s@email.com',     membership: 'Silver',      joinDate: 'Feb 3, 2026',  status: 'active',   subscriptionStart: 'May 3, 2026',  subscriptionEnd: 'Jun 2, 2026'   },
@@ -59,112 +74,239 @@ const INITIAL_STUDENTS: Student[] = [
   { id: 12, name: 'Hannah Ong',      email: 'hannah.o@email.com',    membership: 'Gold',        joinDate: 'Aug 30, 2025', status: 'active',   subscriptionStart: 'Aug 30, 2026', subscriptionEnd: 'Sep 30, 2026'  },
 ];
 
-const EMPTY_FORM = { name: '', email: '', membership: 'Single Pass' as Student['membership'], joinDate: '', status: 'active' as 'active' | 'inactive', password: '', subscriptionStart: '', subscriptionEnd: '' };
+const EMPTY_FORM = {
+  name: '',
+  email: '',
+  membership: 'Single Pass' as Student['membership'],
+  joinDate: '',
+  status: 'active' as 'active' | 'inactive',
+  password: '',
+  subscriptionStart: '',
+  subscriptionEnd: '',
+};
 
-// ── CRM Modal ─────────────────────────────────────────────────
+const EMPTY_CRM: StudentCrm = {
+  phone: 'Not provided',
+  address: 'Not provided',
+  availability: 'Not specified',
+  totalSessions: 0,
+  thisMonth: 0,
+  streak: 0,
+  favoriteClass: '—',
+  renewalDate: 'N/A',
+  recentBookings: [],
+};
 
-function CRMModal({ student, onClose }: { student: Student; onClose: () => void }) {
-  const crm = STUDENT_CRM[student.id] ?? {
-    phone: 'Not provided', address: 'Not provided', availability: 'Not specified',
-    totalSessions: 0, thisMonth: 0, streak: 0, favoriteClass: '—', renewalDate: 'N/A',
-    recentBookings: [],
-  };
+function clientInitials(name: string) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
 
-  const MEMBERSHIP_COLORS: Record<string, string> = {
-    'Gold': 'bg-[#C49A3C]/12 text-[#A67E2A] border border-[#C49A3C]/30',
-    'Silver': 'bg-[#8A7E6E]/10 text-[#5A5048] border border-[#8A7E6E]/20',
-    'Single Pass': 'bg-[#EDE8D8] text-[#7A6A52] border border-[#D4CDB5]/60',
-  };
+// ── Profile Modal (coach-style layout) ─────────────────────────
+
+function ClientProfileModal({ student, onClose }: { student: Student; onClose: () => void }) {
+  const crm = STUDENT_CRM[student.id] ?? EMPTY_CRM;
+  const accent = MEMBERSHIP_ACCENT[student.membership];
+  const initials = clientInitials(student.name);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between sticky top-0 bg-white z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#C49A3C]/12 border border-[#C49A3C]/25 flex items-center justify-center">
-              <span className="text-[#A67E2A] text-xs font-bold">{student.name.split(' ').map(n => n[0]).join('').slice(0,2)}</span>
-            </div>
-            <div>
-              <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>{student.name}</h3>
-              <p className="text-[#8A7E6E] text-xs">{student.email}</p>
-            </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Client profile for ${student.name}`}
+    >
+      <div
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-4 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cover banner with overlapping avatar */}
+        <div className="relative">
+          <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${accent}20` }}>
+            <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}35 0%, ${accent}08 100%)` }} />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close profile"
+              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+            >
+              <X size={16} />
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ backgroundColor: accent }} />
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all"><X size={16} /></button>
+
+          <div
+            className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg flex items-center justify-center"
+            style={{ backgroundColor: `${accent}18` }}
+          >
+            <span
+              style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: '2rem',
+                letterSpacing: '0.08em',
+                color: accent,
+              }}
+            >
+              {initials}
+            </span>
+          </div>
         </div>
 
-        <div className="px-7 py-6 flex flex-col gap-5">
-          {/* Membership + Status */}
-          <div className="flex items-center gap-3">
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${MEMBERSHIP_COLORS[student.membership]}`}>{student.membership}</span>
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${student.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{student.status}</span>
-            <span className="text-[#B0A898] text-xs ml-auto">Joined {student.joinDate}</span>
-          </div>
-
-          {/* Performance Metrics */}
-          <div>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Performance Metrics</p>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { icon: <Activity size={15} className="text-[#C49A3C]" />, label: 'Total Sessions', value: String(crm.totalSessions) },
-                { icon: <CalendarDays size={15} className="text-[#8A9E7A]" />, label: 'This Month', value: String(crm.thisMonth) },
-                { icon: <Flame size={15} className="text-amber-500" />, label: 'Streak', value: crm.streak > 0 ? `${crm.streak} sessions` : '—' },
-              ].map(m => (
-                <div key={m.label} className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 px-3 py-3 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">{m.icon}<span className="text-[#9A8E7E] text-xs">{m.label}</span></div>
-                  <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.04em' }}>{m.value}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center justify-between bg-[#F8F3E8] rounded-xl border border-[#D4CDB5]/50 px-4 py-2.5">
-              <span className="text-[#8A7E6E] text-sm">Favorite Class</span>
-              <span className="text-[#1E2A35] text-sm font-semibold">{crm.favoriteClass}</span>
-            </div>
-            <div className="mt-2 flex items-center justify-between bg-[#F8F3E8] rounded-xl border border-[#D4CDB5]/50 px-4 py-2.5">
-              <span className="text-[#8A7E6E] text-sm">Membership Renewal</span>
-              <span className="text-[#1E2A35] text-sm font-semibold">{crm.renewalDate}</span>
-            </div>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Contact Information</p>
-            <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 p-4 flex flex-col gap-2">
-              {[['Phone', crm.phone], ['Address', crm.address]].map(([label, val]) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[#9A8E7E] text-sm">{label}</span>
-                  <span className="text-[#1E2A35] text-sm font-medium">{val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Availability */}
-          <div>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Availability / Schedule Preferences</p>
-            <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 px-4 py-3 flex items-center gap-2">
-              <Clock size={14} className="text-[#C49A3C] shrink-0" />
-              <span className="text-[#1E2A35] text-sm">{crm.availability}</span>
-            </div>
-          </div>
-
-          {/* Booking History */}
-          {crm.recentBookings.length > 0 && (
+        {/* Identity */}
+        <div className="border-b border-[#D4CDB5]/50 px-6 pb-5 pt-14 md:px-8 md:pt-16">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Recent Booking History</p>
+              <h2
+                className="text-[#1E2A35] leading-none"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}
+              >
+                {student.name}
+              </h2>
+              <p className="mt-0.5 text-sm font-semibold text-[#8A7E6E]">{student.membership} Member</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold border ${
+                    student.status === 'active'
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-[#EDE8D8] text-[#8A7E6E] border-[#D4CDB5]/60'
+                  }`}
+                >
+                  {student.status}
+                </span>
+                <span
+                  className="rounded-full px-2.5 py-1 text-xs font-medium"
+                  style={{ backgroundColor: `${accent}18`, color: accent }}
+                >
+                  Joined {student.joinDate}
+                </span>
+              </div>
+            </div>
+            {crm.favoriteClass !== '—' && (
+              <div className="flex shrink-0 flex-wrap justify-start gap-2 sm:justify-end">
+                <span
+                  className="rounded-full px-3 py-1 text-xs font-bold text-white"
+                  style={{ backgroundColor: accent }}
+                >
+                  {crm.favoriteClass}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-8 py-6 grid md:grid-cols-2 gap-6 max-h-[50vh] overflow-y-auto pb-8">
+          {/* Left */}
+          <div className="flex flex-col gap-5">
+            <div>
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Contact</p>
               <div className="flex flex-col gap-2">
-                {crm.recentBookings.map((b, i) => (
-                  <div key={i} className="flex items-center justify-between bg-[#F8F3E8] rounded-xl border border-[#D4CDB5]/50 px-4 py-2.5">
-                    <div>
-                      <p className="text-[#1E2A35] text-sm font-medium">{b.class}</p>
-                      <p className="text-[#9A8E7E] text-xs">{b.date} · {b.time}</p>
+                <div className="flex items-center gap-2 text-sm text-[#5A5048]">
+                  <Mail size={13} className="text-[#C49A3C] shrink-0" />
+                  <span className="truncate">{student.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#5A5048]">
+                  <Phone size={13} className="text-[#C49A3C] shrink-0" />
+                  <span>{crm.phone}</span>
+                </div>
+                <div className="flex items-start gap-2 text-sm text-[#5A5048]">
+                  <MapPin size={13} className="text-[#C49A3C] shrink-0 mt-0.5" />
+                  <span>{crm.address}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2 flex items-center gap-1">
+                <Clock size={11} /> Availability
+              </p>
+              <p className="text-[#5A5048] text-sm">{crm.availability}</p>
+            </div>
+
+            <div>
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Membership</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 text-xs text-[#5A5048]">
+                  <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                  Plan: {student.membership}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-[#5A5048]">
+                  <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                  Period:{' '}
+                  {student.subscriptionStart === '—'
+                    ? '—'
+                    : `${student.subscriptionStart} → ${student.subscriptionEnd}`}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-[#5A5048]">
+                  <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                  Renewal: {crm.renewalDate}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right */}
+          <div className="flex flex-col gap-5">
+            <div>
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Performance</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { icon: <Activity size={13} className="text-[#C49A3C]" />, label: 'Total', value: String(crm.totalSessions) },
+                  { icon: <CalendarDays size={13} className="text-[#8A9E7A]" />, label: 'Month', value: String(crm.thisMonth) },
+                  { icon: <Flame size={13} className="text-amber-500" />, label: 'Streak', value: crm.streak > 0 ? String(crm.streak) : '—' },
+                ].map((metric) => (
+                  <div
+                    key={metric.label}
+                    className="rounded-2xl border border-[#D4CDB5]/50 bg-[#F8F3E8] px-2.5 py-3 flex flex-col gap-1"
+                  >
+                    <div className="flex items-center gap-1">
+                      {metric.icon}
+                      <span className="text-[#9A8E7E] text-[10px] uppercase tracking-wide">{metric.label}</span>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${b.status === 'confirmed' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{b.status}</span>
+                    <p
+                      className="text-[#1E2A35] leading-none"
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.04em' }}
+                    >
+                      {metric.value}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
-          )}
+
+            {crm.recentBookings.length > 0 && (
+              <div>
+                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Recent Bookings</p>
+                <div className="flex flex-col gap-1.5">
+                  {crm.recentBookings.map((booking, index) => (
+                    <div
+                      key={`${booking.class}-${index}`}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-[#D4CDB5]/50 bg-[#F8F3E8] px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[#1E2A35] text-xs font-semibold truncate">{booking.class}</p>
+                        <p className="text-[#9A8E7E] text-[11px]">{booking.date} · {booking.time}</p>
+                      </div>
+                      <span
+                        className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          booking.status === 'confirmed'
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
+                        {booking.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -177,15 +319,15 @@ export default function AdminStudentsPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
-  const [students, setStudents]     = useState<Student[]>(INITIAL_STUDENTS);
-  const [search, setSearch]         = useState('');
-  const [filterMem, setFilterMem]   = useState<string>('All');
-  const [showModal, setShowModal]   = useState(false);
-  const [editingId, setEditingId]   = useState<number | null>(null);
-  const [deleteId, setDeleteId]     = useState<number | null>(null);
+  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  const [search, setSearch] = useState('');
+  const [filterMem, setFilterMem] = useState<string>('All');
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
-  const [form, setForm]             = useState(EMPTY_FORM);
-  const [formError, setFormError]   = useState('');
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     if (!adminUser) navigate('/admin-login');
@@ -194,8 +336,10 @@ export default function AdminStudentsPage() {
   if (!adminUser) return null;
 
   const filtered = students.filter((s) => {
-    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase());
-    const matchMem    = filterMem === 'All' || s.membership === filterMem;
+    const matchSearch =
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.email.toLowerCase().includes(search.toLowerCase());
+    const matchMem = filterMem === 'All' || s.membership === filterMem;
     return matchSearch && matchMem;
   });
 
@@ -207,7 +351,16 @@ export default function AdminStudentsPage() {
   };
 
   const openEdit = (student: Student) => {
-    setForm({ name: student.name, email: student.email, membership: student.membership, joinDate: student.joinDate, status: student.status, password: '', subscriptionStart: student.subscriptionStart, subscriptionEnd: student.subscriptionEnd });
+    setForm({
+      name: student.name,
+      email: student.email,
+      membership: student.membership,
+      joinDate: student.joinDate,
+      status: student.status,
+      password: '',
+      subscriptionStart: student.subscriptionStart,
+      subscriptionEnd: student.subscriptionEnd,
+    });
     setEditingId(student.id);
     setFormError('');
     setShowModal(true);
@@ -223,11 +376,20 @@ export default function AdminStudentsPage() {
       return;
     }
     if (editingId !== null) {
-      setStudents((prev) => prev.map((s) => s.id === editingId ? { ...s, ...form } : s));
+      setStudents((prev) => prev.map((s) => (s.id === editingId ? { ...s, ...form } : s)));
     } else {
       setStudents((prev) => [
         ...prev,
-        { id: Date.now(), name: form.name.trim(), email: form.email.trim(), membership: form.membership, joinDate: form.joinDate || 'Jul 27, 2026', status: form.status, subscriptionStart: form.subscriptionStart || '—', subscriptionEnd: form.subscriptionEnd || '—' },
+        {
+          id: Date.now(),
+          name: form.name.trim(),
+          email: form.email.trim(),
+          membership: form.membership,
+          joinDate: form.joinDate || 'Jul 27, 2026',
+          status: form.status,
+          subscriptionStart: form.subscriptionStart || '—',
+          subscriptionEnd: form.subscriptionEnd || '—',
+        },
       ]);
     }
     setShowModal(false);
@@ -238,7 +400,8 @@ export default function AdminStudentsPage() {
     setDeleteId(null);
   };
 
-  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]";
+  const inputClass =
+    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   const MEM_FILTERS = ['All', 'Gold', 'Silver', 'Single Pass'];
@@ -252,13 +415,13 @@ export default function AdminStudentsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-[#C49A3C]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Students</span>
+              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Clients</span>
             </div>
             <h1
               className="text-[#1E2A35] leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}
             >
-              Student Accounts
+              Client Accounts
             </h1>
           </div>
           <button
@@ -266,7 +429,7 @@ export default function AdminStudentsPage() {
             className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
             style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
           >
-            <Plus size={16} /> Add Student
+            <Plus size={16} /> Add Client
           </button>
         </div>
 
@@ -293,45 +456,50 @@ export default function AdminStudentsPage() {
               </button>
             ))}
           </div>
-          <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} of {students.length} students</span>
+          <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} of {students.length} clients</span>
         </div>
 
         {/* ── Table ── */}
         <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_180px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
             {['Name', 'Email', 'Membership', 'Subscription Period', 'Status', 'Actions'].map((h) => (
               <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
             ))}
           </div>
 
           {filtered.length === 0 ? (
-            <div className="px-6 py-12 text-center text-[#B0A898] text-sm">No students match your search.</div>
+            <div className="px-6 py-12 text-center text-[#B0A898] text-sm">No clients match your search.</div>
           ) : (
             <div className="divide-y divide-[#D4CDB5]/30">
               {filtered.map((student) => (
                 <div
                   key={student.id}
-                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_180px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px]"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setViewingStudent(student)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setViewingStudent(student);
+                    }
+                  }}
+                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
                 >
-                  {/* Name */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-xl bg-[#C49A3C]/12 border border-[#C49A3C]/25 flex items-center justify-center shrink-0">
                       <span className="text-[#A67E2A] text-xs font-bold">
-                        {student.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                        {clientInitials(student.name)}
                       </span>
                     </div>
                     <span className="text-[#1E2A35] text-sm font-semibold truncate">{student.name}</span>
                   </div>
 
-                  {/* Email */}
                   <span className="text-[#8A7E6E] text-sm truncate">{student.email}</span>
 
-                  {/* Membership */}
                   <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${MEMBERSHIP_COLORS[student.membership]}`}>
                     {student.membership}
                   </span>
 
-                  {/* Subscription Period */}
                   <div>
                     {student.subscriptionStart === '—' ? (
                       <span className="text-[#B0A898] text-xs">—</span>
@@ -343,24 +511,52 @@ export default function AdminStudentsPage() {
                     )}
                   </div>
 
-                  {/* Status */}
                   <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${student.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>
                     {student.status}
                   </span>
 
-                  {/* Actions — fixed 180px column */}
-                  <div className="flex items-center gap-1 w-[180px]">
+                  <div
+                    className="flex items-center gap-1.5 w-[100px]"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     {deleteId === student.id ? (
                       <>
-                        <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Delete?</span>
-                        <button onClick={() => handleDelete(student.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">Yes</button>
-                        <button onClick={() => setDeleteId(null)} className="h-7 px-2.5 bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] text-xs rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">No</button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(student.id)}
+                          aria-label="Confirm delete"
+                          className="h-8 w-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteId(null)}
+                          aria-label="Cancel delete"
+                          className="h-8 w-8 rounded-lg bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] flex items-center justify-center hover:bg-[#EDE8D8] active:scale-95 transition-all"
+                        >
+                          <X size={14} />
+                        </button>
                       </>
                     ) : (
                       <>
-                        <button onClick={() => setViewingStudent(student)} className="h-7 px-2.5 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-xs font-medium rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">View</button>
-                        <button onClick={() => openEdit(student)} className="h-7 px-2.5 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-xs font-medium rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">Edit</button>
-                        <button onClick={() => setDeleteId(student.id)} className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap">Delete</button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(student)}
+                          aria-label={`Edit ${student.name}`}
+                          className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteId(student.id)}
+                          aria-label={`Delete ${student.name}`}
+                          className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </>
                     )}
                   </div>
@@ -371,8 +567,9 @@ export default function AdminStudentsPage() {
         </div>
       </div>
 
-      {/* ── CRM Modal ── */}
-      {viewingStudent && <CRMModal student={viewingStudent} onClose={() => setViewingStudent(null)} />}
+      {viewingStudent && (
+        <ClientProfileModal student={viewingStudent} onClose={() => setViewingStudent(null)} />
+      )}
 
       {/* ── Edit/Add Modal ── */}
       {showModal && (
@@ -383,7 +580,7 @@ export default function AdminStudentsPage() {
                 className="text-[#1E2A35]"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
               >
-                {editingId !== null ? 'Edit Student' : 'Add Student'}
+                {editingId !== null ? 'Edit Client' : 'Add Client'}
               </h3>
               <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] flex items-center justify-center transition-all">
                 <X size={16} />
@@ -391,19 +588,16 @@ export default function AdminStudentsPage() {
             </div>
 
             <div className="px-7 py-6 flex flex-col gap-4">
-              {/* Name */}
               <div>
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Full Name</label>
                 <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Juan dela Cruz" className={inputClass} />
               </div>
 
-              {/* Email */}
               <div>
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Email</label>
-                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="student@email.com" className={inputClass} />
+                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="client@email.com" className={inputClass} />
               </div>
 
-              {/* Password (add only) */}
               {editingId === null && (
                 <div>
                   <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Password</label>
@@ -411,7 +605,6 @@ export default function AdminStudentsPage() {
                 </div>
               )}
 
-              {/* Membership + Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Membership</label>
@@ -436,7 +629,6 @@ export default function AdminStudentsPage() {
                 </div>
               </div>
 
-              {/* Error */}
               {formError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   <p className="text-red-600 text-sm">{formError}</p>
@@ -453,7 +645,7 @@ export default function AdminStudentsPage() {
                 className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
               >
-                {editingId !== null ? 'Save Changes' : 'Add Student'}
+                {editingId !== null ? 'Save Changes' : 'Add Client'}
               </button>
             </div>
           </div>

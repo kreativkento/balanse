@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Users, Award, Clock, X, ChevronRight } from 'lucide-react';
+import { Users, Award, Clock, X, ChevronRight, Globe } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Coach Data ──
 
@@ -11,6 +12,7 @@ interface Coach {
   specialties: string[];
   bio: string;
   experience: string;
+  nationality: string;
   certifications: string[];
   classes: string[];
   schedule: string;
@@ -28,6 +30,7 @@ const COACHES: Coach[] = [
     specialties: ['Calisthenics', 'Capoeira', 'Strength & Conditioning'],
     bio: 'Rex has over 10 years of experience in calisthenics and body weight training. His dynamic coaching style blends functional movement with martial arts-inspired sequences, making every session both challenging and exhilarating.',
     experience: '10+ years',
+    nationality: 'Filipino',
     certifications: ['NSCA-CPT', 'Calisthenics Instructor Level 3', 'First Aid & CPR'],
     classes: ['Calisthenics', 'Capoeira'],
     schedule: 'Mon, Wed, Fri · 7:00 AM – 12:00 PM',
@@ -43,6 +46,7 @@ const COACHES: Coach[] = [
     specialties: ['Hatha Yoga', 'Vinyasa Flow', 'Restorative Yoga', 'Breath Work'],
     bio: 'Jodi is a 500-hour certified yoga instructor who recently completed an immersive retreat in Ubud, Bali. Her classes are known for their serene atmosphere, precise alignment cues, and deeply healing breath work.',
     experience: '7 years',
+    nationality: 'Filipino',
     certifications: ['RYT-500 (Yoga Alliance)', 'Yin Yoga Certified', 'Meditation & Mindfulness'],
     classes: ['Yoga'],
     schedule: 'Mon, Tue, Thu · 8:00 AM – 11:00 AM',
@@ -58,6 +62,7 @@ const COACHES: Coach[] = [
     specialties: ['Animal Flow', 'Groundwork', 'Mobility & Flexibility'],
     bio: 'Ephraim specializes in ground-based movement and Animal Flow, a discipline that blends primal movement patterns with modern mobility science. His classes are energetic, creative, and deeply rewarding for all levels.',
     experience: '6 years',
+    nationality: 'Filipino',
     certifications: ['Animal Flow Instructor L2', 'FRC Mobility Specialist', 'NASM-CPT'],
     classes: ['Animal Flow', 'Groundworks'],
     schedule: 'Tue, Thu, Sat · 9:00 AM – 12:00 PM',
@@ -73,6 +78,7 @@ const COACHES: Coach[] = [
     specialties: ['Groundworks', 'Functional Strength', 'Movement Preparation'],
     bio: 'Alec brings a background in competitive gymnastics and functional fitness. His Groundworks classes focus on building a strong, mobile foundation that translates into real-world movement capability.',
     experience: '5 years',
+    nationality: 'Filipino',
     certifications: ['CSCS (NSCA)', 'Gymnastics Coach Level 2', 'Movement Optimization'],
     classes: ['Groundworks'],
     schedule: 'Mon, Wed, Fri · 11:00 AM – 2:00 PM',
@@ -88,6 +94,7 @@ const COACHES: Coach[] = [
     specialties: ['Circuit Training', 'HIIT', 'Cardio Endurance'],
     bio: 'Rachelle is a high-energy circuit training coach whose sessions are famous for their precision programming and motivating atmosphere. She holds multiple fitness certifications and has coached competitive athletes.',
     experience: '8 years',
+    nationality: 'Filipino',
     certifications: ['ACE-CPT', 'TRX Suspension Trainer', 'Les Mills BodyCombat Instructor'],
     classes: ['Circuit Training'],
     schedule: 'Tue, Thu · 12:00 PM – 3:00 PM · Sat 9:00 AM',
@@ -103,6 +110,7 @@ const COACHES: Coach[] = [
     specialties: ['Mat Pilates', 'Core Stability', 'Posture Correction'],
     bio: 'Kate is a certified Pilates instructor with a passion for helping clients build deep core strength and improve posture. Her thoughtful cueing and attention to form make her classes accessible and highly effective.',
     experience: '9 years',
+    nationality: 'Filipino',
     certifications: ['Pilates Method Alliance Certified', 'Polestar Pilates Instructor', 'Pre/Postnatal Pilates'],
     classes: ['Mat Pilates'],
     schedule: 'Mon, Wed, Thu · 9:00 AM – 12:00 PM',
@@ -118,6 +126,7 @@ const COACHES: Coach[] = [
     specialties: ['Kickboxing', 'Muay Thai Conditioning', 'Self-Defense'],
     bio: 'Wolf brings a fierce competitive background to the studio floor. With 12+ years in martial arts and combat fitness, his kickboxing classes deliver a full-body workout wrapped in the discipline and technique of combat sports.',
     experience: '12+ years',
+    nationality: 'Filipino',
     certifications: ['Muay Thai Instructor (WKA)', 'NASM-CPT', 'Combat Conditioning Specialist'],
     classes: ['Kickboxing'],
     schedule: 'Wed, Fri · 5:00 PM – 8:00 PM · Sat 10:00 AM',
@@ -133,7 +142,7 @@ function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.97] transition-all group"
+      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.97] group ${CARD_HOVER_GROW}`}
     >
       <div className="relative h-36 overflow-hidden" style={{ backgroundColor: `${coach.color}15` }}>
         {!imgErr ? (
@@ -289,6 +298,12 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
                 <p className="mt-0.5 text-sm font-semibold text-[#8A7E6E]">{coach.role}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: `${coach.color}18`, color: coach.color }}>{coach.experience} experience</span>
+                  {coach.nationality.trim() && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
+                      <Globe size={11} className="text-[#C49A3C]" />
+                      {coach.nationality}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap justify-start gap-2 sm:justify-end">
@@ -302,11 +317,19 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
         <div className="px-8 py-6 grid md:grid-cols-2 gap-6 max-h-[50vh] overflow-y-auto pb-8">
           {/* Left column */}
           <div className="flex flex-col gap-5">
-            {/* Bio */}
             <div>
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">About</p>
               <p className="text-[#5A5048] text-sm leading-relaxed">{coach.bio}</p>
             </div>
+
+            {coach.nationality.trim() && (
+              <div>
+                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <Globe size={11} /> Nationality
+                </p>
+                <p className="text-[#5A5048] text-sm">{coach.nationality}</p>
+              </div>
+            )}
 
             {/* Schedule */}
             <div>
@@ -367,6 +390,7 @@ export default function CoachesPage() {
             photo: staffProfile.photo || c.photo,
             bio: staffProfile.bio || c.bio,
             experience: staffProfile.experience || c.experience,
+            nationality: staffProfile.nationality || c.nationality,
             classes: staffProfile.classes.length > 0 ? staffProfile.classes : c.classes,
           }
         : c

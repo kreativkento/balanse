@@ -11,7 +11,7 @@ import logoImg from 'figma:asset/bbdd3c4813a82e401f4feb97932ab9a28f6161ee.png';
 const NAV_LINKS = [
   { label: 'Dashboard',  path: '/admin-dashboard', icon: LayoutDashboard },
   { label: 'Staff',      path: '/admin-staff',     icon: UserCheck },
-  { label: 'Students',   path: '/admin-students',  icon: Users },
+  { label: 'Clients',   path: '/admin-students',  icon: Users },
   { label: 'Schedule',   path: '/admin-schedule',  icon: CalendarDays },
   { label: 'Payments',   path: '/admin-payments',  icon: CreditCard },
   { label: 'Gallery',    path: '/admin-gallery',   icon: Images },

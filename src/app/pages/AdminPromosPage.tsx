@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Tag, Plus, X, Check, Pencil, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ export default function AdminPromosPage() {
             { label: 'Total Redemptions', value: String(promos.reduce((s,p)=>s+p.usedCount,0)), sub: 'All-time uses', color: 'border-[#D4CDB5]/60'   },
             { label: 'Expired Promos',  value: String(promos.filter(p=>p.status==='expired').length), sub: 'No longer active', color: 'border-red-100/60' },
           ].map(s => (
-            <div key={s.label} className={`bg-white rounded-3xl border ${s.color} shadow-sm px-5 py-4`}>
+            <div key={s.label} className={`bg-white rounded-3xl border ${s.color} shadow-sm px-5 py-4 ${CARD_HOVER_GROW}`}>
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
               <p className="text-[#1E2A35] leading-none my-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', letterSpacing: '0.04em' }}>{s.value}</p>
               <p className="text-[#B0A898] text-xs">{s.sub}</p>
@@ -164,7 +165,7 @@ export default function AdminPromosPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filtered.map(promo => (
-              <div key={promo.id} className={`bg-white rounded-3xl border shadow-sm overflow-hidden ${promo.status === 'expired' ? 'opacity-70' : 'border-[#D4CDB5]/60'}`}>
+              <div key={promo.id} className={`bg-white rounded-3xl border shadow-sm overflow-hidden ${CARD_HOVER_GROW} ${promo.status === 'expired' ? 'opacity-70' : 'border-[#D4CDB5]/60'}`}>
                 <div className="px-5 pt-5 pb-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>

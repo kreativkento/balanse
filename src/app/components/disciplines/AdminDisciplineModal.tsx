@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Check, Pencil, Trash2, X } from 'lucide-react';
+import { Check, Pencil, Trash2, Users, X } from 'lucide-react';
 import {
   getDisciplinePlaceholderImage,
   getDisciplinePlaceholderLogo,
 } from '../../data/disciplines';
 import {
+  fetchCoachesForDiscipline,
   slugifyDisciplineName,
+  type DisciplineCoachDisplay,
   type DisciplineDisplay,
   type DisciplineStatusDisplay,
 } from '../../../lib/discipline-service';
@@ -22,10 +24,13 @@ interface AdminDisciplineModalProps {
   discipline: DisciplineDisplay;
   defaultStatus?: DisciplineStatusDisplay;
   isCreateMode?: boolean;
+  /** Public website: view-only, no edit/delete controls. */
+  readOnly?: boolean;
   onClose: () => void;
-  onSave: (id: string, updates: DisciplineFormValues) => Promise<{ success: boolean; error: string | null }>;
+  onSave?: (id: string, updates: DisciplineFormValues) => Promise<{ success: boolean; error: string | null }>;
   onCreate?: (updates: DisciplineFormValues) => Promise<{ success: boolean; error: string | null }>;
   onDelete?: (id: string) => Promise<{ success: boolean; error: string | null }>;
+  onEnroll?: () => void;
 }
 
 function normalizeMediaUrl(url: string, previewName: string, type: 'logo' | 'image'): string {
@@ -82,12 +87,14 @@ export function AdminDisciplineModal({
   discipline,
   defaultStatus,
   isCreateMode = false,
+  readOnly = false,
   onClose,
   onSave,
   onCreate,
   onDelete,
+  onEnroll,
 }: AdminDisciplineModalProps) {
-  const [isEditing, setIsEditing] = useState(isCreateMode);
+  const [isEditing, setIsEditing] = useState(isCreateMode && !readOnly);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [name, setName] = useState(discipline.name);
@@ -96,17 +103,40 @@ export function AdminDisciplineModal({
   const [imageUrl, setImageUrl] = useState(discipline.imageUrl);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [coaches, setCoaches] = useState<DisciplineCoachDisplay[]>([]);
+  const [coachesLoading, setCoachesLoading] = useState(false);
 
   useEffect(() => {
     setName(discipline.name);
     setDescription(discipline.description);
     setLogoUrl(discipline.logoUrl);
     setImageUrl(discipline.imageUrl);
-    setIsEditing(isCreateMode);
+    setIsEditing(isCreateMode && !readOnly);
     setShowConfirm(false);
     setShowConfirmDelete(false);
     setError('');
-  }, [discipline, isCreateMode]);
+  }, [discipline, isCreateMode, readOnly]);
+
+  useEffect(() => {
+    if (isCreateMode || !discipline.id) {
+      setCoaches([]);
+      setCoachesLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCoachesLoading(true);
+
+    void fetchCoachesForDiscipline(discipline.id, discipline.name).then((result) => {
+      if (cancelled) return;
+      setCoaches(result.data);
+      setCoachesLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [discipline.id, discipline.name, isCreateMode]);
 
   const previewName = name.trim() || 'New Discipline';
   const previewSlug = slugifyDisciplineName(name.trim()) || 'new-discipline';
@@ -206,13 +236,15 @@ export function AdminDisciplineModal({
   };
 
   const handleConfirmSave = async () => {
+    if (!onSave && !onCreate) return;
+
     setSaving(true);
     setError('');
 
     const payload = buildPayload();
     const result = isCreateMode
       ? await (onCreate?.(payload) ?? Promise.resolve({ success: false, error: 'Create handler is missing.' }))
-      : await onSave(discipline.id, payload);
+      : await (onSave?.(discipline.id, payload) ?? Promise.resolve({ success: false, error: 'Save handler is missing.' }));
 
     setSaving(false);
 
@@ -244,12 +276,12 @@ export function AdminDisciplineModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-2xl min-h-[min(720px,92vh)] max-h-[92vh] overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative h-52 overflow-hidden">
+        <div className="relative h-64 md:h-72 overflow-hidden">
           <EditableMedia
-            isEditing={isEditing}
+            isEditing={isEditing && !readOnly}
             label="Edit cover image"
             onEdit={handleEditCover}
             className="block w-full h-full"
@@ -267,7 +299,7 @@ export function AdminDisciplineModal({
             >
               <X size={18} />
             </button>
-            {!isEditing && !isCreateMode && (
+            {!readOnly && !isEditing && !isCreateMode && (
               <button
                 type="button"
                 onClick={handleStartEdit}
@@ -277,7 +309,7 @@ export function AdminDisciplineModal({
                 <Pencil size={18} />
               </button>
             )}
-            {isEditing && !isCreateMode && onDelete && (
+            {!readOnly && isEditing && !isCreateMode && onDelete && (
               <button
                 type="button"
                 onClick={handleDeleteClick}
@@ -293,7 +325,7 @@ export function AdminDisciplineModal({
           <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-3 z-10">
             <div className="flex items-end gap-3 min-w-0 flex-1">
               <EditableMedia
-                isEditing={isEditing}
+                isEditing={isEditing && !readOnly}
                 label="Edit logo"
                 onEdit={handleEditLogo}
                 className="shrink-0 rounded-2xl overflow-hidden"
@@ -329,16 +361,16 @@ export function AdminDisciplineModal({
           </div>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-5">
+        <div className="px-6 py-6 flex flex-col gap-5 min-h-[280px]">
           <div>
             <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">Description</p>
             {isEditing ? (
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                rows={5}
+                rows={6}
                 placeholder="Describe this discipline…"
-                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 resize-y min-h-[120px]"
+                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 resize-y min-h-[140px]"
               />
             ) : (
               <p className="text-[#5A5048] text-sm leading-relaxed whitespace-pre-wrap">
@@ -347,7 +379,51 @@ export function AdminDisciplineModal({
             )}
           </div>
 
-          {!isCreateMode && (
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <Users size={13} className="text-[#C49A3C]" />
+              <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Coaches</p>
+            </div>
+            {isCreateMode ? (
+              <p className="text-[#B0A898] text-sm">
+                Coaches appear here after they are assigned to classes in this discipline.
+              </p>
+            ) : coachesLoading ? (
+              <div className="flex flex-wrap gap-2">
+                {[0, 1, 2].map((key) => (
+                  <span
+                    key={key}
+                    className="h-8 w-24 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/50 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : coaches.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {coaches.map((coach) => (
+                  <span
+                    key={coach.accountId}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-3 py-1.5 text-xs font-semibold text-[#1E2A35]"
+                  >
+                    <span className="w-5 h-5 rounded-full bg-[#1E2A35] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {coach.name
+                        .split(/\s+/)
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0]?.toUpperCase() ?? '')
+                        .join('') || '?'}
+                    </span>
+                    {coach.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[#B0A898] text-sm">
+                No coaches are assigned to this discipline yet.
+              </p>
+            )}
+          </div>
+
+          {!isCreateMode && !readOnly && (
             <p className="text-[#B0A898] text-xs">Last updated {formattedUpdatedAt}</p>
           )}
 
@@ -357,7 +433,20 @@ export function AdminDisciplineModal({
             </div>
           )}
 
-          {showConfirmDelete && (
+          {readOnly && onEnroll && (
+            <div className="pt-1 border-t border-[#D4CDB5]/40">
+              <button
+                type="button"
+                onClick={onEnroll}
+                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#A67E2A]"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+              >
+                Enroll
+              </button>
+            </div>
+          )}
+
+          {!readOnly && showConfirmDelete && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
               <p className="text-[#1E2A35] text-sm font-semibold mb-1">Delete this discipline?</p>
               <p className="text-[#8A7E6E] text-sm mb-4">
@@ -385,7 +474,7 @@ export function AdminDisciplineModal({
             </div>
           )}
 
-          {showConfirm && (
+          {!readOnly && showConfirm && (
             <div className="rounded-2xl border border-[#C49A3C]/30 bg-[#C49A3C]/08 px-4 py-4">
               <p className="text-[#1E2A35] text-sm font-semibold mb-1">
                 {isCreateMode ? 'Add this discipline?' : 'Save changes?'}
@@ -417,7 +506,7 @@ export function AdminDisciplineModal({
             </div>
           )}
 
-          {isEditing && (
+          {!readOnly && isEditing && (
             <div className="flex gap-3 pt-1 border-t border-[#D4CDB5]/40">
               <button
                 type="button"

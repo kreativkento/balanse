@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Images, Plus, Pencil, Trash2, X, Check, Search, Tag, Upload } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -61,13 +62,13 @@ function PhotoCard({
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className={`group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md ${CARD_HOVER_GROW}`}>
       {/* Image */}
       <div className="relative overflow-hidden">
         <img
           src={photo.url}
           alt={photo.caption}
-          className={`w-full object-cover transition-transform duration-500 group-hover:scale-105 ${photo.tall ? 'h-60' : 'h-44'}`}
+          className={`w-full object-cover ${IMAGE_HOVER_ZOOM} ${photo.tall ? 'h-60' : 'h-44'}`}
         />
         <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/20 transition-colors" />
 
@@ -376,7 +377,7 @@ export default function AdminGalleryPage() {
               onClick={openUpload}
               className="flex flex-col items-center justify-center h-44 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#C49A3C]/40 hover:text-[#C49A3C] hover:bg-[#C49A3C]/04 transition-all group"
             >
-              <Plus size={24} className="mb-2 transition-transform group-hover:scale-110" />
+              <Plus size={24} className={`mb-2 ${ICON_HOVER_GROW}`} />
               <span className="text-xs font-medium">Upload Photo</span>
             </button>
           </div>

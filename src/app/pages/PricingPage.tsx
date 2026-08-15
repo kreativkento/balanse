@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Star, ChevronRight, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 const SINGLE_PASS_CLASSES = [
   'Calisthenics', 'Kickboxing', 'Mat Pilates', 'Yoga',
@@ -73,9 +74,6 @@ const RECOVERY_TIERS = [
 const HERO_IMG =
   'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
 
-const PRICING_CARD_HOVER =
-  'transition-[transform,box-shadow] duration-300 ease-out hover:scale-[1.02] hover:-translate-y-0.5';
-
 export default function PricingPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -96,15 +94,16 @@ export default function PricingPage() {
     <div className="bg-[#F8F3E8] min-h-screen">
 
       {/* ── Hero: Pricing heading + Single Class Pass ── */}
-      <section className="relative overflow-hidden">
-        <img
-          src={HERO_IMG}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/25" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/50 md:bg-gradient-to-r md:from-black/65 md:via-black/45 md:to-black/35" />
+      <section className="relative">
+        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+          <img
+            src={HERO_IMG}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/25" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/50 md:bg-gradient-to-r md:from-black/65 md:via-black/45 md:to-black/35" />
+        </div>
 
         <div className="relative max-w-6xl mx-auto px-4 md:px-8 pt-5 md:pt-8 pb-8 md:pb-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-10 lg:gap-x-12 md:items-center pb-8 md:pb-10">
@@ -130,7 +129,7 @@ export default function PricingPage() {
             {/* Right: Single Class Pass card */}
             <div className="flex justify-start md:justify-end">
               <div className="w-full max-w-sm">
-                <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm px-6 py-6 ${PRICING_CARD_HOVER}`}>
+                <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm px-6 py-6 ${CARD_HOVER_GROW} hover:shadow-md`}>
               {/* Title row */}
               <div className="flex items-start justify-between gap-3 mb-1.5">
                 <h2
@@ -194,7 +193,7 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 md:items-start">
 
           {/* GOLD */}
-          <div className={`rounded-3xl bg-white border border-[#C49A3C]/50 shadow-[0_4px_32px_rgba(196,154,60,0.13)] overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
+          <div className={`rounded-3xl bg-white border border-[#C49A3C]/50 shadow-[0_4px_32px_rgba(196,154,60,0.13)] overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-lg`}>
             {/* Gold header band */}
             <div className="px-5 md:px-6 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, rgba(196,154,60,0.10) 0%, rgba(248,243,232,0.40) 100%)' }}>
               <div className="flex items-start justify-between gap-2 mb-1">
@@ -262,7 +261,7 @@ export default function PricingPage() {
           </div>
 
           {/* SILVER */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
             <div className="px-5 md:px-6 pt-6 pb-5">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h2
@@ -345,7 +344,7 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 md:items-start">
 
           {/* PERSONAL COACHING */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
             <div className="px-5 pt-5 pb-4">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
@@ -404,7 +403,7 @@ export default function PricingPage() {
           </div>
 
           {/* PRIVATE CLASS */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
             <div className="px-5 pt-5 pb-4">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
@@ -460,7 +459,7 @@ export default function PricingPage() {
           </div>
 
           {/* SPORTS RECOVERY */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${PRICING_CARD_HOVER}`}>
+          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
             <div className="px-5 pt-5 pb-4">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"

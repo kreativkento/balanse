@@ -6,6 +6,7 @@ import {
   Phone, Weight, Ruler,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { NATIONALITIES } from '../data/nationalities';
 
 const TC_LAST_UPDATED = 'January 15, 2026';
 
@@ -217,7 +218,8 @@ export default function ProfileSetupPage() {
 
   const [birthday, setBirthday]         = useState('');
   const [sex, setSex]                   = useState<'male' | 'female' | 'prefer_not_to_say' | ''>('');
-  const [cellNumber, setCellNumber]     = useState('');
+  const [phone, setPhone]               = useState('');
+  const [nationality, setNationality]   = useState('');
   const [weight, setWeight]             = useState('');
   const [height, setHeight]             = useState('');
   const [healthSigned, setHealthSigned] = useState(false);
@@ -231,7 +233,8 @@ export default function ProfileSetupPage() {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = 'First name is required.';
     if (!lastName.trim())  e.lastName  = 'Last name is required.';
-    if (!cellNumber.trim()) e.cellNumber = 'Cell number is required.';
+    if (!phone.trim()) e.phone = 'Phone number is required.';
+    if (!nationality.trim()) e.nationality = 'Nationality is required.';
     if (!birthday) e.birthday = 'Birthday is required.';
     if (!sex) e.sex = 'Please select your sex.';
     if (!healthSigned) e.health = 'You must complete the Health Declaration.';
@@ -246,6 +249,8 @@ export default function ProfileSetupPage() {
     setLoading(true);
     await new Promise(r => setTimeout(r, 600));
     const fullName = [firstName.trim(), middleInitial.trim() ? middleInitial.trim() + '.' : '', lastName.trim()].filter(Boolean).join(' ');
+    const digits = phone.replace(/\D/g, '');
+    const normalizedPhone = digits.startsWith('63') ? `+${digits}` : `+63${digits}`;
     completeProfile({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -253,7 +258,8 @@ export default function ProfileSetupPage() {
       name: fullName,
       birthday,
       sex,
-      cellNumber: cellNumber.trim(),
+      phone: normalizedPhone,
+      nationality: nationality.trim(),
       weight: weight.trim(),
       height: height.trim(),
       healthDeclarationSigned: healthSigned,
@@ -369,23 +375,43 @@ export default function ProfileSetupPage() {
                 </div>
               </div>
 
-              {/* Cell Number */}
+              {/* Phone Number → profiles_client.phone */}
               <div>
                 <label className="text-[#5A5048] text-sm font-semibold mb-2 flex items-center gap-1.5 block">
-                  <Phone size={13} className="text-[#C49A3C]" /> Cell Number <span className="text-red-500">*</span>
+                  <Phone size={13} className="text-[#C49A3C]" /> Phone Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A7E6E] text-sm font-medium pointer-events-none">+63</span>
                   <input
                     type="tel"
-                    value={cellNumber}
-                    onChange={e => { setCellNumber(e.target.value); setErrors(v => ({ ...v, cellNumber: '' })); }}
+                    value={phone}
+                    onChange={e => { setPhone(e.target.value); setErrors(v => ({ ...v, phone: '' })); }}
                     placeholder="9XX XXX XXXX"
-                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-14 pr-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${errors.cellNumber ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-14 pr-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${errors.phone ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
                     autoComplete="tel"
                   />
                 </div>
-                {errors.cellNumber && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.cellNumber}</p>}
+                {errors.phone && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.phone}</p>}
+              </div>
+
+              {/* Nationality */}
+              <div>
+                <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
+                  Nationality <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={nationality}
+                  onChange={e => { setNationality(e.target.value); setErrors(v => ({ ...v, nationality: '' })); }}
+                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all appearance-none ${errors.nationality ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'} ${!nationality ? 'text-[#B0A898]' : ''}`}
+                >
+                  <option value="">Select nationality…</option>
+                  {NATIONALITIES.map((item) => (
+                    <option key={item} value={item} className="text-[#1E2A35]">
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                {errors.nationality && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.nationality}</p>}
               </div>
 
               {/* Birthday */}

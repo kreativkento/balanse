@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { ShieldCheck, Check, RotateCcw } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Defaults ───────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ type Settings = typeof DEFAULTS;
 
 function PolicySection({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+    <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
       <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
         <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>{title}</h2>
         <p className="text-[#8A7E6E] text-xs mt-0.5">{desc}</p>

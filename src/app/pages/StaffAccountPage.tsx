@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 export default function StaffAccountPage() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export default function StaffAccountPage() {
         <div className="py-6 pb-10 flex flex-col gap-5">
 
           {/* Staff Profile Card */}
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
+          <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4">Your Account</p>
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[#1E2A35]/08 border border-[#1E2A35]/15 flex items-center justify-center shrink-0">
@@ -71,7 +72,7 @@ export default function StaffAccountPage() {
           </div>
 
           {/* Change Password */}
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+          <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center gap-2 bg-[#F8F3E8]/60">
               <KeyRound size={15} className="text-[#C49A3C]" />
               <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}>Change Password</h2>

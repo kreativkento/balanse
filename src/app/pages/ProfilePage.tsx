@@ -5,6 +5,7 @@ import {
   Check, AlertTriangle, Shield, Save,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES
@@ -13,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 const INPUT =
   'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
-const CARD = 'bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6';
+const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
   fontFamily: "'Bebas Neue', sans-serif",
   fontSize: '1.2rem',

@@ -5,6 +5,8 @@ import {
   Check, AlertTriangle, Save, Camera, ShieldCheck,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { NATIONALITIES } from '../data/nationalities';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES  (mirrors ProfilePage exactly)
@@ -13,7 +15,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 const INPUT =
   'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
-const CARD = 'bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6';
+const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
   fontFamily: "'Bebas Neue', sans-serif",
   fontSize: '1.2rem',
@@ -60,6 +62,7 @@ export default function StaffProfilePage() {
   // ── Coach Info ──
   const [displayName, setDisplayName] = useState(staffProfile?.displayName || staffUser?.name || '');
   const [phone, setPhone]             = useState('');
+  const [nationality, setNationality] = useState(staffProfile?.nationality || '');
   const [photo, setPhoto]             = useState(staffProfile?.photo || '');
   const [photoPreview, setPhotoPreview] = useState(staffProfile?.photo || '');
   const [infoSaved, setInfoSaved]     = useState(false);
@@ -87,6 +90,18 @@ export default function StaffProfilePage() {
   useEffect(() => {
     if (!staffUser) navigate('/staff-login');
   }, [staffUser, navigate]);
+
+  useEffect(() => {
+    if (!staffProfile) return;
+    setDisplayName(staffProfile.displayName || staffUser?.name || '');
+    setNationality(staffProfile.nationality || '');
+    setPhoto(staffProfile.photo || '');
+    setPhotoPreview(staffProfile.photo || '');
+    setBio(staffProfile.bio || '');
+    setExperience(staffProfile.experience || '');
+    setClasses(staffProfile.classes || []);
+  }, [staffProfile, staffUser?.name]);
+
   if (!staffUser) return null;
 
   const initials = (staffProfile?.displayName || staffUser.name)
@@ -105,7 +120,11 @@ export default function StaffProfilePage() {
   };
 
   const saveInfo = () => {
-    updateStaffProfile({ displayName: displayName.trim() || staffUser.name, photo });
+    updateStaffProfile({
+      displayName: displayName.trim() || staffUser.name,
+      photo,
+      nationality: nationality.trim(),
+    });
     setInfoSaved(true);
     setTimeout(() => setInfoSaved(false), 2500);
   };
@@ -232,6 +251,20 @@ export default function StaffProfilePage() {
                       value={staffUser.email}
                       readOnly
                     />
+                  </Field>
+                  <Field label="Nationality">
+                    <select
+                      className={`${INPUT} appearance-none ${!nationality ? 'text-[#C0B8A8]' : ''}`}
+                      value={nationality}
+                      onChange={e => setNationality(e.target.value)}
+                    >
+                      <option value="">Select nationality…</option>
+                      {NATIONALITIES.map((item) => (
+                        <option key={item} value={item} className="text-[#1E2A35]">
+                          {item}
+                        </option>
+                      ))}
+                    </select>
                   </Field>
                 </div>
               </div>

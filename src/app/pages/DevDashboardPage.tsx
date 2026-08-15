@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router';
 import { Ticket, Bot, ArrowUpRight } from 'lucide-react';
 import { useDevAuth } from '../context/DevAuthContext';
 import { DevSidebar } from '../components/layout/DevSidebar';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 const MODULES = [
   {
@@ -51,7 +52,7 @@ export default function DevDashboardPage() {
             <Link
               key={path}
               to={path}
-              className="group bg-white rounded-2xl border border-[#E8E2D2]/80 px-6 py-5 shadow-sm hover:border-[#C49A3C]/40 hover:shadow-md transition-all"
+              className={`group bg-white rounded-2xl border border-[#E8E2D2]/80 px-6 py-5 shadow-sm hover:border-[#C49A3C]/40 hover:shadow-md ${CARD_HOVER_GROW}`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-11 h-11 rounded-xl bg-[#1E2A35] flex items-center justify-center">
