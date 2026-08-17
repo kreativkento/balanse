@@ -1,11 +1,14 @@
 
-  # Capstone
+  # BALANCIA
 
-  This is a code bundle for Capstone. The original project is available at https://www.figma.com/design/p2p6SmtCBaDWsDCZNkEhqK/Capstone.
+  ## Project Description / Purpose
 
-  ## Running the code
+  ## Setup Instructions
 
-  Run `npm i` to install the dependencies.
+  ## File Structure Explanation
 
-  Run `npm run dev` to start the development server.
+  ## Contact Information
+
+  ## 
+
   
