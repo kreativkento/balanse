@@ -35,7 +35,7 @@ Important: Update this table based on the actual folders and files in the teamâ€
 
   Kent Veloso - kentveloso11@gmail.com
 
-  ## Licence
+  ## License
 
 Copyright Â© 2026 Balanse Wellness Management System Development Team.
 This project is proprietary and intended for authorized academic and project-related use only. No part of this software may be copied, modified, distributed, or used for commercial purposes without permission from the project owners and development team.
