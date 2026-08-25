@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, CalendarDays, ChevronDown, Check, AlertCircle, Clock } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -36,9 +35,9 @@ interface CancelRequest {
 }
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga': '#C49A3C', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
+  'Yoga': '#745b3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
   'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#A67E2A',
+  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#5e4a30',
 };
 const SERVICES  = Object.keys(CLASS_COLORS);
 const COACHES   = ['Rex', 'Jodi', 'Ephraim', 'Alec', 'Rachelle', 'Kate', 'Wolf'];
@@ -53,7 +52,7 @@ function fmtHour(h: number) {
 }
 
 const INITIAL_BLOCKS: ScheduleBlock[] = [
-  { id: 1,  dayIndex: 0, startHour: 8,  duration: 75, className: 'Yoga',            coach: 'Jodi',     capacity: 15, enrolled: 11, color: '#C49A3C', isOpen: true,  status: 'completed' },
+  { id: 1,  dayIndex: 0, startHour: 8,  duration: 75, className: 'Yoga',            coach: 'Jodi',     capacity: 15, enrolled: 11, color: '#745b3c', isOpen: true,  status: 'completed' },
   { id: 2,  dayIndex: 0, startHour: 10, duration: 60, className: 'Mat Pilates',      coach: 'Kate',     capacity: 12, enrolled: 8,  color: '#9A7A8A', isOpen: true,  status: 'completed' },
   { id: 3,  dayIndex: 0, startHour: 18, duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 6,  color: '#3A4A5A', isOpen: true,  status: 'cancelled' },
   { id: 4,  dayIndex: 1, startHour: 7,  duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 3,  color: '#3A4A5A', isOpen: true,  status: 'completed' },
@@ -61,10 +60,10 @@ const INITIAL_BLOCKS: ScheduleBlock[] = [
   { id: 6,  dayIndex: 1, startHour: 17, duration: 60, className: 'Kickboxing',       coach: 'Wolf',     capacity: 10, enrolled: 7,  color: '#7A3A4A', isOpen: false, status: 'upcoming'  },
   { id: 7,  dayIndex: 2, startHour: 9,  duration: 60, className: 'Mat Pilates',      coach: 'Kate',     capacity: 12, enrolled: 5,  color: '#9A7A8A', isOpen: true,  status: 'upcoming'  },
   { id: 8,  dayIndex: 2, startHour: 16, duration: 60, className: 'Circuit Training', coach: 'Rachelle', capacity: 15, enrolled: 12, color: '#B86A4A', isOpen: true,  status: 'upcoming'  },
-  { id: 9,  dayIndex: 3, startHour: 8,  duration: 75, className: 'Yoga',             coach: 'Jodi',     capacity: 15, enrolled: 9,  color: '#C49A3C', isOpen: true,  status: 'upcoming'  },
+  { id: 9,  dayIndex: 3, startHour: 8,  duration: 75, className: 'Yoga',             coach: 'Jodi',     capacity: 15, enrolled: 9,  color: '#745b3c', isOpen: true,  status: 'upcoming'  },
   { id: 10, dayIndex: 4, startHour: 10, duration: 60, className: 'Groundworks',      coach: 'Alec',     capacity: 10, enrolled: 4,  color: '#8B6F5A', isOpen: true,  status: 'upcoming'  },
   { id: 11, dayIndex: 5, startHour: 9,  duration: 60, className: 'Capoeira',         coach: 'Alec',     capacity: 10, enrolled: 7,  color: '#A07050', isOpen: true,  status: 'upcoming'  },
-  { id: 12, dayIndex: 6, startHour: 10, duration: 75, className: 'Personal Coaching',coach: 'Rex',      capacity: 4,  enrolled: 2,  color: '#A67E2A', isOpen: true,  status: 'upcoming'  },
+  { id: 12, dayIndex: 6, startHour: 10, duration: 75, className: 'Personal Coaching',coach: 'Rex',      capacity: 4,  enrolled: 2,  color: '#5e4a30', isOpen: true,  status: 'upcoming'  },
 ];
 
 const INITIAL_BOOKING_REQS: BookingRequest[] = [
@@ -139,7 +138,7 @@ export default function AdminSchedulePage() {
 
   const handleSave = () => {
     if (hasConflict) return; // prevent save if conflict
-    const color = CLASS_COLORS[form.className] || '#C49A3C';
+    const color = CLASS_COLORS[form.className] || '#745b3c';
     if (editingBlock) {
       setBlocks(prev => prev.map(b => b.id === editingBlock.id ? { ...b, ...form, color } : b));
     } else {
@@ -162,7 +161,7 @@ export default function AdminSchedulePage() {
   const pendingB = bookingReqs.filter(r => r.status === 'pending').length;
   const pendingC = cancelReqs.filter(r => r.status === 'pending').length;
 
-  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all";
+  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   const StatusBadge = ({ s }: { s: ReqStatus }) => (
@@ -174,14 +173,14 @@ export default function AdminSchedulePage() {
   );
 
   return (
-    <AdminSidebar>
+    <>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ���─ Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <CalendarDays size={14} className="text-[#C49A3C]" />
+              <CalendarDays size={14} className="text-[#745b3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Schedule</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -227,7 +226,7 @@ export default function AdminSchedulePage() {
                 <button onClick={() => setWeekOffset(w => w - 1)} className="w-8 h-8 rounded-xl flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] transition-all"><ChevronLeft size={16} /></button>
                 <span className="text-[#1E2A35] text-sm font-semibold px-2">{weekLabel}</span>
                 <button onClick={() => setWeekOffset(w => w + 1)} className="w-8 h-8 rounded-xl flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] transition-all"><ChevronRight size={16} /></button>
-                {weekOffset !== 0 && <button onClick={() => setWeekOffset(0)} className="text-[#C49A3C] text-xs font-bold hover:text-[#A67E2A] ml-1">Today</button>}
+                {weekOffset !== 0 && <button onClick={() => setWeekOffset(0)} className="text-[#745b3c] text-xs font-bold hover:text-[#5e4a30] ml-1">Today</button>}
               </div>
               {/* Coach filter */}
               <div className="flex items-center gap-2 bg-white border border-[#D4CDB5]/60 rounded-2xl px-4 py-2.5 shadow-sm">
@@ -327,7 +326,7 @@ export default function AdminSchedulePage() {
                             })}
                             <button
                               onClick={() => { setForm({ ...EMPTY_FORM, dayIndex, startHour: hour }); setEditingBlock(null); setShowModal(true); }}
-                              className="w-full flex items-center justify-center rounded-xl border border-dashed border-[#D4CDB5]/60 text-[#C0B8A8] hover:text-[#C49A3C] hover:border-[#C49A3C]/40 hover:bg-[#C49A3C]/05 transition-all opacity-0 group-hover:opacity-100"
+                              className="w-full flex items-center justify-center rounded-xl border border-dashed border-[#D4CDB5]/60 text-[#C0B8A8] hover:text-[#745b3c] hover:border-[#745b3c]/40 hover:bg-[#745b3c]/05 transition-all opacity-0 group-hover:opacity-100"
                               style={{ height: cellBlocks.length > 0 ? '24px' : '40px' }}
                             >
                               <Plus size={12} />
@@ -554,7 +553,7 @@ export default function AdminSchedulePage() {
                       className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-medium ${
                         form.status === opt.value
                           ? 'bg-[#1E2A35] border-[#1E2A35] text-white'
-                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#C49A3C]/40'
+                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#745b3c]/40'
                       }`}
                     >
                       <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${form.status === opt.value ? 'border-white bg-white' : 'border-[#B0A898]'}`}>
@@ -602,6 +601,6 @@ export default function AdminSchedulePage() {
           </div>
         </div>
       )}
-    </AdminSidebar>
+    </>
   );
 }

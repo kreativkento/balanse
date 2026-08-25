@@ -33,9 +33,9 @@ const COACHES   = ['Rex Santos', 'Jodi Reyes', 'Kate Mercado', 'Ephraim Cruz', '
 const TIME_SLOTS = ['6:00 AM','7:00 AM','7:30 AM','8:00 AM','9:00 AM','9:30 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','5:30 PM','6:00 PM','7:00 PM'];
 const DURATIONS  = ['45 min','60 min','75 min','90 min'];
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga': '#C49A3C', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
+  'Yoga': '#745b3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
   'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#A67E2A',
+  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#5e4a30',
 };
 const SCHEDULED_DATES_INIT = new Set(SCHEDULED_DATES);
 
@@ -96,7 +96,7 @@ const ENROLLED_BY_CLASS: Record<number, { name: string; membership: string }[]> 
 };
 
 const MEMBERSHIP_COLOR: Record<string, string> = {
-  'Gold': 'bg-[#C49A3C]/12 text-[#A67E2A] border-[#C49A3C]/30',
+  'Gold': 'bg-[#745b3c]/12 text-[#5e4a30] border-[#745b3c]/30',
   'Silver': 'bg-[#8A7E6E]/10 text-[#5A5048] border-[#8A7E6E]/20',
   'Single Pass': 'bg-[#EDE8D8] text-[#7A6A52] border-[#D4CDB5]/60',
 };
@@ -129,7 +129,7 @@ const formatDateShort = (key: string) => {
 
 function EnrolledModal({ cls, onClose }: { cls: ApprovedClass; onClose: () => void }) {
   const students = ENROLLED_BY_CLASS[cls.id] ?? [];
-  const color    = CLASS_COLORS[cls.className] || '#C49A3C';
+  const color    = CLASS_COLORS[cls.className] || '#745b3c';
   const fillPct  = Math.round((cls.enrolled / cls.capacity) * 100);
 
   return (
@@ -353,7 +353,7 @@ export default function StaffSchedulePage() {
                   onChange={e => { setCancelReason(e.target.value); setCancelError(''); }}
                   rows={3}
                   placeholder="Describe why you need to cancel this class…"
-                  className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-sm text-[#1E2A35] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-sm text-[#1E2A35] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 transition-all resize-none"
                 />
                 {cancelError && <p className="text-red-500 text-xs mt-1">{cancelError}</p>}
               </div>
@@ -421,7 +421,7 @@ export default function StaffSchedulePage() {
                 </div>
                 <div className="divide-y divide-[#D4CDB5]/30">
                   {classes.map(cls => {
-                    const color   = CLASS_COLORS[cls.className] || '#C49A3C';
+                    const color   = CLASS_COLORS[cls.className] || '#745b3c';
                     const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
                     const isFull  = cls.enrolled >= cls.capacity;
                     return (
@@ -448,7 +448,7 @@ export default function StaffSchedulePage() {
                           }`}>
                             {!cls.isOpen ? 'Closed' : isFull ? 'Full' : fillPct >= 80 ? 'Almost Full' : 'Open'}
                           </span>
-                          <div className="flex items-center gap-1 text-[#B0A898] group-hover:text-[#C49A3C] transition-colors">
+                          <div className="flex items-center gap-1 text-[#B0A898] group-hover:text-[#745b3c] transition-colors">
                             <Users size={13} />
                             <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
@@ -469,7 +469,7 @@ export default function StaffSchedulePage() {
 
             {/* Assigned classes (using a filtered subset for demo) */}
             {APPROVED_SCHEDULE.filter(c => ['Yoga','Calisthenics','Mat Pilates','Animal Flow','Kickboxing','Circuit Training','Groundworks','Capoeira','Personal Coaching'].includes(c.className)).slice(0, 6).map(cls => {
-              const color   = CLASS_COLORS[cls.className] || '#C49A3C';
+              const color   = CLASS_COLORS[cls.className] || '#745b3c';
               const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
               const hasReq  = cancelRequests.some(r => r.id === cls.id);
               return (
@@ -527,7 +527,7 @@ export default function StaffSchedulePage() {
                 <div className="divide-y divide-[#D4CDB5]/30">
                   {cancelRequests.map((req, i) => (
                     <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                      <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.className] || '#C49A3C' }} />
+                      <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.className] || '#745b3c' }} />
                       <div className="flex-1">
                         <p className="text-[#1E2A35] text-sm font-semibold">{req.className}</p>
                         <p className="text-[#8A7E6E] text-xs">{req.day} · {req.time}</p>
@@ -587,7 +587,7 @@ export default function StaffSchedulePage() {
               {availSlots.length > 0 && (
                 <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                   <div className="px-5 py-4 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/60 flex items-center gap-2">
-                    <CalendarDays size={15} className="text-[#C49A3C]" />
+                    <CalendarDays size={15} className="text-[#745b3c]" />
                     <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Saved Availability</h2>
                     <span className="ml-auto text-[#9A8E7E] text-xs">{availSlots.length} date{availSlots.length !== 1 ? 's' : ''}</span>
                   </div>
@@ -638,7 +638,7 @@ export default function StaffSchedulePage() {
                         const isSelected = pendingTimes.includes(t);
                         return (
                           <button key={t} onClick={() => togglePendingTime(t)}
-                            className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${isSelected ? 'bg-[#1E2A35] text-white border-[#1E2A35] shadow-sm' : 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5]/70 hover:border-[#C49A3C]/40'}`}>
+                            className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${isSelected ? 'bg-[#1E2A35] text-white border-[#1E2A35] shadow-sm' : 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5]/70 hover:border-[#745b3c]/40'}`}>
                             {t}
                           </button>
                         );
@@ -692,15 +692,15 @@ export default function StaffSchedulePage() {
                     const isToday    = key === todayKey;
                     const isScheduled = scheduledSet.has(key);
                     return (
-                      <button key={key} onClick={() => handleDateSelect(key)} className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${isSelected ? 'bg-[#1E2A35] text-white shadow-[0_3px_12px_rgba(30,42,53,0.3)]' : isToday ? 'bg-[#C49A3C]/12 text-[#A67E2A]' : 'text-[#1E2A35] hover:bg-[#F0EBE0] cursor-pointer'}`}>
+                      <button key={key} onClick={() => handleDateSelect(key)} className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${isSelected ? 'bg-[#1E2A35] text-white shadow-[0_3px_12px_rgba(30,42,53,0.3)]' : isToday ? 'bg-[#745b3c]/12 text-[#5e4a30]' : 'text-[#1E2A35] hover:bg-[#F0EBE0] cursor-pointer'}`}>
                         <span className="text-sm leading-none mb-1">{day}</span>
-                        {isScheduled && <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white/60' : 'bg-[#C49A3C]'}`} />}
+                        {isScheduled && <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white/60' : 'bg-[#745b3c]'}`} />}
                       </button>
                     );
                   })}
                 </div>
                 <div className="mt-4 pt-4 border-t border-[#D4CDB5]/40 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#C49A3C]" /><span className="text-[#9A8E7E]" style={{ fontSize: '0.68rem' }}>Has scheduled classes</span></div>
+                  <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#745b3c]" /><span className="text-[#9A8E7E]" style={{ fontSize: '0.68rem' }}>Has scheduled classes</span></div>
                   <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#1E2A35] flex items-center justify-center shrink-0"><div className="w-1.5 h-1.5 rounded-full bg-white" /></div><span className="text-[#9A8E7E]" style={{ fontSize: '0.68rem' }}>Selected date</span></div>
                 </div>
               </div>
@@ -746,7 +746,7 @@ export default function StaffSchedulePage() {
                     <button onClick={handleScheduleAnother} className="flex items-center gap-2 bg-[#1E2A35] text-white rounded-full px-6 py-3 text-sm hover:bg-[#263545] transition-all active:scale-[0.97]" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}>
                       <Plus size={15} /> Request Another
                     </button>
-                    <button onClick={() => navigate('/staff-dashboard')} className="flex items-center gap-2 bg-white border border-[#D4CDB5]/70 text-[#1E2A35] rounded-full px-6 py-3 text-sm hover:border-[#C49A3C]/40 hover:bg-[#F8F3E8] transition-all active:scale-[0.97]" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}>
+                    <button onClick={() => navigate('/staff-dashboard')} className="flex items-center gap-2 bg-white border border-[#D4CDB5]/70 text-[#1E2A35] rounded-full px-6 py-3 text-sm hover:border-[#745b3c]/40 hover:bg-[#F8F3E8] transition-all active:scale-[0.97]" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}>
                       Back to Dashboard
                     </button>
                   </div>
@@ -767,7 +767,7 @@ export default function StaffSchedulePage() {
                       {CLASS_TYPES.map(ct => {
                         const c = CLASS_COLORS[ct]; const isSelected = classType === ct;
                         return (
-                          <button key={ct} onClick={() => { setClassType(ct); setErrors(e => ({ ...e, classType: '' })); }} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left border-2 transition-all ${isSelected ? 'border-transparent text-white' : 'border-[#D4CDB5]/60 bg-[#F8F3E8] text-[#5A5048] hover:border-[#C49A3C]/40'}`} style={isSelected ? { backgroundColor: c } : {}}>
+                          <button key={ct} onClick={() => { setClassType(ct); setErrors(e => ({ ...e, classType: '' })); }} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left border-2 transition-all ${isSelected ? 'border-transparent text-white' : 'border-[#D4CDB5]/60 bg-[#F8F3E8] text-[#5A5048] hover:border-[#745b3c]/40'}`} style={isSelected ? { backgroundColor: c } : {}}>
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : c }} />
                             <span className="text-xs font-semibold leading-tight">{ct}</span>
                           </button>
@@ -785,7 +785,7 @@ export default function StaffSchedulePage() {
                         <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Start Time <span className="text-red-400">*</span></label>
                         <div className="relative">
                           <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-                          <select value={time} onChange={e => { setTime(e.target.value); setErrors(er => ({ ...er, time: '' })); }} className={`w-full pl-8 pr-3 py-3 rounded-xl border text-sm text-[#1E2A35] bg-[#F8F3E8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all appearance-none ${errors.time ? 'border-red-300' : 'border-[#D4CDB5]/70'}`}>
+                          <select value={time} onChange={e => { setTime(e.target.value); setErrors(er => ({ ...er, time: '' })); }} className={`w-full pl-8 pr-3 py-3 rounded-xl border text-sm text-[#1E2A35] bg-[#F8F3E8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 transition-all appearance-none ${errors.time ? 'border-red-300' : 'border-[#D4CDB5]/70'}`}>
                             <option value="">Select time</option>
                             {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
@@ -796,13 +796,13 @@ export default function StaffSchedulePage() {
                         <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Duration</label>
                         <div className="flex gap-2">
                           {DURATIONS.map(d => (
-                            <button key={d} onClick={() => setDuration(d)} className={`flex-1 py-3 rounded-xl border text-xs font-semibold transition-all ${duration === d ? 'bg-[#1E2A35] text-white border-[#1E2A35]' : 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5]/70 hover:border-[#C49A3C]/40'}`}>{d}</button>
+                            <button key={d} onClick={() => setDuration(d)} className={`flex-1 py-3 rounded-xl border text-xs font-semibold transition-all ${duration === d ? 'bg-[#1E2A35] text-white border-[#1E2A35]' : 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5]/70 hover:border-[#745b3c]/40'}`}>{d}</button>
                           ))}
                         </div>
                       </div>
                       <div>
                         <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Assign Coach <span className="text-red-400">*</span></label>
-                        <select value={coach} onChange={e => { setCoach(e.target.value); setErrors(er => ({ ...er, coach: '' })); }} className={`w-full px-3 py-3 rounded-xl border text-sm text-[#1E2A35] bg-[#F8F3E8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all appearance-none ${errors.coach ? 'border-red-300' : 'border-[#D4CDB5]/70'}`}>
+                        <select value={coach} onChange={e => { setCoach(e.target.value); setErrors(er => ({ ...er, coach: '' })); }} className={`w-full px-3 py-3 rounded-xl border text-sm text-[#1E2A35] bg-[#F8F3E8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 transition-all appearance-none ${errors.coach ? 'border-red-300' : 'border-[#D4CDB5]/70'}`}>
                           {COACHES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         {errors.coach && <p className="text-red-500 text-xs mt-1">{errors.coach}</p>}
@@ -811,7 +811,7 @@ export default function StaffSchedulePage() {
                         <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Max Spots <span className="text-red-400">*</span></label>
                         <div className="relative">
                           <Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-                          <input type="number" min={1} max={50} value={maxSpots} onChange={e => { setMaxSpots(e.target.value); setErrors(er => ({ ...er, maxSpots: '' })); }} className={`w-full pl-8 pr-3 py-3 rounded-xl border text-sm text-[#1E2A35] bg-[#F8F3E8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all ${errors.maxSpots ? 'border-red-300' : 'border-[#D4CDB5]/70'}`} />
+                          <input type="number" min={1} max={50} value={maxSpots} onChange={e => { setMaxSpots(e.target.value); setErrors(er => ({ ...er, maxSpots: '' })); }} className={`w-full pl-8 pr-3 py-3 rounded-xl border text-sm text-[#1E2A35] bg-[#F8F3E8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 transition-all ${errors.maxSpots ? 'border-red-300' : 'border-[#D4CDB5]/70'}`} />
                         </div>
                         {errors.maxSpots && <p className="text-red-500 text-xs mt-1">{errors.maxSpots}</p>}
                       </div>
@@ -821,7 +821,7 @@ export default function StaffSchedulePage() {
                   {/* Notes */}
                   <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
                     <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Notes <span className="text-[#B0A898]">(optional)</span></label>
-                    <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Special instructions, equipment needed, room assignment..." className="w-full px-4 py-3 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-sm text-[#1E2A35] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all resize-none" />
+                    <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Special instructions, equipment needed, room assignment..." className="w-full px-4 py-3 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-sm text-[#1E2A35] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 transition-all resize-none" />
                   </div>
 
                   {/* Submit */}

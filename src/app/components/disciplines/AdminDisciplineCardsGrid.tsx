@@ -34,7 +34,7 @@ export function AdminDisciplineCardsGrid({
             <button
               type="button"
               onClick={() => onSelect(discipline)}
-              className="flex flex-col flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C49A3C]/50"
+              className="flex flex-col flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#745b3c]/50"
             >
               <div className="relative h-48 overflow-hidden shrink-0">
                 <img
@@ -73,7 +73,7 @@ export function AdminDisciplineCardsGrid({
                   {discipline.description || 'No description yet.'}
                 </p>
                 {!isPublic && (
-                  <p className="text-[#C49A3C] text-xs font-semibold mt-4">View details</p>
+                  <p className="text-[#745b3c] text-xs font-semibold mt-4">View details</p>
                 )}
               </div>
             </button>
@@ -86,7 +86,7 @@ export function AdminDisciplineCardsGrid({
                     event.stopPropagation();
                     onEnroll(discipline);
                   }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#A67E2A]"
+                  className="w-full flex items-center justify-center gap-2 bg-[#745b3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(116,91,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#5e4a30]"
                 >
                   Enroll <ChevronRight size={16} />
                 </button>

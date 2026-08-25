@@ -25,8 +25,8 @@ const NEWS: NewsPost[] = [
     excerpt: 'Join us this June 21 for a free open mat event celebrating the summer solstice. All fitness levels welcome.',
     body: `Celebrate summer with BALANSÉ! On June 21, we're opening our studio doors for a free Community Open Mat session from 8:00 AM to 11:00 AM. Expect a fun-filled morning of mixed movement classes, partner drills, and a light refreshment break. Bring a friend and experience BALANSÉ together.`,
     date: 'Jun 5, 2026',
-    imageColor: '#C49A3C',
-    badgeColor: 'bg-[#C49A3C]/12 text-[#A67E2A]',
+    imageColor: '#745b3c',
+    badgeColor: 'bg-[#745b3c]/12 text-[#5e4a30]',
     badgeText: 'Event',
     pinned: true,
   },
@@ -146,7 +146,7 @@ export default function NewsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
-            <Newspaper size={16} className="text-[#C49A3C]" />
+            <Newspaper size={16} className="text-[#745b3c]" />
             <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Latest from BALANSÉ</span>
           </div>
           <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '0.04em' }}>
@@ -165,7 +165,7 @@ export default function NewsPage() {
                 className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
                   activeCategory === cat
                     ? 'bg-[#1E2A35] text-white border-[#1E2A35]'
-                    : 'bg-white text-[#5A5048] border-[#D4CDB5]/60 hover:border-[#C49A3C]/40'
+                    : 'bg-white text-[#5A5048] border-[#D4CDB5]/60 hover:border-[#745b3c]/40'
                 }`}
               >
                 {cat}
@@ -179,7 +179,7 @@ export default function NewsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search news..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-full border border-[#D4CDB5]/60 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]"
+              className="w-full pl-9 pr-4 py-2.5 rounded-full border border-[#D4CDB5]/60 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/20 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
         </div>
@@ -212,7 +212,7 @@ export default function NewsPage() {
 
         {filtered.length === 0 && (
           <div className="text-center py-16">
-            <Newspaper size={32} className="text-[#C49A3C]/40 mx-auto mb-3" />
+            <Newspaper size={32} className="text-[#745b3c]/40 mx-auto mb-3" />
             <p className="text-[#9A8E7E]">No news found matching your filters.</p>
           </div>
         )}
@@ -225,7 +225,7 @@ function NewsCard({ post, onClick, featured }: { post: NewsPost; onClick: () => 
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.98] group ${CARD_HOVER_GROW} ${featured ? 'ring-1 ring-[#C49A3C]/20' : ''}`}
+      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#745b3c]/30 active:scale-[0.98] group ${CARD_HOVER_GROW} ${featured ? 'ring-1 ring-[#745b3c]/20' : ''}`}
     >
       <div className="p-5">
         <div className="flex items-center justify-between mb-3">
@@ -234,7 +234,7 @@ function NewsCard({ post, onClick, featured }: { post: NewsPost; onClick: () => 
         </div>
         <h3 className="text-[#1E2A35] leading-snug mb-2" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.04em' }}>{post.title}</h3>
         <p className="text-[#8A7E6E] text-xs leading-relaxed line-clamp-3">{post.excerpt}</p>
-        <div className="flex items-center gap-1 mt-3 text-[#C49A3C] text-xs font-semibold group-hover:gap-2 transition-all">
+        <div className="flex items-center gap-1 mt-3 text-[#745b3c] text-xs font-semibold group-hover:gap-2 transition-all">
           Read more <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>

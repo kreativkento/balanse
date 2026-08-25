@@ -12,9 +12,9 @@ import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 // ── Mock Data ──────────────────────────────────────────────────
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga': '#C49A3C', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
+  'Yoga': '#745b3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
   'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#A67E2A',
+  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#5e4a30',
 };
 
 const UPCOMING_CLASSES = [
@@ -40,7 +40,7 @@ const ENROLLED_BY_CLASS: Record<number, { name: string; membership: string }[]> 
 };
 
 const MEMBERSHIP_COLOR: Record<string, string> = {
-  'Gold': 'bg-[#C49A3C]/12 text-[#A67E2A] border-[#C49A3C]/30',
+  'Gold': 'bg-[#745b3c]/12 text-[#5e4a30] border-[#745b3c]/30',
   'Silver': 'bg-[#8A7E6E]/10 text-[#5A5048] border-[#8A7E6E]/20',
   'Single Pass': 'bg-[#EDE8D8] text-[#7A6A52] border-[#D4CDB5]/60',
 };
@@ -51,8 +51,8 @@ function StatCard({ label, value, sub, icon, gold, amber }: {
   label: string; value: string; sub: string; icon: React.ReactNode; gold?: boolean; amber?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${gold ? 'border-[#C49A3C]/40' : amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${gold ? 'bg-[#C49A3C]/12' : amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>
+    <div className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${gold ? 'border-[#745b3c]/40' : amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
+      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${gold ? 'bg-[#745b3c]/12' : amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>
         {icon}
       </div>
       <div>
@@ -71,7 +71,7 @@ function EnrolledModal({ cls, onClose }: {
   onClose: () => void;
 }) {
   const students = ENROLLED_BY_CLASS[cls.id] ?? [];
-  const color = CLASS_COLORS[cls.className] || '#C49A3C';
+  const color = CLASS_COLORS[cls.className] || '#745b3c';
   const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
 
   return (
@@ -194,8 +194,8 @@ export default function StaffDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <ShieldCheck size={13} className="text-[#C49A3C]" />
-                <span className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${staffUser.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#C49A3C]/12 text-[#A67E2A]'}`}>
+                <ShieldCheck size={13} className="text-[#745b3c]" />
+                <span className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${staffUser.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#745b3c]/12 text-[#5e4a30]'}`}>
                   {staffUser.role}
                 </span>
               </div>
@@ -208,7 +208,7 @@ export default function StaffDashboardPage() {
               <button
                 onClick={() => navigate('/staff-profile')}
                 title="Edit Profile"
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#1E2A35]/20 hover:border-[#C49A3C]/50 hover:shadow-md transition-all relative group shrink-0"
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#1E2A35]/20 hover:border-[#745b3c]/50 hover:shadow-md transition-all relative group shrink-0"
               >
                 {staffProfile?.photo ? (
                   <img src={staffProfile.photo} alt="Profile" className="w-full h-full object-cover" />
@@ -237,7 +237,7 @@ export default function StaffDashboardPage() {
             label="Today's Classes"
             value="3"
             sub="Monday, April 13"
-            icon={<CalendarDays size={18} className="text-[#C49A3C]" />}
+            icon={<CalendarDays size={18} className="text-[#745b3c]" />}
             gold
           />
           <StatCard
@@ -271,7 +271,7 @@ export default function StaffDashboardPage() {
               [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
               [&::-webkit-scrollbar-thumb]:bg-[#D4CDB5] [&::-webkit-scrollbar-thumb]:rounded-full">
               {UPCOMING_CLASSES.map((cls) => {
-                const color = CLASS_COLORS[cls.className] || '#C49A3C';
+                const color = CLASS_COLORS[cls.className] || '#745b3c';
                 const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
                 const isFull = cls.status === 'full';
                 const almostFull = fillPct >= 80 && !isFull;
@@ -298,7 +298,7 @@ export default function StaffDashboardPage() {
                       }`}>
                         {cls.enrolled}/{cls.capacity}
                       </span>
-                      <div className="flex items-center gap-1 text-[#B0A898] group-hover:text-[#C49A3C] transition-colors">
+                      <div className="flex items-center gap-1 text-[#B0A898] group-hover:text-[#745b3c] transition-colors">
                         <Users size={13} />
                         <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
@@ -331,7 +331,7 @@ export default function StaffDashboardPage() {
 
               <button
                 onClick={() => navigate('/staff-availability')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#C49A3C]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
+                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#745b3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
               >
                 <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
                   <CalendarCheck size={16} className="text-[#8A7E6E]" />
@@ -340,12 +340,12 @@ export default function StaffDashboardPage() {
                   <p className="text-sm font-semibold">My Availability</p>
                   <p className="text-[#8A7E6E] text-xs">Set dates & time slots</p>
                 </div>
-                <ChevronRight size={16} className="text-[#C49A3C] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight size={16} className="text-[#745b3c] opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
 
               <button
                 onClick={() => navigate('/staff-gallery')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#C49A3C]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
+                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#745b3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
               >
                 <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
                   <Images size={16} className="text-[#8A7E6E]" />
@@ -354,12 +354,12 @@ export default function StaffDashboardPage() {
                   <p className="text-sm font-semibold">Post to Gallery</p>
                   <p className="text-[#8A7E6E] text-xs">Upload photos & tag students</p>
                 </div>
-                <ChevronRight size={16} className="text-[#C49A3C] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight size={16} className="text-[#745b3c] opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
 
               <button
                 onClick={() => navigate('/staff-account')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#C49A3C]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
+                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#745b3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
               >
                 <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
                   <KeyRound size={16} className="text-[#8A7E6E]" />
@@ -368,7 +368,7 @@ export default function StaffDashboardPage() {
                   <p className="text-sm font-semibold">Account Settings</p>
                   <p className="text-[#8A7E6E] text-xs">Change password</p>
                 </div>
-                <ChevronRight size={16} className="text-[#C49A3C] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight size={16} className="text-[#745b3c] opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             </div>
           </div>
@@ -392,7 +392,7 @@ export default function StaffDashboardPage() {
                 { class: 'Mat Pilates', date: 'Sun, Apr 20', time: '10:00 AM', coach: staffUser.name.split(' ')[0], status: 'pending' as const, submitted: '1 day ago' },
               ].map((req, i) => (
                 <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                  <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.class] || '#C49A3C' }} />
+                  <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.class] || '#745b3c' }} />
                   <div className="flex-1">
                     <p className="text-[#1E2A35] text-sm font-semibold">{req.class}</p>
                     <p className="text-[#8A7E6E] text-xs">{req.date} · {req.time} · Coach {req.coach}</p>
@@ -416,7 +416,7 @@ export default function StaffDashboardPage() {
                 { label: 'Total Classes',  value: '3',   color: 'text-[#1E2A35]' },
                 { label: 'Total Students', value: '26',  color: 'text-[#1E2A35]' },
                 { label: 'Open Spots',     value: '13',  color: 'text-amber-600'  },
-                { label: 'Active Members', value: '200', color: 'text-[#C49A3C]'  },
+                { label: 'Active Members', value: '200', color: 'text-[#745b3c]'  },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex items-center justify-between">
                   <span className="text-[#5A5048] text-sm">{label}</span>

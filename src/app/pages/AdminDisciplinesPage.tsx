@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AlertCircle, Layers, Loader2, Plus } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 import { AdminDisciplineCardsGrid } from '../components/disciplines/AdminDisciplineCardsGrid';
 import { AdminDisciplineModal } from '../components/disciplines/AdminDisciplineModal';
 import {
@@ -41,9 +40,9 @@ function AddDisciplineTrigger({
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-3xl border-2 border-dashed border-[#D4CDB5] bg-white/50 hover:bg-[#F8F3E8] hover:border-[#C49A3C]/50 transition-all px-6 py-10 flex flex-col items-center justify-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] min-h-[220px]"
+      className="w-full rounded-3xl border-2 border-dashed border-[#D4CDB5] bg-white/50 hover:bg-[#F8F3E8] hover:border-[#745b3c]/50 transition-all px-6 py-10 flex flex-col items-center justify-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] min-h-[220px]"
     >
-      <div className="w-12 h-12 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#C49A3C]">
+      <div className="w-12 h-12 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#745b3c]">
         <Plus size={22} />
       </div>
       <span
@@ -148,7 +147,7 @@ export default function AdminDisciplinesPage() {
   if (!adminUser) return null;
 
   return (
-    <AdminSidebar>
+    <>
       {selectedDiscipline && (
         <AdminDisciplineModal
           discipline={
@@ -169,7 +168,7 @@ export default function AdminDisciplinesPage() {
         <div className="flex items-start justify-between gap-4 mb-8">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <Layers size={18} className="text-[#C49A3C]" />
+              <Layers size={18} className="text-[#745b3c]" />
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Class Catalog</p>
             </div>
             <h1
@@ -232,6 +231,6 @@ export default function AdminDisciplinesPage() {
           </div>
         )}
       </div>
-    </AdminSidebar>
+    </>
   );
 }

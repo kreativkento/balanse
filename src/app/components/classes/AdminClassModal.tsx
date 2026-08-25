@@ -44,7 +44,7 @@ function fromLocalInputValue(value: string): string | null {
 }
 
 const inputClass =
-  'w-full px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50';
+  'w-full px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50';
 
 const STATUS_LABEL: Record<ClassStatus, string> = {
   draft: 'Draft',
@@ -318,7 +318,7 @@ export function AdminClassModal({
                       key={coach.accountId}
                       className={`flex items-start gap-3 rounded-xl px-3 py-2.5 cursor-pointer border transition-colors ${
                         checked
-                          ? 'bg-white border-[#C49A3C]/40'
+                          ? 'bg-white border-[#745b3c]/40'
                           : 'bg-transparent border-transparent hover:bg-white/70'
                       }`}
                     >
@@ -326,7 +326,7 @@ export function AdminClassModal({
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleId('coachAccountIds', coach.accountId)}
-                        className="mt-1 accent-[#C49A3C]"
+                        className="mt-1 accent-[#745b3c]"
                       />
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold text-[#1E2A35] truncate">{coach.name}</span>
@@ -366,7 +366,7 @@ export function AdminClassModal({
                         atLimit
                           ? 'opacity-50 cursor-not-allowed border-transparent'
                           : checked
-                            ? 'bg-white border-[#C49A3C]/40 cursor-pointer'
+                            ? 'bg-white border-[#745b3c]/40 cursor-pointer'
                             : 'bg-transparent border-transparent hover:bg-white/70 cursor-pointer'
                       }`}
                     >
@@ -375,7 +375,7 @@ export function AdminClassModal({
                         checked={checked}
                         disabled={atLimit}
                         onChange={() => toggleId('studentAccountIds', student.accountId)}
-                        className="mt-1 accent-[#C49A3C]"
+                        className="mt-1 accent-[#745b3c]"
                       />
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold text-[#1E2A35] truncate">{student.name}</span>
@@ -395,7 +395,7 @@ export function AdminClassModal({
           )}
 
           {showConfirm && (
-            <div className="rounded-2xl border border-[#C49A3C]/30 bg-[#C49A3C]/08 px-4 py-4">
+            <div className="rounded-2xl border border-[#745b3c]/30 bg-[#745b3c]/08 px-4 py-4">
               <p className="text-[#1E2A35] text-sm font-semibold mb-1">
                 {mode === 'create' ? 'Create this class?' : 'Save class changes?'}
               </p>
@@ -416,7 +416,7 @@ export function AdminClassModal({
                   type="button"
                   onClick={handleConfirmSave}
                   disabled={saving}
-                  className="flex-1 py-2.5 rounded-full bg-[#C49A3C] text-white text-sm font-bold hover:bg-[#A67E2A] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 rounded-full bg-[#745b3c] text-white text-sm font-bold hover:bg-[#5e4a30] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
                   <Check size={14} />
                   {saving ? 'Saving…' : mode === 'create' ? 'Confirm Create' : 'Confirm Save'}

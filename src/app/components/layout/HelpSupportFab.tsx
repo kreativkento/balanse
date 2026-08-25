@@ -77,9 +77,9 @@ export function HelpSupportFab() {
                 type="button"
                 role="menuitem"
                 onClick={() => handleMenuSelect(item.id)}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#1E2A35] transition-colors hover:bg-[#EDE8D8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50 active:scale-[0.98]"
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#1E2A35] transition-colors hover:bg-[#EDE8D8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50 active:scale-[0.98]"
               >
-                <item.icon size={18} className="shrink-0 text-[#C49A3C]" aria-hidden="true" />
+                <item.icon size={18} className="shrink-0 text-[#745b3c]" aria-hidden="true" />
                 {item.label}
               </button>
             ))}
@@ -92,8 +92,8 @@ export function HelpSupportFab() {
             aria-label={menuOpen ? 'Close help menu' : 'Open help menu'}
             onClick={() => setMenuOpen((prev) => !prev)}
             className={cn(
-              'flex h-14 w-14 items-center justify-center rounded-full bg-[#C49A3C] text-xl font-bold text-white shadow-[0_4px_20px_rgba(196,154,60,0.35)] transition-all duration-200 hover:bg-[#A67E2A] hover:shadow-[0_6px_24px_rgba(196,154,60,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F3E8] active:scale-[0.97]',
-              menuOpen && 'scale-105 bg-[#A67E2A]',
+              'flex h-14 w-14 items-center justify-center rounded-full bg-[#745b3c] text-xl font-bold text-white shadow-[0_4px_20px_rgba(116,91,60,0.35)] transition-all duration-200 hover:bg-[#5e4a30] hover:shadow-[0_6px_24px_rgba(116,91,60,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F3E8] active:scale-[0.97]',
+              menuOpen && 'scale-105 bg-[#5e4a30]',
             )}
           >
             <span
@@ -128,7 +128,7 @@ export function HelpSupportFab() {
                 type="button"
                 aria-label="Close chatbot"
                 onClick={() => setChatOpen(false)}
-                className="rounded-full p-2 text-[#8A7E6E] transition-colors hover:bg-[#F8F3E8] hover:text-[#1E2A35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+                className="rounded-full p-2 text-[#8A7E6E] transition-colors hover:bg-[#F8F3E8] hover:text-[#1E2A35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
               >
                 <X size={16} />
               </button>
@@ -149,7 +149,7 @@ export function HelpSupportFab() {
                 <button
                   type="button"
                   aria-label="Send message"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C49A3C] text-white transition-colors hover:bg-[#A67E2A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#745b3c] text-white transition-colors hover:bg-[#5e4a30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
                 >
                   <Send size={14} />
                 </button>

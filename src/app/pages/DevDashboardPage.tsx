@@ -52,13 +52,13 @@ export default function DevDashboardPage() {
             <Link
               key={path}
               to={path}
-              className={`group bg-white rounded-2xl border border-[#E8E2D2]/80 px-6 py-5 shadow-sm hover:border-[#C49A3C]/40 hover:shadow-md ${CARD_HOVER_GROW}`}
+              className={`group bg-white rounded-2xl border border-[#E8E2D2]/80 px-6 py-5 shadow-sm hover:border-[#745b3c]/40 hover:shadow-md ${CARD_HOVER_GROW}`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-11 h-11 rounded-xl bg-[#1E2A35] flex items-center justify-center">
-                  <Icon size={18} className="text-[#C49A3C]" />
+                  <Icon size={18} className="text-[#745b3c]" />
                 </div>
-                <ArrowUpRight size={16} className="text-[#B0A898] group-hover:text-[#C49A3C] transition-colors" />
+                <ArrowUpRight size={16} className="text-[#B0A898] group-hover:text-[#745b3c] transition-colors" />
               </div>
               <h2
                 className="text-[#1E2A35] mb-1"

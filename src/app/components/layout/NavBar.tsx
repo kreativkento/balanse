@@ -57,7 +57,7 @@ export function NavBar() {
                 to={link.path}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   isActive(link.path)
-                    ? 'bg-[#C49A3C]/10 text-[#C49A3C]'
+                    ? 'bg-[#745b3c]/10 text-[#745b3c]'
                     : 'text-[#5A5048] hover:text-[#1E2A35] hover:bg-[#EDE8D8]'
                 }`}
               >
@@ -93,7 +93,7 @@ export function NavBar() {
               <>
                 <Link
                   to="/dashboard"
-                  className="flex items-center gap-2 px-4 py-2 bg-[#C49A3C]/10 text-[#C49A3C] rounded-xl text-sm font-semibold hover:bg-[#C49A3C]/20 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#745b3c]/10 text-[#745b3c] rounded-xl text-sm font-semibold hover:bg-[#745b3c]/20 transition-colors"
                 >
                   <LayoutDashboard size={15} />
                   Dashboard
@@ -109,7 +109,7 @@ export function NavBar() {
             ) : (
               <Link
                 to="/auth"
-                className="px-5 py-2.5 bg-[#C49A3C] text-white rounded-full text-sm font-bold shadow-[0_4px_16px_rgba(196,154,60,0.35)] hover:bg-[#A67E2A] transition-colors active:scale-95"
+                className="px-5 py-2.5 bg-[#745b3c] text-white rounded-full text-sm font-bold shadow-[0_4px_16px_rgba(116,91,60,0.35)] hover:bg-[#5e4a30] transition-colors active:scale-95"
               >
                 Book / Schedule
               </Link>
@@ -172,7 +172,7 @@ export function NavBar() {
               onClick={() => setMenuOpen(false)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors min-h-[52px] ${
                 isActive(link.path)
-                  ? 'bg-[#C49A3C]/10 text-[#C49A3C]'
+                  ? 'bg-[#745b3c]/10 text-[#745b3c]'
                   : 'text-[#1E2A35] hover:bg-[#EDE8D8]'
               }`}
             >
@@ -207,7 +207,7 @@ export function NavBar() {
               <Link
                 to="/dashboard"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-[#C49A3C] hover:bg-[#EDE8D8] rounded-xl text-base font-medium transition-colors min-h-[52px]"
+                className="flex items-center gap-3 px-4 py-3 text-[#745b3c] hover:bg-[#EDE8D8] rounded-xl text-base font-medium transition-colors min-h-[52px]"
               >
                 <LayoutDashboard size={18} />
                 Dashboard
@@ -224,7 +224,7 @@ export function NavBar() {
             <Link
               to="/auth"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center justify-center px-4 py-4 bg-[#C49A3C] text-white rounded-2xl font-bold transition-all hover:bg-[#A67E2A] active:scale-95 min-h-[56px] shadow-[0_4px_20px_rgba(196,154,60,0.3)]"
+              className="flex items-center justify-center px-4 py-4 bg-[#745b3c] text-white rounded-2xl font-bold transition-all hover:bg-[#5e4a30] active:scale-95 min-h-[56px] shadow-[0_4px_20px_rgba(116,91,60,0.3)]"
             >
               Book / Schedule
             </Link>

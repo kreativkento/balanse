@@ -103,7 +103,7 @@ export function getDisciplinePlaceholderLogo(name: string): string {
     .slice(0, 2)
     .toUpperCase() || 'BL';
 
-  return `https://placehold.co/96x96/C49A3C/FFFFFF/png?text=${encodeURIComponent(initials)}`;
+  return `https://placehold.co/96x96/745B3C/FFFFFF/png?text=${encodeURIComponent(initials)}`;
 }
 
 export function getDisciplinePlaceholderImage(name: string): string {

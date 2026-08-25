@@ -13,7 +13,7 @@ import { NATIONALITIES } from '../data/nationalities';
 // ─────────────────────────────────────────────
 
 const INPUT =
-  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all';
+  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
 const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
@@ -178,12 +178,12 @@ export default function StaffProfilePage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             title="Click to change photo"
-            className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#C49A3C]/40 bg-[#C49A3C]/15 flex items-center justify-center shrink-0 group hover:border-[#C49A3C]/70 transition-all"
+            className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#745b3c]/40 bg-[#745b3c]/15 flex items-center justify-center shrink-0 group hover:border-[#745b3c]/70 transition-all"
           >
             {photoPreview ? (
               <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" onError={() => setPhotoPreview('')} />
             ) : (
-              <span className="text-[#A67E2A] font-black text-xl">{initials}</span>
+              <span className="text-[#5e4a30] font-black text-xl">{initials}</span>
             )}
             <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
               <Camera size={14} className="text-white" />
@@ -200,7 +200,7 @@ export default function StaffProfilePage() {
               {staffProfile?.displayName || staffUser.name}
             </h2>
             <p className="text-[#8A7E6E] text-sm">{staffUser.email}</p>
-            <span className="inline-flex items-center gap-1.5 bg-[#C49A3C]/10 text-[#A67E2A] text-xs font-bold px-2.5 py-1 rounded-full border border-[#C49A3C]/25 mt-1.5">
+            <span className="inline-flex items-center gap-1.5 bg-[#745b3c]/10 text-[#5e4a30] text-xs font-bold px-2.5 py-1 rounded-full border border-[#745b3c]/25 mt-1.5">
               <ShieldCheck size={10} /> {staffUser.role}
             </span>
           </div>
@@ -216,7 +216,7 @@ export default function StaffProfilePage() {
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px ${
                   active
-                    ? 'border-[#C49A3C] text-[#C49A3C]'
+                    ? 'border-[#745b3c] text-[#745b3c]'
                     : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35] hover:border-[#D4CDB5]'
                 }`}
               >
@@ -289,7 +289,7 @@ export default function StaffProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   infoSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#C49A3C] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#A67E2A]'
+                    : 'bg-[#745b3c] shadow-[0_4px_16px_rgba(116,91,60,0.3)] hover:bg-[#5e4a30]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
@@ -356,7 +356,7 @@ export default function StaffProfilePage() {
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                         classes.includes(cls)
                           ? 'bg-[#1E2A35] text-white border-[#1E2A35]'
-                          : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/70 hover:border-[#C49A3C]/40'
+                          : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/70 hover:border-[#745b3c]/40'
                       }`}
                     >
                       {cls}
@@ -370,7 +370,7 @@ export default function StaffProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   credSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#C49A3C] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#A67E2A]'
+                    : 'bg-[#745b3c] shadow-[0_4px_16px_rgba(116,91,60,0.3)] hover:bg-[#5e4a30]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >

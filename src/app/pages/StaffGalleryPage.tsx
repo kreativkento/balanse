@@ -33,7 +33,7 @@ const CATEGORIES: Category[] = ['Classes', 'Studio', 'Events', 'Community'];
 const EMPTY_FORM = { url: '', caption: '', category: 'Classes' as Category, taggedStudents: [] as string[] };
 
 const CAT_COLORS: Record<Category, string> = {
-  Classes:   'bg-[#C49A3C]/12 text-[#A67E2A]',
+  Classes:   'bg-[#745b3c]/12 text-[#5e4a30]',
   Studio:    'bg-[#EDE8D8] text-[#5A5048]',
   Events:    'bg-[#3A4A5A]/10 text-[#3A4A5A]',
   Community: 'bg-[#8A9E7A]/15 text-[#5A6E4A]',
@@ -68,7 +68,7 @@ function PhotoModal({
     onSave(form);
   };
 
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]';
   const SEL = INP + ' appearance-none cursor-pointer';
 
   return (
@@ -110,7 +110,7 @@ function PhotoModal({
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all border ${
                     form.category === c
                       ? 'bg-[#1E2A35] text-white border-[#1E2A35]'
-                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#C49A3C]/40 hover:text-[#1E2A35]'
+                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#745b3c]/40 hover:text-[#1E2A35]'
                   }`}
                 >
                   {c}
@@ -129,8 +129,8 @@ function PhotoModal({
                   onClick={() => toggleStudent(s)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                     form.taggedStudents.includes(s)
-                      ? 'bg-[#C49A3C] text-white border-[#C49A3C]'
-                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#C49A3C]/40 hover:text-[#1E2A35]'
+                      ? 'bg-[#745b3c] text-white border-[#745b3c]'
+                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#745b3c]/40 hover:text-[#1E2A35]'
                   }`}
                 >
                   {s.split(' ')[0]}
@@ -138,7 +138,7 @@ function PhotoModal({
               ))}
             </div>
             {form.taggedStudents.length > 0 && (
-              <p className="text-[#C49A3C] text-xs mt-1.5">{form.taggedStudents.length} student{form.taggedStudents.length !== 1 ? 's' : ''} tagged</p>
+              <p className="text-[#745b3c] text-xs mt-1.5">{form.taggedStudents.length} student{form.taggedStudents.length !== 1 ? 's' : ''} tagged</p>
             )}
           </div>
 
@@ -267,7 +267,7 @@ export default function StaffGalleryPage() {
         {/* ── Grid ── */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center pb-10">
-            <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm"><Images size={26} className="text-[#C49A3C]/50" /></div>
+            <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm"><Images size={26} className="text-[#745b3c]/50" /></div>
             <h3 className="text-[#1E2A35] mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>No Photos Yet</h3>
             <p className="text-[#8A7E6E] text-sm max-w-xs">Post your first studio photo to get started.</p>
           </div>
@@ -313,7 +313,7 @@ export default function StaffGalleryPage() {
                   <div className="flex items-center justify-between text-xs text-[#B0A898]">
                     <span>{photo.uploadedAt} · {photo.uploadedBy}</span>
                     {photo.taggedStudents.length > 0 && (
-                      <span className="flex items-center gap-1 text-[#C49A3C]">
+                      <span className="flex items-center gap-1 text-[#745b3c]">
                         <Tag size={10} /> {photo.taggedStudents.length}
                       </span>
                     )}
@@ -335,7 +335,7 @@ export default function StaffGalleryPage() {
             {/* Upload placeholder */}
             <button
               onClick={openUpload}
-              className="flex flex-col items-center justify-center h-48 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#C49A3C]/40 hover:text-[#C49A3C] hover:bg-[#C49A3C]/04 transition-all group"
+              className="flex flex-col items-center justify-center h-48 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#745b3c]/40 hover:text-[#745b3c] hover:bg-[#745b3c]/04 transition-all group"
             >
               <Upload size={22} className={`mb-2 ${ICON_HOVER_GROW}`} />
               <span className="text-xs font-medium">Post a Photo</span>

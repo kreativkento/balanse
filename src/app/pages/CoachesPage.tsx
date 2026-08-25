@@ -50,7 +50,7 @@ const COACHES: Coach[] = [
     certifications: ['RYT-500 (Yoga Alliance)', 'Yin Yoga Certified', 'Meditation & Mindfulness'],
     classes: ['Yoga'],
     schedule: 'Mon, Tue, Thu · 8:00 AM – 11:00 AM',
-    color: '#C49A3C',
+    color: '#745b3c',
     initials: 'JD',
     photo: 'https://images.unsplash.com/photo-1581423880338-b9e4f9718df6?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&w=400&h=400&q=80',
     totalClasses: 280,
@@ -142,7 +142,7 @@ function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.97] group ${CARD_HOVER_GROW}`}
+      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#745b3c]/30 active:scale-[0.97] group ${CARD_HOVER_GROW}`}
     >
       <div className="relative h-36 overflow-hidden" style={{ backgroundColor: `${coach.color}15` }}>
         {!imgErr ? (
@@ -170,7 +170,7 @@ function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
             <span key={cls} className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: coach.color }}>{cls}</span>
           ))}
         </div>
-        <div className="flex items-center gap-1 text-[#C49A3C] text-xs font-semibold group-hover:gap-2 transition-all">
+        <div className="flex items-center gap-1 text-[#745b3c] text-xs font-semibold group-hover:gap-2 transition-all">
           View Profile <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
@@ -196,7 +196,7 @@ function CoachPhotoModal({ coach, onClose }: { coach: Coach; onClose: () => void
           type="button"
           onClick={onClose}
           aria-label="Close photo"
-          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#8A7E6E] shadow-md transition-all hover:bg-[#F8F3E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#8A7E6E] shadow-md transition-all hover:bg-[#F8F3E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
         >
           <X size={16} />
         </button>
@@ -250,7 +250,7 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
                 type="button"
                 onClick={onClose}
                 aria-label="Close profile"
-                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
               >
                 <X size={16} />
               </button>
@@ -261,7 +261,7 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
               type="button"
               onClick={() => setPhotoOpen(true)}
               aria-label={`View full photo of Coach ${coach.name}`}
-              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#C49A3C]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C] active:scale-[0.98] cursor-pointer"
+              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#745b3c]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c] active:scale-[0.98] cursor-pointer"
             >
               {!imgError ? (
                 <img
@@ -300,7 +300,7 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
                   <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: `${coach.color}18`, color: coach.color }}>{coach.experience} experience</span>
                   {coach.nationality.trim() && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
-                      <Globe size={11} className="text-[#C49A3C]" />
+                      <Globe size={11} className="text-[#745b3c]" />
                       {coach.nationality}
                     </span>
                   )}
@@ -360,7 +360,7 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
               <div className="flex flex-col gap-1.5">
                 {coach.certifications.map(c => (
                   <div key={c} className="flex items-center gap-2 text-xs text-[#5A5048]">
-                    <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                    <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                     {c}
                   </div>
                 ))}
@@ -406,7 +406,7 @@ export default function CoachesPage() {
         {/* Header */}
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-2">
-            <Users size={16} className="text-[#C49A3C]" />
+            <Users size={16} className="text-[#745b3c]" />
             <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Meet the Team</span>
           </div>
           <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '0.04em' }}>

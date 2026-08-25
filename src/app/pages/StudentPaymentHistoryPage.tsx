@@ -185,7 +185,7 @@ export default function StudentPaymentHistoryPage() {
           </button>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <CreditCard size={13} className="text-[#C49A3C]" />
+              <CreditCard size={13} className="text-[#745b3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Dashboard › Payments</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', letterSpacing: '0.04em' }}>
@@ -207,7 +207,7 @@ export default function StudentPaymentHistoryPage() {
         {profileComplete && <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Total Paid',  value: `₱${totals.spent.toLocaleString()}`, icon: <CreditCard size={15} className="text-[#C49A3C]" />, bg: 'bg-[#C49A3C]/10', border: 'border-[#C49A3C]/25' },
+            { label: 'Total Paid',  value: `₱${totals.spent.toLocaleString()}`, icon: <CreditCard size={15} className="text-[#745b3c]" />, bg: 'bg-[#745b3c]/10', border: 'border-[#745b3c]/25' },
             { label: 'Approved',    value: String(totals.approved),              icon: <Check size={15} className="text-green-600" />,         bg: 'bg-green-50',     border: 'border-green-200' },
             { label: 'Pending',     value: String(totals.pending),               icon: <Clock size={15} className="text-amber-600" />,         bg: 'bg-amber-50',     border: 'border-amber-200' },
             { label: 'Rejected',    value: String(totals.rejected),              icon: <X size={15} className="text-red-500" />,               bg: 'bg-red-50',       border: 'border-red-200' },
@@ -236,7 +236,7 @@ export default function StudentPaymentHistoryPage() {
             <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search class, coach, reference…"
-              className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]" />
+              className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]" />
           </div>
         </div>
 
@@ -268,7 +268,7 @@ export default function StudentPaymentHistoryPage() {
 
                   {/* Class + date */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#1E2A35] text-sm font-semibold group-hover:text-[#C49A3C] transition-colors truncate">{p.class}</p>
+                    <p className="text-[#1E2A35] text-sm font-semibold group-hover:text-[#745b3c] transition-colors truncate">{p.class}</p>
                     <p className="text-[#9A8E7E] text-xs truncate">{p.date} · {p.time} · Coach {p.coach}</p>
                   </div>
 

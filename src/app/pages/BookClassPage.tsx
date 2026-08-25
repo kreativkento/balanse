@@ -124,7 +124,7 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
 // ─────────────────────────────────────────────
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga':             '#C49A3C',
+  'Yoga':             '#745b3c',
   'Calisthenics':     '#3A4A5A',
   'Animal Flow':      '#6B8E6B',
   'Groundworks':      '#8B6F5A',
@@ -132,7 +132,7 @@ const CLASS_COLORS: Record<string, string> = {
   'Mat Pilates':      '#9A7A8A',
   'Kickboxing':       '#7A3A4A',
   'Capoeira':         '#A07050',
-  'Personal Coaching':'#A67E2A',
+  'Personal Coaching':'#5e4a30',
 };
 
 // ─────────────────────────────────────────────
@@ -174,8 +174,8 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
             <div className="flex flex-col items-center">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                  isDone   ? 'bg-[#C49A3C] text-white' :
-                  isActive ? 'bg-[#C49A3C] text-white shadow-[0_0_0_3px_rgba(196,154,60,0.2)]' :
+                  isDone   ? 'bg-[#745b3c] text-white' :
+                  isActive ? 'bg-[#745b3c] text-white shadow-[0_0_0_3px_rgba(116,91,60,0.2)]' :
                              'bg-[#EDE8D8] text-[#9A8E7E]'
                 }`}
                 style={{ fontSize: '0.7rem', fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
@@ -183,14 +183,14 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
                 {isDone ? <Check size={13} strokeWidth={3} /> : num}
               </div>
               <span
-                className={`text-[10px] mt-1 whitespace-nowrap ${isActive ? 'text-[#C49A3C]' : 'text-[#B0A898]'}`}
+                className={`text-[10px] mt-1 whitespace-nowrap ${isActive ? 'text-[#745b3c]' : 'text-[#B0A898]'}`}
                 style={{ letterSpacing: '0.05em' }}
               >
                 {label}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`w-14 h-px mx-1.5 mb-4 transition-colors ${isDone ? 'bg-[#C49A3C]' : 'bg-[#D4CDB5]'}`} />
+              <div className={`w-14 h-px mx-1.5 mb-4 transition-colors ${isDone ? 'bg-[#745b3c]' : 'bg-[#D4CDB5]'}`} />
             )}
           </div>
         );
@@ -210,7 +210,7 @@ function SlotCard({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const color      = CLASS_COLORS[slot.className] || '#C49A3C';
+  const color      = CLASS_COLORS[slot.className] || '#745b3c';
   const fullyBooked = slot.spots === 0;
   const lowSpots   = slot.spots > 0 && slot.spots <= 4;
 
@@ -222,8 +222,8 @@ function SlotCard({
         fullyBooked
           ? 'border-[#D4CDB5]/40 bg-[#F5F2EC] opacity-70 cursor-not-allowed'
           : isSelected
-            ? 'border-[#C49A3C]/60 bg-[#C49A3C]/06 shadow-[0_2px_16px_rgba(196,154,60,0.12)]'
-            : 'border-[#D4CDB5]/60 bg-white hover:border-[#C49A3C]/30 hover:shadow-sm'
+            ? 'border-[#745b3c]/60 bg-[#745b3c]/06 shadow-[0_2px_16px_rgba(116,91,60,0.12)]'
+            : 'border-[#D4CDB5]/60 bg-white hover:border-[#745b3c]/30 hover:shadow-sm'
       }`}
     >
       {/* Color bar */}
@@ -286,11 +286,11 @@ function SlotCard({
                 <Users size={9} /> {slot.spots} spots left
               </div>
               {isSelected ? (
-                <div className="w-6 h-6 rounded-full bg-[#C49A3C] flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-[#745b3c] flex items-center justify-center">
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
               ) : (
-                <span className="text-[#C49A3C] text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[#745b3c] text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                   Select →
                 </span>
               )}
@@ -338,14 +338,14 @@ function MultiSelectFilter({
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2.5 text-xs font-semibold transition-all ${
           !allSelected
-            ? 'bg-[#C49A3C]/10 border-[#C49A3C]/40 text-[#A67E2A]'
-            : 'bg-white border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#C49A3C]/30'
+            ? 'bg-[#745b3c]/10 border-[#745b3c]/40 text-[#5e4a30]'
+            : 'bg-white border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#745b3c]/30'
         }`}
       >
         {icon}
         {label}
         {!allSelected && (
-          <span className="w-4 h-4 rounded-full bg-[#C49A3C] text-white text-[9px] flex items-center justify-center">
+          <span className="w-4 h-4 rounded-full bg-[#745b3c] text-white text-[9px] flex items-center justify-center">
             {selected.length}
           </span>
         )}
@@ -356,7 +356,7 @@ function MultiSelectFilter({
         <div className="absolute z-30 top-full left-0 mt-2 w-56 bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-[0_8px_28px_rgba(30,42,53,0.16)] p-2 max-h-72 overflow-y-auto">
           <button
             onClick={() => onChange([])}
-            className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#C49A3C] hover:bg-[#F5F2E8] transition-colors mb-1"
+            className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#745b3c] hover:bg-[#F5F2E8] transition-colors mb-1"
           >
             All {label}s
           </button>
@@ -369,7 +369,7 @@ function MultiSelectFilter({
                 type="checkbox"
                 checked={selected.includes(opt)}
                 onChange={() => toggleOption(opt)}
-                className="w-3.5 h-3.5 rounded accent-[#C49A3C]"
+                className="w-3.5 h-3.5 rounded accent-[#745b3c]"
               />
               <span className="text-xs text-[#1E2A35]">{opt}</span>
             </label>
@@ -527,7 +527,7 @@ export default function BookClassPage() {
           duration: parseDurationMinutes(slot.duration),
           title: slot.className,
           subtitle: `${slot.time} · Coach ${slot.trainer}`,
-          color: CLASS_COLORS[slot.className] || '#C49A3C',
+          color: CLASS_COLORS[slot.className] || '#745b3c',
           muted: fullyBooked,
           mutedLabel: fullyBooked ? 'Full' : undefined,
           onClick: () => openDayPanel(key, fullyBooked ? null : slot),
@@ -547,7 +547,7 @@ export default function BookClassPage() {
         id: slot.id,
         time: slot.time,
         title: slot.className,
-        color: CLASS_COLORS[slot.className] || '#C49A3C',
+        color: CLASS_COLORS[slot.className] || '#745b3c',
         muted: slot.spots === 0,
       }));
     });
@@ -625,7 +625,7 @@ export default function BookClassPage() {
             {filtersActive && (
               <button
                 onClick={() => { setCoachFilter([]); setClassFilter([]); }}
-                className="text-[#C49A3C] text-xs font-semibold px-3 py-2 rounded-full border border-[#C49A3C]/40 hover:bg-[#C49A3C]/10 transition-colors"
+                className="text-[#745b3c] text-xs font-semibold px-3 py-2 rounded-full border border-[#745b3c]/40 hover:bg-[#745b3c]/10 transition-colors"
               >
                 Clear
               </button>
@@ -705,9 +705,9 @@ export default function BookClassPage() {
                       disabled={!hasClasses}
                       className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${
                         isSelected
-                          ? 'bg-[#C49A3C] text-white shadow-[0_3px_12px_rgba(196,154,60,0.35)]'
+                          ? 'bg-[#745b3c] text-white shadow-[0_3px_12px_rgba(116,91,60,0.35)]'
                           : isToday
-                            ? 'bg-[#C49A3C]/12 text-[#A67E2A]'
+                            ? 'bg-[#745b3c]/12 text-[#5e4a30]'
                             : hasClasses
                               ? 'text-[#1E2A35] hover:bg-[#F0EBE0] cursor-pointer'
                               : 'text-[#D4CDB5] cursor-default'
@@ -715,7 +715,7 @@ export default function BookClassPage() {
                     >
                       <span className="text-sm leading-none mb-1">{day}</span>
                       {hasClasses && (
-                        <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white/70' : 'bg-[#C49A3C]'}`} />
+                        <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white/70' : 'bg-[#745b3c]'}`} />
                       )}
                     </button>
                   );
@@ -725,7 +725,7 @@ export default function BookClassPage() {
               {/* Legend */}
               <div className="mt-4 pt-4 border-t border-[#D4CDB5]/40 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#C49A3C]" />
+                  <span className="w-2 h-2 rounded-full bg-[#745b3c]" />
                   <span className="text-[#9A8E7E]" style={{ fontSize: '0.68rem' }}>Classes available</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -777,7 +777,7 @@ export default function BookClassPage() {
             <div className="flex items-center gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {ALL_CLASSES.map((name) => (
                 <div key={name} className="flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[name] || '#C49A3C' }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[name] || '#745b3c' }} />
                   <span className="text-[#8A7E6E] text-xs whitespace-nowrap">{name}</span>
                 </div>
               ))}
@@ -819,7 +819,7 @@ export default function BookClassPage() {
                 {panelSlots.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-14 h-14 rounded-2xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-3 shadow-sm">
-                      <CalendarDays size={22} className="text-[#C49A3C]/60" />
+                      <CalendarDays size={22} className="text-[#745b3c]/60" />
                     </div>
                     <p className="text-[#9A8E7E] text-sm">No classes on this day.</p>
                     {filtersActive && (
@@ -842,15 +842,15 @@ export default function BookClassPage() {
 
               {/* ── Booking summary (appears when a slot is selected) ── */}
               {selectedSlot && (
-                <div className="border-t border-[#C49A3C]/30 bg-white px-6 py-5 shrink-0">
+                <div className="border-t border-[#745b3c]/30 bg-white px-6 py-5 shrink-0">
                   <div className="flex items-center gap-3 mb-4">
                     <div
                       className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: `${CLASS_COLORS[selectedSlot.className] || '#C49A3C'}18` }}
+                      style={{ backgroundColor: `${CLASS_COLORS[selectedSlot.className] || '#745b3c'}18` }}
                     >
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: CLASS_COLORS[selectedSlot.className] || '#C49A3C' }}
+                        style={{ backgroundColor: CLASS_COLORS[selectedSlot.className] || '#745b3c' }}
                       />
                     </div>
                     <div className="min-w-0">
@@ -875,7 +875,7 @@ export default function BookClassPage() {
                     <div>
                       <p className="text-[#8A7E6E] text-xs">Session fee</p>
                       <p
-                        className="text-[#C49A3C] leading-none"
+                        className="text-[#745b3c] leading-none"
                         style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.02em' }}
                       >
                         ₱360
@@ -883,7 +883,7 @@ export default function BookClassPage() {
                     </div>
                     <button
                       onClick={handleProceed}
-                      className="flex items-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 px-6 shadow-[0_4px_16px_rgba(196,154,60,0.35)] hover:bg-[#A67E2A] active:scale-[0.97] transition-all whitespace-nowrap"
+                      className="flex items-center gap-2 bg-[#745b3c] text-white font-bold text-sm rounded-full py-3.5 px-6 shadow-[0_4px_16px_rgba(116,91,60,0.35)] hover:bg-[#5e4a30] active:scale-[0.97] transition-all whitespace-nowrap"
                       style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em', fontSize: '0.9rem' }}
                     >
                       Proceed to Payment <ChevronRight size={16} />

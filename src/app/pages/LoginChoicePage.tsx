@@ -32,8 +32,8 @@ export default function LoginChoicePage() {
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-8 md:p-10">
             {/* Logo / Icon */}
             <div className="flex flex-col items-center mb-8">
-              <div className="w-20 h-20 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-3xl flex items-center justify-center mb-5">
-                <Leaf size={36} className="text-[#C49A3C]" />
+              <div className="w-20 h-20 bg-[#745b3c]/10 border border-[#745b3c]/30 rounded-3xl flex items-center justify-center mb-5">
+                <Leaf size={36} className="text-[#745b3c]" />
               </div>
               <h1
                 className="text-[#1E2A35] text-center leading-tight mb-2"
@@ -54,7 +54,7 @@ export default function LoginChoicePage() {
             <div className="flex flex-col gap-4">
               <button
                 onClick={() => navigate('/login')}
-                className="w-full flex items-center gap-4 bg-[#C49A3C] text-white font-bold rounded-2xl px-6 py-5 min-h-[72px] shadow-[0_4px_24px_rgba(196,154,60,0.35)] active:scale-[0.97] transition-all hover:bg-[#A67E2A]"
+                className="w-full flex items-center gap-4 bg-[#745b3c] text-white font-bold rounded-2xl px-6 py-5 min-h-[72px] shadow-[0_4px_24px_rgba(116,91,60,0.35)] active:scale-[0.97] transition-all hover:bg-[#5e4a30]"
               >
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
                   <LogIn size={20} />
@@ -70,7 +70,7 @@ export default function LoginChoicePage() {
                 className="w-full flex items-center gap-4 bg-[#F8F3E8] text-[#1E2A35] font-bold rounded-2xl px-6 py-5 min-h-[72px] border border-[#D4CDB5] active:scale-[0.97] transition-all hover:bg-[#EDE8D8] shadow-sm"
               >
                 <div className="w-10 h-10 bg-[#EDE8D8] rounded-xl flex items-center justify-center shrink-0">
-                  <UserPlus size={20} className="text-[#C49A3C]" />
+                  <UserPlus size={20} className="text-[#745b3c]" />
                 </div>
                 <div className="text-left">
                   <p className="text-lg font-bold">Sign Up</p>

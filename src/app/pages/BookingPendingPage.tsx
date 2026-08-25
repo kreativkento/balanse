@@ -8,7 +8,7 @@ import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 // ─────────────────────────────────────────────
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga':             '#C49A3C',
+  'Yoga':             '#745b3c',
   'Calisthenics':     '#3A4A5A',
   'Animal Flow':      '#6B8E6B',
   'Groundworks':      '#8B6F5A',
@@ -16,7 +16,7 @@ const CLASS_COLORS: Record<string, string> = {
   'Mat Pilates':      '#9A7A8A',
   'Kickboxing':       '#7A3A4A',
   'Capoeira':         '#A07050',
-  'Personal Coaching':'#A67E2A',
+  'Personal Coaching':'#5e4a30',
 };
 
 // ─────────────────────────────────────────────
@@ -25,7 +25,7 @@ const CLASS_COLORS: Record<string, string> = {
 
 const NEXT_STEPS = [
   {
-    icon: <Clock size={16} className="text-[#C49A3C]" />,
+    icon: <Clock size={16} className="text-[#745b3c]" />,
     title: 'Payment Review',
     desc: 'Our team will review your proof of payment within 24 hours.',
   },
@@ -56,7 +56,7 @@ export default function BookingPendingPage() {
 
   if (!booking) return null;
 
-  const classColor = CLASS_COLORS[booking.className] || '#C49A3C';
+  const classColor = CLASS_COLORS[booking.className] || '#745b3c';
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen flex flex-col items-center justify-center px-4 py-12">
@@ -67,12 +67,12 @@ export default function BookingPendingPage() {
           {/* Pending ring animation */}
           <div className="relative inline-flex items-center justify-center mb-5">
             {/* Outer pulse ring */}
-            <div className="absolute w-28 h-28 rounded-full border-2 border-[#C49A3C]/20 animate-ping" style={{ animationDuration: '2.5s' }} />
+            <div className="absolute w-28 h-28 rounded-full border-2 border-[#745b3c]/20 animate-ping" style={{ animationDuration: '2.5s' }} />
             {/* Middle ring */}
-            <div className="absolute w-24 h-24 rounded-full border border-[#C49A3C]/30" />
+            <div className="absolute w-24 h-24 rounded-full border border-[#745b3c]/30" />
             {/* Icon container */}
-            <div className="w-20 h-20 rounded-full bg-[#C49A3C]/12 border-2 border-[#C49A3C]/40 flex items-center justify-center">
-              <Clock size={34} className="text-[#C49A3C]" />
+            <div className="w-20 h-20 rounded-full bg-[#745b3c]/12 border-2 border-[#745b3c]/40 flex items-center justify-center">
+              <Clock size={34} className="text-[#745b3c]" />
             </div>
           </div>
 
@@ -115,7 +115,7 @@ export default function BookingPendingPage() {
             <div className="grid grid-cols-2 gap-x-8 gap-y-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-[#F0EBE0] flex items-center justify-center shrink-0">
-                  <Calendar size={13} className="text-[#C49A3C]" />
+                  <Calendar size={13} className="text-[#745b3c]" />
                 </div>
                 <div>
                   <p className="text-[#9A8E7E]" style={{ fontSize: '0.65rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Date</p>
@@ -125,7 +125,7 @@ export default function BookingPendingPage() {
 
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-[#F0EBE0] flex items-center justify-center shrink-0">
-                  <Clock size={13} className="text-[#C49A3C]" />
+                  <Clock size={13} className="text-[#745b3c]" />
                 </div>
                 <div>
                   <p className="text-[#9A8E7E]" style={{ fontSize: '0.65rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Time</p>
@@ -135,7 +135,7 @@ export default function BookingPendingPage() {
 
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-[#F0EBE0] flex items-center justify-center shrink-0">
-                  <User size={13} className="text-[#C49A3C]" />
+                  <User size={13} className="text-[#745b3c]" />
                 </div>
                 <div>
                   <p className="text-[#9A8E7E]" style={{ fontSize: '0.65rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Coach</p>
@@ -145,7 +145,7 @@ export default function BookingPendingPage() {
 
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-[#F0EBE0] flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={13} className="text-[#C49A3C]" />
+                  <CheckCircle2 size={13} className="text-[#745b3c]" />
                 </div>
                 <div>
                   <p className="text-[#9A8E7E]" style={{ fontSize: '0.65rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Amount Paid</p>
@@ -213,14 +213,14 @@ export default function BookingPendingPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#C49A3C] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(196,154,60,0.35)] hover:bg-[#A67E2A] active:scale-[0.97] transition-all"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#745b3c] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(116,91,60,0.35)] hover:bg-[#5e4a30] active:scale-[0.97] transition-all"
             style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
           >
             <LayoutDashboard size={17} /> Back to Dashboard
           </button>
           <button
             onClick={() => navigate('/book')}
-            className="flex-1 flex items-center justify-center gap-2 bg-white text-[#1E2A35] border border-[#D4CDB5]/70 rounded-full py-4 hover:border-[#C49A3C]/40 hover:bg-[#F8F3E8] active:scale-[0.97] transition-all"
+            className="flex-1 flex items-center justify-center gap-2 bg-white text-[#1E2A35] border border-[#D4CDB5]/70 rounded-full py-4 hover:border-[#745b3c]/40 hover:bg-[#F8F3E8] active:scale-[0.97] transition-all"
             style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
           >
             Book Another Class <ArrowRight size={17} />

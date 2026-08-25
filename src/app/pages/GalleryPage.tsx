@@ -180,7 +180,7 @@ export default function GalleryPage() {
               onClick={() => setActiveTab('community')}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
                 activeTab === 'community'
-                  ? 'border-[#C49A3C] text-[#C49A3C]'
+                  ? 'border-[#745b3c] text-[#745b3c]'
                   : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35]'
               }`}
             >
@@ -190,7 +190,7 @@ export default function GalleryPage() {
               onClick={() => isAuthenticated ? setActiveTab('personal') : navigate('/login')}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
                 activeTab === 'personal'
-                  ? 'border-[#C49A3C] text-[#C49A3C]'
+                  ? 'border-[#745b3c] text-[#745b3c]'
                   : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35]'
               }`}
             >
@@ -208,7 +208,7 @@ export default function GalleryPage() {
         {activeTab === 'personal' && isAuthenticated && (
           <div>
             <div className="flex items-center gap-2 mb-5 px-1">
-              <Tag size={15} className="text-[#C49A3C]" />
+              <Tag size={15} className="text-[#745b3c]" />
               <p className="text-[#8A7E6E] text-sm">
                 Photos where you've been tagged by the BALANSÉ team appear here.
               </p>
@@ -217,7 +217,7 @@ export default function GalleryPage() {
             {PERSONAL_PHOTOS.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="w-16 h-16 rounded-3xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center mb-4">
-                  <Tag size={24} className="text-[#C49A3C]/50" />
+                  <Tag size={24} className="text-[#745b3c]/50" />
                 </div>
                 <h3
                   className="text-[#1E2A35] mb-1"
@@ -245,15 +245,15 @@ export default function GalleryPage() {
                     <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/30 transition-colors flex items-end p-3">
                       <div className={`opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${HOVER_FADE_UP} w-full`}>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <Tag size={11} className="text-[#C49A3C]" />
-                          <span className="text-[#C49A3C] text-xs font-bold uppercase tracking-widest">Tagged</span>
+                          <Tag size={11} className="text-[#745b3c]" />
+                          <span className="text-[#745b3c] text-xs font-bold uppercase tracking-widest">Tagged</span>
                         </div>
                         <p className="text-white text-sm font-medium leading-tight">{photo.class}</p>
                         <p className="text-white/70 text-xs">{photo.date}</p>
                       </div>
                     </div>
                     {/* Persistent tag badge */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-[#C49A3C]/90 text-white text-xs px-2 py-0.5 rounded-full">
+                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-[#745b3c]/90 text-white text-xs px-2 py-0.5 rounded-full">
                       <Tag size={9} /> Tagged
                     </div>
                   </div>
@@ -360,8 +360,8 @@ export default function GalleryPage() {
                       onClick={() => setVideoIndex(i)}
                       className={`rounded-full transition-all duration-200 ${
                         i === videoIndex
-                          ? 'w-5 h-2 bg-[#C49A3C]'
-                          : 'w-2 h-2 bg-[#D4CDB5] hover:bg-[#C49A3C]/50'
+                          ? 'w-5 h-2 bg-[#745b3c]'
+                          : 'w-2 h-2 bg-[#D4CDB5] hover:bg-[#745b3c]/50'
                       }`}
                     />
                   ))}
@@ -415,8 +415,8 @@ export default function GalleryPage() {
                       onClick={() => setVideoIndex(i)}
                       className={`rounded-full transition-all duration-200 ${
                         i === videoIndex
-                          ? 'w-6 h-2 bg-[#C49A3C]'
-                          : 'w-2 h-2 bg-[#D4CDB5] hover:bg-[#C49A3C]/50'
+                          ? 'w-6 h-2 bg-[#745b3c]'
+                          : 'w-2 h-2 bg-[#D4CDB5] hover:bg-[#745b3c]/50'
                       }`}
                     />
                   ))}
@@ -502,7 +502,7 @@ export default function GalleryPage() {
             <div className="flex justify-center mt-8 mb-2">
               <button
                 onClick={() => setShowMore((v) => !v)}
-                className="flex items-center gap-2 px-7 py-3 rounded-full border-2 border-[#C49A3C] text-[#C49A3C] hover:bg-[#C49A3C] hover:text-white active:scale-95 transition-all"
+                className="flex items-center gap-2 px-7 py-3 rounded-full border-2 border-[#745b3c] text-[#745b3c] hover:bg-[#745b3c] hover:text-white active:scale-95 transition-all"
                 style={{
                   fontFamily: "'Bebas Neue', sans-serif",
                   fontSize: '1rem',

@@ -297,7 +297,7 @@ export default function StaffAvailabilityPage() {
           {[
             { label: 'Available Days',   value: availableCount, color: 'text-green-600', bg: 'bg-green-50',       border: 'border-green-200',    icon: <CalendarDays size={14} className="text-green-600" /> },
             { label: 'Days Off',          value: dayOffCount,    color: 'text-red-500',   bg: 'bg-red-50',         border: 'border-red-200',      icon: <X size={14} className="text-red-500" /> },
-            { label: 'Time Periods',      value: periodCount,    color: 'text-[#C49A3C]', bg: 'bg-[#C49A3C]/10',  border: 'border-[#C49A3C]/30', icon: <AlarmClock size={14} className="text-[#C49A3C]" /> },
+            { label: 'Time Periods',      value: periodCount,    color: 'text-[#745b3c]', bg: 'bg-[#745b3c]/10',  border: 'border-[#745b3c]/30', icon: <AlarmClock size={14} className="text-[#745b3c]" /> },
           ].map(s => (
             <div key={s.label} className={`bg-white rounded-xl border ${s.border} px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-2.5 min-w-0`}>
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${s.bg}`}>
@@ -352,10 +352,10 @@ export default function StaffAvailabilityPage() {
                       onClick={() => openDate(key)}
                       className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all hover:bg-[#F0EBE0] ${
                         isSel ? 'bg-[#1E2A35] hover:bg-[#263545]' : ''
-                      } ${isToday && !isSel ? 'ring-1 ring-[#C49A3C]/50' : ''}`}
+                      } ${isToday && !isSel ? 'ring-1 ring-[#745b3c]/50' : ''}`}
                     >
                       <span className={`text-xs leading-none mb-0.5 ${
-                        isSel ? 'text-white' : isToday ? 'text-[#C49A3C] font-bold' : 'text-[#1E2A35]'
+                        isSel ? 'text-white' : isToday ? 'text-[#745b3c] font-bold' : 'text-[#1E2A35]'
                       }`}>{day}</span>
                       {entry ? (
                         <span className={`w-1.5 h-1.5 rounded-full ${entry.dayOff ? 'bg-red-400' : 'bg-green-500'}`} />
@@ -376,7 +376,7 @@ export default function StaffAvailabilityPage() {
 
             <button
               onClick={() => openDate(todayKey)}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#C49A3C]/40 text-[#A67E2A] text-xs sm:text-sm font-semibold hover:bg-[#C49A3C]/08 active:scale-[0.98] transition-all"
+              className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#745b3c]/40 text-[#5e4a30] text-xs sm:text-sm font-semibold hover:bg-[#745b3c]/08 active:scale-[0.98] transition-all"
             >
               <Plus size={14} /> Add for Today
             </button>
@@ -433,7 +433,7 @@ export default function StaffAvailabilityPage() {
                         <p className="text-[#8A7E6E] text-[10px] uppercase tracking-widest">Time Ranges</p>
                         <button
                           onClick={addPeriod}
-                          className="flex items-center gap-1 text-[#C49A3C] text-[11px] font-semibold hover:text-[#A67E2A] transition-colors"
+                          className="flex items-center gap-1 text-[#745b3c] text-[11px] font-semibold hover:text-[#5e4a30] transition-colors"
                         >
                           <Plus size={12} /> Add
                         </button>
@@ -469,7 +469,7 @@ export default function StaffAvailabilityPage() {
                       value={editorNote}
                       onChange={e => setEditorNote(e.target.value)}
                       placeholder={editorDayOff ? 'Personal leave, travel…' : 'Available after 10 AM…'}
-                      className="w-full px-2.5 py-2 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all placeholder-[#C0B8A8]"
+                      className="w-full px-2.5 py-2 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 transition-all placeholder-[#C0B8A8]"
                     />
                   </div>
                 </div>
@@ -540,7 +540,7 @@ export default function StaffAvailabilityPage() {
                         {/* Date + note */}
                         <div className="flex sm:block items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className={`text-sm font-semibold leading-tight ${isActive ? 'text-[#C49A3C]' : 'text-[#1E2A35]'}`}>
+                            <p className={`text-sm font-semibold leading-tight ${isActive ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}>
                               {formatDateShortFromKey(entry.date)}
                             </p>
                             {entry.note && (

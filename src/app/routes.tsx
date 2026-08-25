@@ -33,6 +33,7 @@ import AdminCoachAvailabilityPage from './pages/AdminCoachAvailabilityPage';
 import AdminDisciplinesPage from './pages/AdminDisciplinesPage';
 import AdminClassesPage from './pages/AdminClassesPage';
 import AdminCoachesPage from './pages/AdminCoachesPage';
+import { AdminLayout } from './components/layout/AdminLayout';
 import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
 import StaffProfilePage from './pages/StaffProfilePage';
 import NewsPage from './pages/NewsPage';
@@ -77,22 +78,27 @@ export const router = createBrowserRouter([
       { path: 'staff-availability', Component: StaffAvailabilityPage },
       { path: 'staff-profile',      Component: StaffProfilePage },
       { path: 'admin-login', Component: AdminLoginPage },
-      { path: 'admin-dashboard', Component: AdminDashboardPage },
-      { path: 'admin-staff', Component: AdminStaffPage },
-      { path: 'admin-coaches', Component: AdminCoachesPage },
-      { path: 'admin-students', Component: AdminStudentsPage },
-      { path: 'admin-schedule',   Component: AdminSchedulePage },
-      { path: 'admin-payments',   Component: AdminPaymentsPage },
-      { path: 'admin-gallery',    Component: AdminGalleryPage },
-      { path: 'admin-disciplines', Component: AdminDisciplinesPage },
-      { path: 'admin-classes', Component: AdminClassesPage },
-      { path: 'admin-events', Component: AdminClassesPage },
-      { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
-      { path: 'admin-promos',     Component: AdminPromosPage },
-      { path: 'admin-news',       Component: AdminNewsPage },
-      { path: 'admin-policies',   Component: AdminPoliciesPage },
-      { path: 'admin-absence',             Component: AdminAbsenceTrackerPage },
-      { path: 'admin-coach-availability',  Component: AdminCoachAvailabilityPage },
+      {
+        Component: AdminLayout,
+        children: [
+          { path: 'admin-dashboard', Component: AdminDashboardPage },
+          { path: 'admin-staff', Component: AdminStaffPage },
+          { path: 'admin-coaches', Component: AdminCoachesPage },
+          { path: 'admin-students', Component: AdminStudentsPage },
+          { path: 'admin-schedule', Component: AdminSchedulePage },
+          { path: 'admin-payments', Component: AdminPaymentsPage },
+          { path: 'admin-gallery', Component: AdminGalleryPage },
+          { path: 'admin-disciplines', Component: AdminDisciplinesPage },
+          { path: 'admin-classes', Component: AdminClassesPage },
+          { path: 'admin-events', Component: AdminClassesPage },
+          { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
+          { path: 'admin-promos', Component: AdminPromosPage },
+          { path: 'admin-news', Component: AdminNewsPage },
+          { path: 'admin-policies', Component: AdminPoliciesPage },
+        ],
+      },
+      { path: 'admin-absence', Component: AdminAbsenceTrackerPage },
+      { path: 'admin-coach-availability', Component: AdminCoachAvailabilityPage },
       { path: 'development', Component: DevelopmentLoginPage },
       { path: 'development/dashboard', Component: DevDashboardPage },
       { path: 'development/tickets', Component: DevTicketsPage },

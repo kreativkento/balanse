@@ -5,7 +5,6 @@ import {
   Clock, AlertOctagon, Users, LayoutGrid, List, Eye, EyeOff,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 import { NATIONALITIES } from '../data/nationalities';
 import {
   createStaffAccount,
@@ -34,7 +33,7 @@ interface CoachMember {
   nationality: string;
 }
 
-const ACCENT = '#C49A3C';
+const ACCENT = '#745b3c';
 
 const EMPTY_FORM = {
   firstName: '',
@@ -149,12 +148,12 @@ function DisciplineMultiSelect({
                 onClick={() => onToggle(discipline.id)}
                 className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                   selected
-                    ? 'bg-[#C49A3C]/12 text-[#1E2A35]'
+                    ? 'bg-[#745b3c]/12 text-[#1E2A35]'
                     : 'hover:bg-[#F8F3E8] text-[#5A5048]'
                 }`}
               >
                 <span className="text-sm font-semibold truncate">{discipline.name}</span>
-                {selected && <Check size={14} className="text-[#C49A3C] shrink-0" strokeWidth={2.5} />}
+                {selected && <Check size={14} className="text-[#745b3c] shrink-0" strokeWidth={2.5} />}
               </button>
             );
           })}
@@ -270,7 +269,7 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
               type="button"
               onClick={() => setPhotoOpen(true)}
               aria-label={`View photo of ${coach.name}`}
-              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#C49A3C]/40 active:scale-[0.98] cursor-pointer"
+              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#745b3c]/40 active:scale-[0.98] cursor-pointer"
             >
               {coach.photo && !imgError ? (
                 <img
@@ -307,7 +306,7 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
                   )}
                   {coach.nationality.trim() && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
-                      <Globe size={11} className="text-[#C49A3C]" />
+                      <Globe size={11} className="text-[#745b3c]" />
                       {coach.nationality}
                     </span>
                   )}
@@ -346,15 +345,15 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Contact</p>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Mail size={13} className="text-[#C49A3C] shrink-0" />
+                    <Mail size={13} className="text-[#745b3c] shrink-0" />
                     <span className="truncate">{coach.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Phone size={13} className="text-[#C49A3C] shrink-0" />
+                    <Phone size={13} className="text-[#745b3c] shrink-0" />
                     <span>{coach.phone.trim() || 'No phone on file'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Globe size={13} className="text-[#C49A3C] shrink-0" />
+                    <Globe size={13} className="text-[#745b3c] shrink-0" />
                     <span>{coach.nationality.trim() || 'No nationality on file'}</span>
                   </div>
                 </div>
@@ -383,16 +382,16 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Account</p>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                    <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                    <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                     Role: Coach
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                    <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                    <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                     Status: {coach.status}
                   </div>
                   {coach.experience.trim() && (
                     <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                      <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                      <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                       Experience: {coach.experience}
                     </div>
                   )}
@@ -600,16 +599,16 @@ export default function AdminCoachesPage() {
   };
 
   const inputClass =
-    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]";
+    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   return (
-    <AdminSidebar>
+    <>
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Award size={14} className="text-[#C49A3C]" />
+              <Award size={14} className="text-[#745b3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Coaches</span>
             </div>
             <h1
@@ -661,7 +660,7 @@ export default function AdminCoachesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, or discipline…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
           <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm">
@@ -720,7 +719,7 @@ export default function AdminCoachesPage() {
                       setSelectedCoach(coach);
                     }
                   }}
-                  className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 transition-all cursor-pointer group"
+                  className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#745b3c]/30 transition-all cursor-pointer group"
                 >
                   <div className="relative h-28 overflow-hidden" style={{ backgroundColor: `${ACCENT}15` }}>
                     <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${ACCENT}30 0%, ${ACCENT}08 100%)` }} />
@@ -743,7 +742,7 @@ export default function AdminCoachesPage() {
                       {coach.photo ? (
                         <img src={coach.photo} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <span className="text-[#A67E2A] text-sm font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.06em' }}>
+                        <span className="text-[#5e4a30] text-sm font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.06em' }}>
                           {coachInitials(coach.name)}
                         </span>
                       )}
@@ -758,7 +757,7 @@ export default function AdminCoachesPage() {
                     <p className="text-[#8A7E6E] text-xs font-semibold mb-1 truncate">{coach.email}</p>
                     {coach.nationality.trim() && (
                       <p className="text-[#B0A898] text-xs mb-3 flex items-center gap-1">
-                        <Globe size={11} className="text-[#C49A3C]" />
+                        <Globe size={11} className="text-[#745b3c]" />
                         {coach.nationality}
                       </p>
                     )}
@@ -858,11 +857,11 @@ export default function AdminCoachesPage() {
                   className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-[#C49A3C]/12 border border-[#C49A3C]/25 flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0 overflow-hidden">
                       {coach.photo ? (
                         <img src={coach.photo} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <span className="text-[#A67E2A] text-xs font-bold">{coachInitials(coach.name)}</span>
+                        <span className="text-[#5e4a30] text-xs font-bold">{coachInitials(coach.name)}</span>
                       )}
                     </div>
                     <span className="text-[#1E2A35] text-sm font-semibold truncate">{coach.name}</span>
@@ -1111,6 +1110,6 @@ export default function AdminCoachesPage() {
           </div>
         </div>
       )}
-    </AdminSidebar>
+    </>
   );
 }

@@ -42,7 +42,7 @@ const WEEKLY_SCHEDULE: ScheduleEvent[] = [
 ];
 
 const CLASS_COLORS: Record<string, string> = {
-  Yoga: '#C49A3C',
+  Yoga: '#745b3c',
   Calisthenics: '#3A4A5A',
   'Animal Flow': '#6B8E6B',
   Groundworks: '#8B6F5A',
@@ -66,7 +66,7 @@ function WeeklySchedule({ onBook }: { onBook: () => void }) {
         duration: evt.duration,
         title: evt.className,
         subtitle: `${evt.time} · ${evt.trainer}`,
-        color: CLASS_COLORS[evt.className] || '#C49A3C',
+        color: CLASS_COLORS[evt.className] || '#745b3c',
         onClick: onBook,
       })),
     [onBook],
@@ -106,7 +106,7 @@ function WeeklySchedule({ onBook }: { onBook: () => void }) {
         {weekOffset !== 0 && (
           <button
             onClick={() => setWeekOffset(0)}
-            className="text-[#C49A3C] text-xs font-semibold px-3 py-1.5 rounded-full border border-[#C49A3C]/40 hover:bg-[#C49A3C]/10 transition-colors"
+            className="text-[#745b3c] text-xs font-semibold px-3 py-1.5 rounded-full border border-[#745b3c]/40 hover:bg-[#745b3c]/10 transition-colors"
           >
             This Week
           </button>
@@ -117,7 +117,7 @@ function WeeklySchedule({ onBook }: { onBook: () => void }) {
       <div className="flex items-center gap-3 mb-4 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {legendClasses.map((name) => (
           <div key={name} className="flex items-center gap-1.5 shrink-0">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[name] || '#C49A3C' }} />
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[name] || '#745b3c' }} />
             <span className="text-[#8A7E6E] text-xs whitespace-nowrap">{name}</span>
           </div>
         ))}
@@ -197,8 +197,8 @@ export default function ClassesPage() {
             className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-sm p-6"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="w-12 h-12 rounded-2xl bg-[#C49A3C]/12 border border-[#C49A3C]/25 flex items-center justify-center mb-4">
-              <LogIn size={20} className="text-[#C49A3C]" />
+            <div className="w-12 h-12 rounded-2xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center mb-4">
+              <LogIn size={20} className="text-[#745b3c]" />
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-2"
@@ -249,7 +249,7 @@ export default function ClassesPage() {
               onClick={() => setActiveTab('upcoming')}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
                 activeTab === 'upcoming'
-                  ? 'border-[#C49A3C] text-[#C49A3C]'
+                  ? 'border-[#745b3c] text-[#745b3c]'
                   : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35]'
               }`}
             >
@@ -260,7 +260,7 @@ export default function ClassesPage() {
               onClick={() => setActiveTab('disciplines')}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
                 activeTab === 'disciplines'
-                  ? 'border-[#C49A3C] text-[#C49A3C]'
+                  ? 'border-[#745b3c] text-[#745b3c]'
                   : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35]'
               }`}
             >
@@ -281,7 +281,7 @@ export default function ClassesPage() {
           <>
             {disciplinesLoading && (
               <div className="flex items-center justify-center gap-2 text-[#8A7E6E] py-16">
-                <Loader2 size={18} className="animate-spin text-[#C49A3C]" />
+                <Loader2 size={18} className="animate-spin text-[#745b3c]" />
                 <span className="text-sm">Loading disciplines…</span>
               </div>
             )}

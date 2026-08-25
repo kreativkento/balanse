@@ -64,8 +64,8 @@ const INITIAL_BOOKINGS = [
     trainer: 'Jodi',
     location: 'Studio 1',
     status: 'confirmed' as const,
-    color: 'bg-[#C49A3C]/08 border-[#C49A3C]/30',
-    dot: 'bg-[#C49A3C]',
+    color: 'bg-[#745b3c]/08 border-[#745b3c]/30',
+    dot: 'bg-[#745b3c]',
     hoursUntilClass: 20,
     subscriptionType: 'Gold Membership',
     creditsUsed: 1,
@@ -118,17 +118,17 @@ const INITIAL_BOOKINGS = [
 ];
 
 const INITIAL_PAST_SESSIONS = [
-  { id: 101, className: 'Yoga',         date: dateLabel(addDays(_T, -2)),  time: '8:00 AM', trainer: 'Jodi',    rated: false, rating: 0, status: 'completed' as const },
-  { id: 102, className: 'Animal Flow',  date: dateLabel(addDays(_T, -5)),  time: '9:00 AM', trainer: 'Ephraim', rated: false, rating: 0, status: 'completed' as const },
-  { id: 103, className: 'Calisthenics', date: dateLabel(addDays(_T, -7)),  time: '7:00 AM', trainer: 'Rex',     rated: true,  rating: 5, status: 'completed' as const },
-  { id: 104, className: 'Kickboxing',   date: dateLabel(addDays(_T, -11)), time: '5:00 PM', trainer: 'Wolf',    rated: true,  rating: 4, status: 'completed' as const },
-  { id: 105, className: 'Mat Pilates',  date: dateLabel(addDays(_T, -14)), time: '9:00 AM', trainer: 'Kate',    rated: false, rating: 0, status: 'cancelled' as const },
+  { id: 101, className: 'Yoga',         date: dateLabel(addDays(_T, -2)),  time: '8:00 AM', trainer: 'Jodi',    status: 'completed' as const },
+  { id: 102, className: 'Animal Flow',  date: dateLabel(addDays(_T, -5)),  time: '9:00 AM', trainer: 'Ephraim', status: 'completed' as const },
+  { id: 103, className: 'Calisthenics', date: dateLabel(addDays(_T, -7)),  time: '7:00 AM', trainer: 'Rex',     status: 'completed' as const },
+  { id: 104, className: 'Kickboxing',   date: dateLabel(addDays(_T, -11)), time: '5:00 PM', trainer: 'Wolf',    status: 'completed' as const },
+  { id: 105, className: 'Mat Pilates',  date: dateLabel(addDays(_T, -14)), time: '9:00 AM', trainer: 'Kate',    status: 'cancelled' as const },
 ];
 
 const CLASS_COLORS_MAP: Record<string, string> = {
-  'Yoga': '#C49A3C', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
+  'Yoga': '#745b3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
   'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#A67E2A',
+  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#5e4a30',
 };
 
 type EventType = 'confirmed' | 'waitlisted' | 'open';
@@ -170,7 +170,7 @@ function buildCalendarEvents(): Record<string, CalEvent[]> {
 const CALENDAR_EVENTS = buildCalendarEvents();
 
 const eventStyle: Record<EventType, { bar: string; badge: string; badgeText: string; dot: string }> = {
-  confirmed:  { bar: 'bg-[#C49A3C]', badge: 'bg-[#C49A3C]/12 text-[#A67E2A]', badgeText: 'Confirmed',  dot: 'bg-[#C49A3C]' },
+  confirmed:  { bar: 'bg-[#745b3c]', badge: 'bg-[#745b3c]/12 text-[#5e4a30]', badgeText: 'Confirmed',  dot: 'bg-[#745b3c]' },
   waitlisted: { bar: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700',      badgeText: 'Waitlisted', dot: 'bg-amber-400'  },
   open:       { bar: 'bg-[#8A9E7A]', badge: 'bg-[#8A9E7A]/12 text-[#5A6E4A]', badgeText: 'Available',  dot: 'bg-[#8A9E7A]'  },
 };
@@ -182,7 +182,7 @@ const bookingStatusStyle: Record<string, string> = {
   rescheduled:'bg-violet-100 text-violet-700',
 };
 
-interface PastSession { id: number; className: string; date: string; time: string; trainer: string; rated: boolean; rating: number; status: 'completed' | 'cancelled'; }
+interface PastSession { id: number; className: string; date: string; time: string; trainer: string; status: 'completed' | 'cancelled'; }
 
 // ─────────────────────────────────────────────
 // CANCEL MODAL
@@ -230,8 +230,8 @@ function CancelModal({
           ))}
         </div>
         {canCancel ? (
-          <div className="flex items-center gap-3 bg-[#C49A3C]/06 border border-[#C49A3C]/30 rounded-2xl px-4 py-3">
-            <AlertTriangle size={16} className="text-[#C49A3C] shrink-0" />
+          <div className="flex items-center gap-3 bg-[#745b3c]/06 border border-[#745b3c]/30 rounded-2xl px-4 py-3">
+            <AlertTriangle size={16} className="text-[#745b3c] shrink-0" />
             <p className="text-[#7A6A52] text-sm">
               <span className="font-semibold">50% refund</span> will be processed to your original payment method within 3–5 business days.
             </p>
@@ -291,7 +291,7 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
     <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
       <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between">
         <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.06em' }}>My Calendar</h2>
-        <Calendar size={18} className="text-[#C49A3C]" />
+        <Calendar size={18} className="text-[#745b3c]" />
       </div>
       <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-[#D4CDB5]/40">
         {/* Left — Month Grid */}
@@ -316,8 +316,8 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
                   key={key}
                   onClick={() => setSelectedKey(key)}
                   className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${
-                    isSelected ? 'bg-[#C49A3C] text-white shadow-[0_3px_12px_rgba(196,154,60,0.35)]' :
-                    isToday    ? 'bg-[#C49A3C]/12 text-[#A67E2A]' : 'text-[#5A5048] hover:bg-[#F0EBE0]'
+                    isSelected ? 'bg-[#745b3c] text-white shadow-[0_3px_12px_rgba(116,91,60,0.35)]' :
+                    isToday    ? 'bg-[#745b3c]/12 text-[#5e4a30]' : 'text-[#5A5048] hover:bg-[#F0EBE0]'
                   }`}
                 >
                   <span className="text-sm leading-none mb-1">{day}</span>
@@ -335,7 +335,7 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
           {/* Legend */}
           <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#D4CDB5]/40">
             {[
-              { dot: 'bg-[#C49A3C]', label: 'Confirmed' },
+              { dot: 'bg-[#745b3c]', label: 'Confirmed' },
               { dot: 'bg-amber-400',  label: 'Waitlisted' },
               { dot: 'bg-[#8A9E7A]', label: 'Available' },
             ].map(({ dot, label }) => (
@@ -358,23 +358,23 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
           <div className="flex flex-col gap-3 flex-1">
             {selectedEvents.length === 0 ? (
               <div className="flex flex-col items-center justify-center flex-1 py-10 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-[#F0EBE0] border border-[#D4CDB5]/50 flex items-center justify-center mb-3"><Calendar size={20} className="text-[#C49A3C]/60" /></div>
+                <div className="w-12 h-12 rounded-2xl bg-[#F0EBE0] border border-[#D4CDB5]/50 flex items-center justify-center mb-3"><Calendar size={20} className="text-[#745b3c]/60" /></div>
                 <p className="text-[#9A8E7E] text-sm">No classes on this day</p>
-                <button onClick={onBook} className="mt-4 flex items-center gap-1.5 text-[#C49A3C] text-xs border border-[#C49A3C]/40 px-4 py-2 rounded-full hover:bg-[#C49A3C]/08 transition-all"><Plus size={13} /> Book a class</button>
+                <button onClick={onBook} className="mt-4 flex items-center gap-1.5 text-[#745b3c] text-xs border border-[#745b3c]/40 px-4 py-2 rounded-full hover:bg-[#745b3c]/08 transition-all"><Plus size={13} /> Book a class</button>
               </div>
             ) : (
               <>
                 {selectedEvents.map((ev, i) => {
                   const s = eventStyle[ev.type];
                   return (
-                    <div key={i} className="flex items-stretch gap-3 bg-[#FAFAF7] border border-[#D4CDB5]/40 rounded-2xl overflow-hidden p-3.5 hover:border-[#C49A3C]/30 hover:shadow-sm transition-all">
+                    <div key={i} className="flex items-stretch gap-3 bg-[#FAFAF7] border border-[#D4CDB5]/40 rounded-2xl overflow-hidden p-3.5 hover:border-[#745b3c]/30 hover:shadow-sm transition-all">
                       <div className={`w-1 rounded-full shrink-0 ${s.bar}`} />
                       <div className="flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="text-[#1E2A35] leading-none mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.04em' }}>{ev.name}</p>
                             <div className="flex items-center gap-2 text-[#8A7E6E] text-xs">
-                              <Clock size={11} className="text-[#C49A3C]" />
+                              <Clock size={11} className="text-[#745b3c]" />
                               <span>{ev.time}</span>
                               <span className="text-[#D4CDB5]">·</span>
                               <span>with {ev.trainer}</span>
@@ -386,7 +386,7 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
                     </div>
                   );
                 })}
-                <button onClick={onBook} className="mt-1 w-full flex items-center justify-center gap-2 border border-dashed border-[#D4CDB5] rounded-2xl py-3 text-[#8A7E6E] text-xs hover:border-[#C49A3C]/50 hover:text-[#C49A3C] transition-all">
+                <button onClick={onBook} className="mt-1 w-full flex items-center justify-center gap-2 border border-dashed border-[#D4CDB5] rounded-2xl py-3 text-[#8A7E6E] text-xs hover:border-[#745b3c]/50 hover:text-[#745b3c] transition-all">
                   <Plus size={13} /> Book another class
                 </button>
               </>
@@ -428,7 +428,7 @@ export default function DashboardPage() {
   const sessionsLeft     = sessionsTotal - sessionsUsed;
 
   const STATS = [
-    { icon: <Activity size={16} className="text-[#C49A3C]" />,      label: 'Sessions Attended', value: '24' },
+    { icon: <Activity size={16} className="text-[#745b3c]" />,      label: 'Sessions Attended', value: '24' },
     { icon: <CalendarDays size={16} className="text-[#8A9E7A]" />,   label: 'This Month',        value: '6'  },
     { icon: <Flame size={16} className="text-amber-500" />,          label: 'Current Streak',    value: '5 sessions' },
   ];
@@ -476,10 +476,10 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => navigate('/profile')}
-              className="w-11 h-11 bg-[#C49A3C]/15 border-2 border-[#C49A3C]/40 rounded-full flex items-center justify-center hover:bg-[#C49A3C]/25 active:scale-95 transition-all"
+              className="w-11 h-11 bg-[#745b3c]/15 border-2 border-[#745b3c]/40 rounded-full flex items-center justify-center hover:bg-[#745b3c]/25 active:scale-95 transition-all"
               title="My Profile"
             >
-              <span className="text-[#A67E2A] font-black text-sm">{user?.name?.split(' ').map(n => n[0]).join('') || 'M'}</span>
+              <span className="text-[#5e4a30] font-black text-sm">{user?.name?.split(' ').map(n => n[0]).join('') || 'M'}</span>
             </button>
           </div>
 
@@ -487,14 +487,14 @@ export default function DashboardPage() {
           {profileComplete ? (
             <div className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               <div className="flex items-center gap-3 px-4 py-3">
-                <div className="w-8 h-8 bg-[#C49A3C]/10 rounded-xl flex items-center justify-center">
-                  <CheckCircle2 size={16} className="text-[#C49A3C]" />
+                <div className="w-8 h-8 bg-[#745b3c]/10 rounded-xl flex items-center justify-center">
+                  <CheckCircle2 size={16} className="text-[#745b3c]" />
                 </div>
                 <div className="flex-1">
                   <p className="text-[#1E2A35] text-sm font-semibold">{memberPlan}</p>
                   <p className="text-[#8A7E6E] text-xs">Active — Renews Apr 30, 2026</p>
                 </div>
-                <span className="bg-[#C49A3C]/15 text-[#A67E2A] text-xs font-bold px-2 py-1 rounded-full">Active</span>
+                <span className="bg-[#745b3c]/15 text-[#5e4a30] text-xs font-bold px-2 py-1 rounded-full">Active</span>
               </div>
               <div className="px-4 pb-3 flex items-center gap-3">
                 <div className="flex-1">
@@ -509,7 +509,7 @@ export default function DashboardPage() {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${(sessionsUsed / sessionsTotal) * 100}%`,
-                        backgroundColor: sessionsLeft <= 3 ? '#E56B6B' : sessionsLeft <= 6 ? '#D97706' : '#C49A3C',
+                        backgroundColor: sessionsLeft <= 3 ? '#E56B6B' : sessionsLeft <= 6 ? '#D97706' : '#745b3c',
                       }}
                     />
                   </div>
@@ -529,7 +529,7 @@ export default function DashboardPage() {
                 </div>
                 <button
                   onClick={() => navigate('/pricing')}
-                  className="shrink-0 flex items-center gap-1.5 bg-[#C49A3C] text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-[#A67E2A] active:scale-95 transition-all shadow-sm"
+                  className="shrink-0 flex items-center gap-1.5 bg-[#745b3c] text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-[#5e4a30] active:scale-95 transition-all shadow-sm"
                   style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em' }}
                 >
                   <Sparkles size={12} /> View Plans
@@ -578,9 +578,9 @@ export default function DashboardPage() {
                 </div>
               ) : bookings.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-                  <CalendarDays size={28} className="text-[#C49A3C]/40 mb-2" />
+                  <CalendarDays size={28} className="text-[#745b3c]/40 mb-2" />
                   <p className="text-[#9A8E7E] text-sm">No upcoming bookings</p>
-                  <button onClick={() => navigate('/book')} className="mt-3 text-[#C49A3C] text-xs border border-[#C49A3C]/40 px-4 py-2 rounded-full hover:bg-[#C49A3C]/08 transition-all">Book a class</button>
+                  <button onClick={() => navigate('/book')} className="mt-3 text-[#745b3c] text-xs border border-[#745b3c]/40 px-4 py-2 rounded-full hover:bg-[#745b3c]/08 transition-all">Book a class</button>
                 </div>
               ) : (
                 <div
@@ -589,7 +589,7 @@ export default function DashboardPage() {
                     [&::-webkit-scrollbar-track]:bg-transparent
                     [&::-webkit-scrollbar-thumb]:bg-[#D4CDB5]
                     [&::-webkit-scrollbar-thumb]:rounded-full
-                    [&::-webkit-scrollbar-thumb:hover]:bg-[#C49A3C]/50"
+                    [&::-webkit-scrollbar-thumb:hover]:bg-[#745b3c]/50"
                 >
                   {bookings.map(booking => {
                     const isExpanded = expandedId === booking.id;
@@ -678,12 +678,12 @@ export default function DashboardPage() {
                   [&::-webkit-scrollbar-track]:bg-transparent
                   [&::-webkit-scrollbar-thumb]:bg-[#D4CDB5]
                   [&::-webkit-scrollbar-thumb]:rounded-full
-                  [&::-webkit-scrollbar-thumb:hover]:bg-[#C49A3C]/50"
+                  [&::-webkit-scrollbar-thumb:hover]:bg-[#745b3c]/50"
               >
                 {pastSessions.map(session => {
-                  const color = session.status === 'cancelled' ? '#9A8E7E' : (CLASS_COLORS_MAP[session.className] || '#C49A3C');
+                  const color = session.status === 'cancelled' ? '#9A8E7E' : (CLASS_COLORS_MAP[session.className] || '#745b3c');
                   return (
-                    <div key={session.id} className={`bg-[#FAFAF7] border rounded-2xl px-4 py-3 flex items-center gap-3 transition-colors ${session.status === 'cancelled' ? 'border-[#D4CDB5]/40 opacity-70' : 'border-[#D4CDB5]/60 hover:border-[#C49A3C]/30'}`}>
+                    <div key={session.id} className={`bg-[#FAFAF7] border rounded-2xl px-4 py-3 flex items-center gap-3 transition-colors ${session.status === 'cancelled' ? 'border-[#D4CDB5]/40 opacity-70' : 'border-[#D4CDB5]/60 hover:border-[#745b3c]/30'}`}>
                       <div className="w-1 h-9 rounded-full shrink-0" style={{ backgroundColor: color }} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -714,13 +714,13 @@ export default function DashboardPage() {
             <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl overflow-hidden shadow-sm ${CARD_HOVER_GROW}`}>
               <div className="px-5 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between">
                 <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>Book a Class</h2>
-                <Calendar size={18} className="text-[#C49A3C]" />
+                <Calendar size={18} className="text-[#745b3c]" />
               </div>
               <div className="p-4">
                 <p className="text-[#8A7E6E] text-sm mb-4 leading-relaxed">Browse the Balansé calendar and reserve your spot — spaces are limited.</p>
                 <button
                   onClick={() => navigate('/book')}
-                  className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white rounded-full py-4 min-h-[52px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#A67E2A]"
+                  className="w-full flex items-center justify-center gap-2 bg-[#745b3c] text-white rounded-full py-4 min-h-[52px] shadow-[0_4px_16px_rgba(116,91,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#5e4a30]"
                   style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em' }}
                 >
                   <Plus size={18} /> Browse &amp; Book Classes
@@ -729,15 +729,15 @@ export default function DashboardPage() {
             </div>
 
             {/* Featured: Class of the Month */}
-            <div className="rounded-3xl overflow-hidden border border-[#C49A3C]/25 shadow-sm" style={{ background: 'linear-gradient(135deg, #1E2A35 0%, #2C3E4E 100%)' }}>
+            <div className="rounded-3xl overflow-hidden border border-[#745b3c]/25 shadow-sm" style={{ background: 'linear-gradient(135deg, #1E2A35 0%, #2C3E4E 100%)' }}>
               <div className="px-5 pt-5 pb-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Star size={12} className="text-[#C49A3C] fill-[#C49A3C]" />
-                  <span className="text-[#C49A3C] text-xs font-bold uppercase tracking-widest">Class of the Month</span>
+                  <Star size={12} className="text-[#745b3c] fill-[#745b3c]" />
+                  <span className="text-[#745b3c] text-xs font-bold uppercase tracking-widest">Class of the Month</span>
                 </div>
                 <h3 className="text-white leading-tight mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.7rem', letterSpacing: '0.05em' }}>Animal Flow</h3>
                 <p className="text-white/55 text-xs leading-relaxed mb-4">Experience ground-based movement inspired by animals. Builds mobility, coordination, and fluid strength — with Coach Ephraim this April.</p>
-                <button onClick={() => navigate('/book')} className="flex items-center gap-2 bg-[#C49A3C] text-white text-xs font-bold px-4 py-2.5 rounded-full hover:bg-[#A67E2A] active:scale-95 transition-all" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}>
+                <button onClick={() => navigate('/book')} className="flex items-center gap-2 bg-[#745b3c] text-white text-xs font-bold px-4 py-2.5 rounded-full hover:bg-[#5e4a30] active:scale-95 transition-all" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}>
                   Book This Class <ChevronRight size={13} />
                 </button>
               </div>
@@ -747,17 +747,17 @@ export default function DashboardPage() {
             <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl overflow-hidden shadow-sm p-4 flex flex-col gap-2 ${CARD_HOVER_GROW}`}>
               <button
                 onClick={() => navigate('/profile')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] text-sm font-medium hover:border-[#C49A3C]/40 hover:bg-[#EDE8D8] active:scale-95 transition-all"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] text-sm font-medium hover:border-[#745b3c]/40 hover:bg-[#EDE8D8] active:scale-95 transition-all"
               >
-                <User size={16} className="text-[#C49A3C]" />
+                <User size={16} className="text-[#745b3c]" />
                 View My Profile
                 <ChevronRight size={15} className="ml-auto text-[#B0A898]" />
               </button>
               <button
                 onClick={() => navigate('/payment-history')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] text-sm font-medium hover:border-[#C49A3C]/40 hover:bg-[#EDE8D8] active:scale-95 transition-all"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] text-sm font-medium hover:border-[#745b3c]/40 hover:bg-[#EDE8D8] active:scale-95 transition-all"
               >
-                <CreditCard size={16} className="text-[#C49A3C]" />
+                <CreditCard size={16} className="text-[#745b3c]" />
                 Payment History
                 <ChevronRight size={15} className="ml-auto text-[#B0A898]" />
               </button>

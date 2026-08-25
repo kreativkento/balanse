@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Tag, Plus, X, Check, Pencil, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -101,17 +100,17 @@ export default function AdminPromosPage() {
 
   const handleDelete = (id: number) => { setPromos(prev => prev.filter(p => p.id !== id)); setDeleteId(null); };
 
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
-    <AdminSidebar>
+    <>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Tag size={14} className="text-[#C49A3C]" />
+              <Tag size={14} className="text-[#745b3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Promos & Discounts</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -158,7 +157,7 @@ export default function AdminPromosPage() {
         {/* ── Promo Cards ── */}
         {filtered.length === 0 ? (
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col items-center justify-center py-20 text-center">
-            <Tag size={28} className="text-[#C49A3C]/40 mb-3" />
+            <Tag size={28} className="text-[#745b3c]/40 mb-3" />
             <p className="text-[#1E2A35] font-semibold mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem' }}>No Promos Found</p>
             <p className="text-[#8A7E6E] text-sm">No promos match the selected filter.</p>
           </div>
@@ -170,7 +169,7 @@ export default function AdminPromosPage() {
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>{promo.name}</h3>
-                      <code className="text-[#C49A3C] text-xs font-bold bg-[#C49A3C]/08 px-2 py-0.5 rounded-lg">{promo.code}</code>
+                      <code className="text-[#745b3c] text-xs font-bold bg-[#745b3c]/08 px-2 py-0.5 rounded-lg">{promo.code}</code>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full border capitalize ${STATUS_STYLES[promo.status]}`}>{promo.status}</span>
                   </div>
@@ -256,7 +255,7 @@ export default function AdminPromosPage() {
                     { value: 'percentage', label: 'Percentage (%)' },
                     { value: 'flat',       label: 'Flat Amount (₱)' },
                   ] as const).map(opt => (
-                    <label key={opt.value} className={`flex items-center gap-2.5 flex-1 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${form.type === opt.value ? 'bg-[#1E2A35] border-[#1E2A35] text-white' : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#C49A3C]/40'}`}>
+                    <label key={opt.value} className={`flex items-center gap-2.5 flex-1 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${form.type === opt.value ? 'bg-[#1E2A35] border-[#1E2A35] text-white' : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#745b3c]/40'}`}>
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${form.type === opt.value ? 'border-white bg-white' : 'border-[#B0A898]'}`}>
                         {form.type === opt.value && <div className="w-2 h-2 rounded-full bg-[#1E2A35]" />}
                       </div>
@@ -314,6 +313,6 @@ export default function AdminPromosPage() {
           </div>
         </div>
       )}
-    </AdminSidebar>
+    </>
   );
 }

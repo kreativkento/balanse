@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { CreditCard, Pencil, Plus, X, Check, ChevronDown, Users, TrendingUp } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 import { CARD_HOVER_GROW, HOVER_SCALE_SMOOTH } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -30,7 +29,7 @@ interface Subscriber {
 const INITIAL_PLANS: Plan[] = [
   { id: 1, name: 'Single Class Pass', fee: 360,  sessions: 1,  color: '#8A7E6E', desc: 'Pay per session, no monthly commitment.' },
   { id: 2, name: 'Silver Membership', fee: 3600, sessions: 12, color: '#7A9A8A', desc: 'Monthly plan · 12 sessions included per month.' },
-  { id: 3, name: 'Gold Membership',   fee: 4800, sessions: 20, color: '#C49A3C', desc: 'Monthly plan · 20 sessions included per month.' },
+  { id: 3, name: 'Gold Membership',   fee: 4800, sessions: 20, color: '#745b3c', desc: 'Monthly plan · 20 sessions included per month.' },
 ];
 
 const SUBSCRIBERS: Subscriber[] = [
@@ -109,17 +108,17 @@ export default function AdminSubscriptionsPage() {
     setPlanForm({ name: '', fee: '', sessions: '', desc: '', color: '#8A7E6E' });
   };
 
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
-    <AdminSidebar>
+    <>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <CreditCard size={14} className="text-[#C49A3C]" />
+              <CreditCard size={14} className="text-[#745b3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Subscriptions</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -138,13 +137,13 @@ export default function AdminSubscriptionsPage() {
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
           {[
-            { label: 'Active Subscribers', value: '200', sub: 'All plans combined',     icon: <Users size={18} className="text-[#C49A3C]" />,     gold: true  },
-            { label: 'Gold Members',        value: String(goldCount),   sub: '20 sessions/month',  icon: <CreditCard size={18} className="text-[#C49A3C]" />,  gold: true  },
+            { label: 'Active Subscribers', value: '200', sub: 'All plans combined',     icon: <Users size={18} className="text-[#745b3c]" />,     gold: true  },
+            { label: 'Gold Members',        value: String(goldCount),   sub: '20 sessions/month',  icon: <CreditCard size={18} className="text-[#745b3c]" />,  gold: true  },
             { label: 'Silver Members',      value: String(silverCount), sub: '12 sessions/month',  icon: <CreditCard size={18} className="text-[#7A9A8A]" />,  gold: false },
             { label: 'Credits Remaining',   value: String(totalCreditsRemaining), sub: 'Across active plans', icon: <TrendingUp size={18} className="text-amber-600" />, gold: false, amber: true },
           ].map(s => (
-            <div key={s.label} className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${s.gold ? 'border-[#C49A3C]/40' : s.amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${s.gold ? 'bg-[#C49A3C]/12' : s.amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>{s.icon}</div>
+            <div key={s.label} className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${s.gold ? 'border-[#745b3c]/40' : s.amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${s.gold ? 'bg-[#745b3c]/12' : s.amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>{s.icon}</div>
               <div>
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
                 <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}>{s.value}</p>
@@ -198,7 +197,7 @@ export default function AdminSubscriptionsPage() {
           <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between bg-[#F8F3E8]/60">
             <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Active Subscribers</h2>
             <div className="relative">
-              <select value={subFilter} onChange={e => setSubFilter(e.target.value)} className="pl-3 pr-7 py-1.5 text-xs rounded-xl border border-[#D4CDB5]/70 bg-white text-[#5A5048] appearance-none outline-none focus:ring-2 focus:ring-[#C49A3C]/25 cursor-pointer">
+              <select value={subFilter} onChange={e => setSubFilter(e.target.value)} className="pl-3 pr-7 py-1.5 text-xs rounded-xl border border-[#D4CDB5]/70 bg-white text-[#5A5048] appearance-none outline-none focus:ring-2 focus:ring-[#745b3c]/25 cursor-pointer">
                 {PLAN_FILTER_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
               <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
@@ -283,7 +282,7 @@ export default function AdminSubscriptionsPage() {
               <div>
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Accent Color</label>
                 <div className="flex gap-3">
-                  {['#C49A3C', '#7A9A8A', '#8A7E6E', '#3A4A5A', '#B86A4A', '#9A7A8A'].map(c => (
+                  {['#745b3c', '#7A9A8A', '#8A7E6E', '#3A4A5A', '#B86A4A', '#9A7A8A'].map(c => (
                     <button key={c} onClick={() => setPlanForm(f => ({ ...f, color: c }))} className={`w-7 h-7 rounded-full ${HOVER_SCALE_SMOOTH} ${planForm.color === c ? 'scale-125 ring-2 ring-offset-1 ring-[#1E2A35]' : 'hover:scale-110'}`} style={{ backgroundColor: c }} />
                   ))}
                 </div>
@@ -298,6 +297,6 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       )}
-    </AdminSidebar>
+    </>
   );
 }

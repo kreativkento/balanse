@@ -5,7 +5,6 @@ import {
   Activity, Flame, CalendarDays, Clock, Mail, Phone, MapPin, Check,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -48,13 +47,13 @@ const STUDENT_CRM: Record<number, StudentCrm> = {
 };
 
 const MEMBERSHIP_COLORS: Record<string, string> = {
-  'Gold':        'bg-[#C49A3C]/12 text-[#A67E2A] border border-[#C49A3C]/30',
+  'Gold':        'bg-[#745b3c]/12 text-[#5e4a30] border border-[#745b3c]/30',
   'Silver':      'bg-[#8A7E6E]/10 text-[#5A5048] border border-[#8A7E6E]/20',
   'Single Pass': 'bg-[#EDE8D8] text-[#7A6A52] border border-[#D4CDB5]/60',
 };
 
 const MEMBERSHIP_ACCENT: Record<Student['membership'], string> = {
-  Gold: '#C49A3C',
+  Gold: '#745b3c',
   Silver: '#8A7E6E',
   'Single Pass': '#7A6A52',
 };
@@ -134,7 +133,7 @@ function ClientProfileModal({ student, onClose }: { student: Student; onClose: (
               type="button"
               onClick={onClose}
               aria-label="Close profile"
-              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A3C]/50"
+              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
             >
               <X size={16} />
             </button>
@@ -207,15 +206,15 @@ function ClientProfileModal({ student, onClose }: { student: Student; onClose: (
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Contact</p>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                  <Mail size={13} className="text-[#C49A3C] shrink-0" />
+                  <Mail size={13} className="text-[#745b3c] shrink-0" />
                   <span className="truncate">{student.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                  <Phone size={13} className="text-[#C49A3C] shrink-0" />
+                  <Phone size={13} className="text-[#745b3c] shrink-0" />
                   <span>{crm.phone}</span>
                 </div>
                 <div className="flex items-start gap-2 text-sm text-[#5A5048]">
-                  <MapPin size={13} className="text-[#C49A3C] shrink-0 mt-0.5" />
+                  <MapPin size={13} className="text-[#745b3c] shrink-0 mt-0.5" />
                   <span>{crm.address}</span>
                 </div>
               </div>
@@ -232,18 +231,18 @@ function ClientProfileModal({ student, onClose }: { student: Student; onClose: (
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Membership</p>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                  <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                  <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                   Plan: {student.membership}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                  <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                  <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                   Period:{' '}
                   {student.subscriptionStart === '—'
                     ? '—'
                     : `${student.subscriptionStart} → ${student.subscriptionEnd}`}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                  <div className="w-1 h-1 rounded-full bg-[#C49A3C] shrink-0" />
+                  <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
                   Renewal: {crm.renewalDate}
                 </div>
               </div>
@@ -256,7 +255,7 @@ function ClientProfileModal({ student, onClose }: { student: Student; onClose: (
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Performance</p>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: <Activity size={13} className="text-[#C49A3C]" />, label: 'Total', value: String(crm.totalSessions) },
+                  { icon: <Activity size={13} className="text-[#745b3c]" />, label: 'Total', value: String(crm.totalSessions) },
                   { icon: <CalendarDays size={13} className="text-[#8A9E7A]" />, label: 'Month', value: String(crm.thisMonth) },
                   { icon: <Flame size={13} className="text-amber-500" />, label: 'Streak', value: crm.streak > 0 ? String(crm.streak) : '—' },
                 ].map((metric) => (
@@ -401,20 +400,20 @@ export default function AdminStudentsPage() {
   };
 
   const inputClass =
-    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]";
+    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   const MEM_FILTERS = ['All', 'Gold', 'Silver', 'Single Pass'];
 
   return (
-    <AdminSidebar>
+    <>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-7">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Users size={14} className="text-[#C49A3C]" />
+              <Users size={14} className="text-[#745b3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Clients</span>
             </div>
             <h1
@@ -442,7 +441,7 @@ export default function AdminStudentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or email…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -450,7 +449,7 @@ export default function AdminStudentsPage() {
               <button
                 key={f}
                 onClick={() => setFilterMem(f)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${filterMem === f ? 'bg-[#1E2A35] text-white' : 'bg-white border border-[#D4CDB5]/60 text-[#8A7E6E] hover:border-[#C49A3C]/40 hover:text-[#1E2A35]'}`}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${filterMem === f ? 'bg-[#1E2A35] text-white' : 'bg-white border border-[#D4CDB5]/60 text-[#8A7E6E] hover:border-[#745b3c]/40 hover:text-[#1E2A35]'}`}
               >
                 {f}
               </button>
@@ -486,8 +485,8 @@ export default function AdminStudentsPage() {
                   className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-[#C49A3C]/12 border border-[#C49A3C]/25 flex items-center justify-center shrink-0">
-                      <span className="text-[#A67E2A] text-xs font-bold">
+                    <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0">
+                      <span className="text-[#5e4a30] text-xs font-bold">
                         {clientInitials(student.name)}
                       </span>
                     </div>
@@ -651,6 +650,6 @@ export default function AdminStudentsPage() {
           </div>
         </div>
       )}
-    </AdminSidebar>
+    </>
   );
 }

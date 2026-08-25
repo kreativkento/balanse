@@ -115,7 +115,7 @@ export default function HomePage() {
               key={s.label}
               className="flex items-center gap-1.5 bg-[#F8F3E8]/80 backdrop-blur-md rounded-full px-3 py-1.5"
             >
-              <span className="text-[#C49A3C]">{s.icon}</span>
+              <span className="text-[#745b3c]">{s.icon}</span>
               <span className="text-[#1E2A35] text-xs font-medium">{s.label}</span>
             </div>
           ))}
@@ -125,7 +125,7 @@ export default function HomePage() {
         <div className="absolute inset-0 flex items-end md:items-center">
           <div className="w-full md:max-w-6xl md:mx-auto px-5 md:px-8 pb-8 md:pb-0">
             <div className="md:max-w-xl">
-              <p className="text-[#C49A3C] font-semibold text-xs uppercase tracking-[0.25em] mb-3">
+              <p className="text-[#745b3c] font-semibold text-xs uppercase tracking-[0.25em] mb-3">
                 Premium Wellness Hub
               </p>
               <h1
@@ -155,7 +155,7 @@ export default function HomePage() {
                     key={s.label}
                     className="flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-4 py-2"
                   >
-                    <span className="text-[#C49A3C]">{s.icon}</span>
+                    <span className="text-[#745b3c]">{s.icon}</span>
                     <span className="text-white text-sm font-medium">{s.label}</span>
                   </div>
                 ))}
@@ -197,7 +197,7 @@ export default function HomePage() {
               </h2>
               <button
                 onClick={() => navigate('/gallery')}
-                className="flex items-center gap-1 text-[#C49A3C] text-sm font-semibold active:opacity-70 transition-opacity"
+                className="flex items-center gap-1 text-[#745b3c] text-sm font-semibold active:opacity-70 transition-opacity"
               >
                 View More <ChevronRight size={16} />
               </button>
@@ -209,7 +209,7 @@ export default function HomePage() {
             </div>
             <button
               onClick={() => navigate('/gallery')}
-              className="mt-3 w-full py-3 border border-[#D4CDB5] text-[#8A7E6E] rounded-full text-sm font-medium hover:border-[#C49A3C] hover:text-[#C49A3C] transition-colors active:scale-95 min-h-[48px]"
+              className="mt-3 w-full py-3 border border-[#D4CDB5] text-[#8A7E6E] rounded-full text-sm font-medium hover:border-[#745b3c] hover:text-[#745b3c] transition-colors active:scale-95 min-h-[48px]"
             >
               View Full Gallery
             </button>
@@ -244,17 +244,17 @@ export default function HomePage() {
                     }}
                     className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer ${CARD_HOVER_GROW} ${
                       plan.highlight
-                        ? 'bg-[#C49A3C]/10 border-[#C49A3C]/50'
+                        ? 'bg-[#745b3c]/10 border-[#745b3c]/50'
                         : 'bg-[#F8F3E8] border-[#D4CDB5]/60'
                     }`}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className={`font-semibold text-sm ${plan.highlight ? 'text-[#C49A3C]' : 'text-[#1E2A35]'}`}>
+                        <p className={`font-semibold text-sm ${plan.highlight ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}>
                           {plan.name}
                         </p>
                         {plan.highlight && (
-                          <span className="bg-[#C49A3C] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          <span className="bg-[#745b3c] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                             Popular
                           </span>
                         )}
@@ -263,7 +263,7 @@ export default function HomePage() {
                     </div>
                     <div className="text-right ml-3 shrink-0">
                       <span
-                        className={`leading-none ${plan.highlight ? 'text-[#C49A3C]' : 'text-[#1E2A35]'}`}
+                        className={`leading-none ${plan.highlight ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}
                         style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.02em' }}
                       >
                         {plan.price}
@@ -301,7 +301,7 @@ export default function HomePage() {
             </h2>
             <button
               onClick={() => navigate('/classes')}
-              className="flex items-center gap-1 text-[#C49A3C] text-sm font-semibold active:opacity-70 transition-opacity"
+              className="flex items-center gap-1 text-[#745b3c] text-sm font-semibold active:opacity-70 transition-opacity"
             >
               View All <ChevronRight size={16} />
             </button>
@@ -344,7 +344,7 @@ export default function HomePage() {
                     <span className="text-xs bg-[#EDE8D8] text-[#5A5048] px-3 py-1.5 rounded-full border border-[#D4CDB5]">
                       {cls.level}
                     </span>
-                    <span className="text-[#C49A3C] text-sm font-semibold flex items-center gap-1">
+                    <span className="text-[#745b3c] text-sm font-semibold flex items-center gap-1">
                       View Details <ChevronRight size={14} />
                     </span>
                   </div>
@@ -365,7 +365,7 @@ export default function HomePage() {
         </section>
 
         {/* ─── PERKS ─── */}
-        <section id="why-balanse" className="mx-4 md:mx-8 mb-14 md:mb-20 rounded-3xl border border-[#C49A3C]/25 px-5 md:px-10 py-8 md:py-14 scroll-mt-24" style={{ backgroundColor: 'rgba(196,154,60,0.07)' }}>
+        <section id="why-balanse" className="mx-4 md:mx-8 mb-14 md:mb-20 rounded-3xl border border-[#745b3c]/25 px-5 md:px-10 py-8 md:py-14 scroll-mt-24" style={{ backgroundColor: 'rgba(116,91,60,0.07)' }}>
           <h2
             className="text-[#1E2A35] mb-4 md:mb-6 md:text-center"
             style={{
@@ -379,7 +379,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {perks.map((perk) => (
               <div key={perk} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#C49A3C] flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#745b3c] flex items-center justify-center shrink-0">
                   <Check size={13} className="text-white" strokeWidth={3} />
                 </div>
                 <p className="text-[#5A5048] text-sm">{perk}</p>
