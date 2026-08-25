@@ -1,5 +1,5 @@
 
-  # BALANCIA
+  # Balanse Wellness Hub
 
   ## Project Description / Purpose
 
