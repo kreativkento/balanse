@@ -19,6 +19,7 @@ function Shell() {
   const location = useLocation();
   const isPortal = PORTAL_PREFIXES.some((p) => location.pathname.startsWith(p));
   const showBottomCTA = PAGES_WITH_CTA.includes(location.pathname);
+  const lockScroll = location.pathname === '/login' || location.pathname === '/signup';
 
   if (isPortal) {
     return (
@@ -29,9 +30,9 @@ function Shell() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F3E8] flex flex-col">
+    <div className={`bg-[#F8F3E8] flex flex-col ${lockScroll ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
       <NavBar />
-      <main className="flex-1">
+      <main className={`flex-1 ${lockScroll ? 'min-h-0 overflow-hidden' : ''}`}>
         <Outlet />
       </main>
       {showBottomCTA && <BottomCTA />}

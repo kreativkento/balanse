@@ -94,9 +94,11 @@ export default function SignupPage() {
   };
 
   const strength = passwordStrength();
+  const inputBase =
+    'w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl py-3.5 min-h-[52px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all';
 
   return (
-    <div className="min-h-screen bg-[#F8F3E8] flex flex-col">
+    <div className="h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
       {showProfilePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-sm p-7 flex flex-col gap-6">
@@ -132,8 +134,9 @@ export default function SignupPage() {
           </div>
         </div>
       )}
+
       {/* Mobile back */}
-      <div className="md:hidden px-5 pt-5 pb-2">
+      <div className="md:hidden px-5 pt-3 pb-1 shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors active:opacity-70 min-h-[44px]"
@@ -143,21 +146,21 @@ export default function SignupPage() {
         </button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-5 py-8">
-        <div className="w-full max-w-md">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-5 py-4 overflow-hidden">
+        <div className="w-full max-w-2xl">
           {/* Desktop back */}
           <button
             onClick={() => navigate(-1)}
-            className="hidden md:flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors mb-6 text-sm font-medium"
+            className="hidden md:flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors mb-4 text-sm font-medium"
           >
             <ArrowLeft size={16} />
             Back
           </button>
 
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-8 md:p-10">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-7 md:p-9">
             {/* Header */}
-            <div className="mb-7">
-              <div className="w-12 h-12 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-2xl flex items-center justify-center mb-4">
+            <div className="mb-5">
+              <div className="w-12 h-12 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-2xl flex items-center justify-center mb-3">
                 <Leaf size={22} className="text-[#C49A3C]" />
               </div>
               <h1
@@ -170,7 +173,7 @@ export default function SignupPage() {
             </div>
 
             {/* Step indicator */}
-            <div className="flex items-center gap-3 mb-6 bg-[#F8F3E8] rounded-2xl px-4 py-3 border border-[#D4CDB5]/50">
+            <div className="flex items-center gap-3 mb-5 bg-[#F8F3E8] rounded-2xl px-4 py-3 border border-[#D4CDB5]/50">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#C49A3C] flex items-center justify-center shrink-0">
                   <span className="text-white text-xs font-bold">1</span>
@@ -186,9 +189,8 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Account exists error */}
             {accountExistsError && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-4 flex items-start gap-3 mb-4">
+              <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-3 mb-4">
                 <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-red-700 text-sm font-semibold mb-0.5">Account already exists.</p>
@@ -196,9 +198,8 @@ export default function SignupPage() {
                     This email is already registered.{' '}
                     <button onClick={() => navigate('/login')} className="text-[#C49A3C] underline font-medium">
                       Please log in
-                    </button>{' '}
-                    with the same password. If you deleted the account from Supabase Table Editor, remove it from{' '}
-                    <strong>Authentication → Users</strong> as well, or log in to restore it.
+                    </button>
+                    .
                   </p>
                 </div>
               </div>
@@ -211,55 +212,57 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-
-              {/* Name row: First + M.I. */}
-              <div className="flex gap-3">
-                <div className="flex-1">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" noValidate>
+              {/* Name row: First + M.I. + Last */}
+              <div className="grid grid-cols-[1fr_4.5rem_1fr] gap-3">
+                <div className="min-w-0">
                   <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={firstName}
-                    onChange={e => { setFirstName(e.target.value); setErrors(p => ({ ...p, firstName: '' })); }}
+                    onChange={(e) => { setFirstName(e.target.value); setErrors((p) => ({ ...p, firstName: '' })); }}
                     placeholder="Juan"
-                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${errors.firstName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    className={`${inputBase} px-4 ${errors.firstName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
                     autoComplete="given-name"
                   />
-                  {errors.firstName && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.firstName}</p>}
+                  {errors.firstName && (
+                    <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle size={12} /> {errors.firstName}
+                    </p>
+                  )}
                 </div>
-                <div className="w-20">
-                  <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
-                    M.I.
-                  </label>
+                <div className="min-w-0">
+                  <label className="text-[#5A5048] text-sm font-semibold mb-2 block">M.I.</label>
                   <input
                     type="text"
                     value={middleInitial}
-                    onChange={e => setMiddleInitial(e.target.value.slice(0, 2))}
+                    onChange={(e) => setMiddleInitial(e.target.value.slice(0, 2))}
                     placeholder="A"
                     maxLength={2}
-                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/60 transition-all text-center"
+                    className={`${inputBase} px-2 border-[#D4CDB5] focus:border-[#C49A3C]/60 text-center`}
                     autoComplete="additional-name"
                   />
                 </div>
-              </div>
-
-              {/* Last Name */}
-              <div>
-                <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={e => { setLastName(e.target.value); setErrors(p => ({ ...p, lastName: '' })); }}
-                  placeholder="dela Cruz"
-                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${errors.lastName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
-                  autoComplete="family-name"
-                />
-                {errors.lastName && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.lastName}</p>}
+                <div className="min-w-0">
+                  <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => { setLastName(e.target.value); setErrors((p) => ({ ...p, lastName: '' })); }}
+                    placeholder="dela Cruz"
+                    className={`${inputBase} px-4 ${errors.lastName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    autoComplete="family-name"
+                  />
+                  {errors.lastName && (
+                    <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle size={12} /> {errors.lastName}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Email */}
@@ -274,7 +277,7 @@ export default function SignupPage() {
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: '' })); setAccountExistsError(false); }}
                     placeholder="you@example.com"
-                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${
+                    className={`${inputBase} pl-11 pr-4 ${
                       errors.email || accountExistsError ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
                     }`}
                     autoComplete="email"
@@ -287,90 +290,94 @@ export default function SignupPage() {
                 )}
               </div>
 
-              {/* Password */}
-              <div>
-                <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Lock size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: '' })); }}
-                    placeholder="Create a password"
-                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-12 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${
-                      errors.password ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
-                    }`}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#B0A898] hover:text-[#8A7E6E] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {password && (
-                  <div className="mt-2">
-                    <div className="flex gap-1 mb-1">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div
-                          key={i}
-                          className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthBgColor[strength] : 'bg-[#D4CDB5]'}`}
-                        />
-                      ))}
-                    </div>
-                    <p className={`text-xs ${strengthTextColor[strength]}`}>{strengthLabel[strength]} password</p>
+              {/* Password + Confirm */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: '' })); }}
+                      placeholder="Create a password"
+                      className={`${inputBase} pl-11 pr-12 ${
+                        errors.password ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
+                      }`}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] hover:text-[#8A7E6E] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
-                )}
 
-                {errors.password && (
-                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                    <AlertCircle size={12} /> {errors.password}
-                  </p>
-                )}
-              </div>
+                  {password && (
+                    <div className="mt-2">
+                      <div className="flex gap-1 mb-1">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthBgColor[strength] : 'bg-[#D4CDB5]'}`}
+                          />
+                        ))}
+                      </div>
+                      <p className={`text-xs ${strengthTextColor[strength]}`}>{strengthLabel[strength]} password</p>
+                    </div>
+                  )}
 
-              {/* Confirm Password */}
-              <div>
-                <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
-                  Confirm Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Lock size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  <input
-                    type={showConfirm ? 'text' : 'password'}
-                    value={confirm}
-                    onChange={(e) => { setConfirm(e.target.value); setErrors((p) => ({ ...p, confirm: '' })); }}
-                    placeholder="Repeat your password"
-                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-12 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${
-                      errors.confirm ? 'border-red-400' : confirm && confirm === password ? 'border-[#C49A3C]/50' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
-                    }`}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#B0A898] hover:text-[#8A7E6E] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  >
-                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                  {errors.password && (
+                    <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle size={12} /> {errors.password}
+                    </p>
+                  )}
                 </div>
-                {errors.confirm && (
-                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                    <AlertCircle size={12} /> {errors.confirm}
-                  </p>
-                )}
+
+                <div className="min-w-0">
+                  <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+                    <input
+                      type={showConfirm ? 'text' : 'password'}
+                      value={confirm}
+                      onChange={(e) => { setConfirm(e.target.value); setErrors((p) => ({ ...p, confirm: '' })); }}
+                      placeholder="Repeat your password"
+                      className={`${inputBase} pl-11 pr-12 ${
+                        errors.confirm
+                          ? 'border-red-400'
+                          : confirm && confirm === password
+                            ? 'border-[#C49A3C]/50'
+                            : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
+                      }`}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] hover:text-[#8A7E6E] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    >
+                      {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {errors.confirm && (
+                    <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle size={12} /> {errors.confirm}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-4 min-h-[56px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-3.5 min-h-[52px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
               >
                 {loading ? (
                   <>
@@ -383,8 +390,7 @@ export default function SignupPage() {
               </button>
             </form>
 
-            {/* Login link */}
-            <p className="text-center text-[#8A7E6E] text-sm mt-6">
+            <p className="text-center text-[#8A7E6E] text-sm mt-5">
               Already have an account?{' '}
               <button
                 onClick={() => navigate('/login')}

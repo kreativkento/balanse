@@ -49,9 +49,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F3E8] flex flex-col">
+    <div className="h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
       {/* Mobile back */}
-      <div className="md:hidden px-5 pt-5 pb-2">
+      <div className="md:hidden px-5 pt-3 pb-1 shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors active:opacity-70 min-h-[44px]"
@@ -62,20 +62,20 @@ export default function LoginPage() {
       </div>
 
       {/* Centered card */}
-      <div className="flex-1 flex items-center justify-center px-5 py-8">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-5 py-4 overflow-hidden">
         <div className="w-full max-w-md">
           {/* Desktop back */}
           <button
             onClick={() => navigate(-1)}
-            className="hidden md:flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors mb-6 text-sm font-medium"
+            className="hidden md:flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors mb-4 text-sm font-medium"
           >
             <ArrowLeft size={16} />
             Back
           </button>
 
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-8 md:p-10">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-7 md:p-9">
             {/* Header */}
-            <div className="mb-7">
+            <div className="mb-6">
               <div className="w-12 h-12 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-2xl flex items-center justify-center mb-4">
                 <Leaf size={22} className="text-[#C49A3C]" />
               </div>
@@ -93,7 +93,7 @@ export default function LoginPage() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5" noValidate>
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-3">
                   <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
@@ -113,7 +113,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setError(''); }}
                     placeholder="you@example.com"
-                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-4 py-4 min-h-[56px] outline-none focus:border-[#C49A3C]/60 focus:ring-2 focus:ring-[#C49A3C]/20 transition-all"
+                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-4 py-3.5 min-h-[52px] outline-none focus:border-[#C49A3C]/60 focus:ring-2 focus:ring-[#C49A3C]/20 transition-all"
                     autoComplete="email"
                   />
                 </div>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter your password"
-                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-12 py-4 min-h-[56px] outline-none focus:border-[#C49A3C]/60 focus:ring-2 focus:ring-[#C49A3C]/20 transition-all"
+                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-12 py-3.5 min-h-[52px] outline-none focus:border-[#C49A3C]/60 focus:ring-2 focus:ring-[#C49A3C]/20 transition-all"
                     autoComplete="current-password"
                   />
                   <button
@@ -155,7 +155,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-4 min-h-[56px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-3.5 min-h-[52px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
               >
                 {loading ? (
                   <>
@@ -169,7 +169,7 @@ export default function LoginPage() {
             </form>
 
             {/* Sign up link */}
-            <p className="text-center text-[#8A7E6E] text-sm mt-6">
+            <p className="text-center text-[#8A7E6E] text-sm mt-5">
               Don't have an account?{' '}
               <button
                 onClick={() => navigate('/signup')}
