@@ -10,6 +10,7 @@ import {
   MONTH_NAMES, DAY_LABELS_SHORT, buildMonthGrid, toDateKeyFromParts,
   getTodayDateKey, getInitialCalendarMonth, dateKeyFromOffset,
   formatDateShortFromKey, formatTimeRange24,
+  SCHEDULE_START_TIME_24, SCHEDULE_END_TIME_24,
 } from '../components/calendar/weekCalendarUtils';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -35,13 +36,13 @@ function buildInitialEntries(): AvailabilityEntry[] {
     {
       id: 1, date: dateKeyFromOffset(1), dayOff: false, note: '',
       periods: [
-        { id: 101, start: '07:00', end: '09:00' },
+        { id: 101, start: '09:00', end: '11:00' },
         { id: 102, start: '14:00', end: '17:00' },
       ],
     },
     {
       id: 2, date: dateKeyFromOffset(2), dayOff: false, note: '',
-      periods: [{ id: 201, start: '07:00', end: '08:00' }],
+      periods: [{ id: 201, start: '09:00', end: '10:00' }],
     },
     {
       id: 3, date: dateKeyFromOffset(3), dayOff: true, note: 'Personal leave',
@@ -49,14 +50,14 @@ function buildInitialEntries(): AvailabilityEntry[] {
     },
     {
       id: 4, date: dateKeyFromOffset(4), dayOff: false, note: '',
-      periods: [{ id: 401, start: '07:00', end: '09:00' }],
+      periods: [{ id: 401, start: '09:00', end: '11:00' }],
     },
   ];
 }
 
 function isValidRange(start: string, end: string): boolean {
   if (!start || !end) return false;
-  return start < end;
+  return start < end && start >= SCHEDULE_START_TIME_24 && end <= SCHEDULE_END_TIME_24;
 }
 
 // New blank period for the editor
@@ -117,6 +118,8 @@ function PeriodRow({ period, onChange, onRemove, showRemove }: {
         <Clock size={12} className="text-[#B0A898] shrink-0" />
         <input
           type="time"
+          min={SCHEDULE_START_TIME_24}
+          max={SCHEDULE_END_TIME_24}
           value={period.start}
           onChange={e => onChange(period.id, 'start', e.target.value)}
           className="flex-1 bg-transparent text-[#1E2A35] text-sm outline-none min-w-0"
@@ -124,6 +127,8 @@ function PeriodRow({ period, onChange, onRemove, showRemove }: {
         <span className="text-[#B0A898] text-xs font-medium shrink-0">to</span>
         <input
           type="time"
+          min={SCHEDULE_START_TIME_24}
+          max={SCHEDULE_END_TIME_24}
           value={period.end}
           onChange={e => onChange(period.id, 'end', e.target.value)}
           className="flex-1 bg-transparent text-[#1E2A35] text-sm outline-none min-w-0"

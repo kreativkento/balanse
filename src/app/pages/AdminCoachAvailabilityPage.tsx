@@ -43,18 +43,18 @@ function buildCoachMockData(): Coach[] {
   {
     id: 1, name: 'Rex Santos', initials: 'RX', color: '#5A8A7A', role: 'Calisthenics · Capoeira',
     availability: [
-      { id: 101, date: d(1), dayOff: false, note: '', periods: [{ id: 1011, start: '07:00', end: '09:00' }, { id: 1012, start: '14:00', end: '17:00' }] },
-      { id: 102, date: d(2), dayOff: false, note: '', periods: [{ id: 1021, start: '07:00', end: '09:00' }] },
+      { id: 101, date: d(1), dayOff: false, note: '', periods: [{ id: 1011, start: '09:00', end: '11:00' }, { id: 1012, start: '14:00', end: '17:00' }] },
+      { id: 102, date: d(2), dayOff: false, note: '', periods: [{ id: 1021, start: '09:00', end: '11:00' }] },
       { id: 103, date: d(3), dayOff: true,  note: 'Personal leave', periods: [] },
-      { id: 104, date: d(4), dayOff: false, note: '', periods: [{ id: 1041, start: '07:00', end: '10:00' }] },
+      { id: 104, date: d(4), dayOff: false, note: '', periods: [{ id: 1041, start: '09:00', end: '12:00' }] },
     ],
   },
   {
     id: 2, name: 'Jodi Reyes', initials: 'JO', color: '#E8A87C', role: 'Yoga',
     availability: [
-      { id: 201, date: d(1), dayOff: false, note: '', periods: [{ id: 2011, start: '08:00', end: '11:00' }] },
-      { id: 202, date: d(2), dayOff: false, note: '', periods: [{ id: 2021, start: '08:00', end: '10:00' }] },
-      { id: 203, date: d(8), dayOff: false, note: 'Back from Bali retreat', periods: [{ id: 2031, start: '08:00', end: '12:00' }] },
+      { id: 201, date: d(1), dayOff: false, note: '', periods: [{ id: 2011, start: '09:00', end: '11:00' }] },
+      { id: 202, date: d(2), dayOff: false, note: '', periods: [{ id: 2021, start: '09:00', end: '11:00' }] },
+      { id: 203, date: d(8), dayOff: false, note: 'Back from Bali retreat', periods: [{ id: 2031, start: '09:00', end: '12:00' }] },
     ],
   },
   {

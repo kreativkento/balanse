@@ -16,24 +16,24 @@ import {
 interface ScheduleEvent {
   id: number;
   day: number; // 0 = Sunday ... 6 = Saturday
-  time: string; // e.g. '7:00 AM'
+  time: string; // e.g. '9:00 AM'
   duration: number; // minutes
   className: string;
   trainer: string;
 }
 
 const WEEKLY_SCHEDULE: ScheduleEvent[] = [
-  { id: 1, day: 1, time: '7:00 AM', duration: 60, className: 'Calisthenics', trainer: 'Rex' },
-  { id: 2, day: 1, time: '9:00 AM', duration: 75, className: 'Yoga', trainer: 'Jodi' },
+  { id: 1, day: 1, time: '9:00 AM', duration: 60, className: 'Calisthenics', trainer: 'Rex' },
+  { id: 2, day: 1, time: '10:00 AM', duration: 75, className: 'Yoga', trainer: 'Jodi' },
   { id: 3, day: 1, time: '6:00 PM', duration: 60, className: 'Kickboxing', trainer: 'Wolf' },
-  { id: 4, day: 2, time: '8:00 AM', duration: 60, className: 'Animal Flow', trainer: 'Ephraim' },
+  { id: 4, day: 2, time: '9:00 AM', duration: 60, className: 'Animal Flow', trainer: 'Ephraim' },
   { id: 5, day: 2, time: '12:00 PM', duration: 60, className: 'Circuit Training', trainer: 'Rachelle' },
-  { id: 6, day: 3, time: '7:00 AM', duration: 60, className: 'Calisthenics', trainer: 'Rex' },
-  { id: 7, day: 3, time: '9:30 AM', duration: 60, className: 'Mat Pilates', trainer: 'Kate' },
+  { id: 6, day: 3, time: '9:00 AM', duration: 60, className: 'Calisthenics', trainer: 'Rex' },
+  { id: 7, day: 3, time: '10:00 AM', duration: 60, className: 'Mat Pilates', trainer: 'Kate' },
   { id: 8, day: 3, time: '5:00 PM', duration: 60, className: 'Kickboxing', trainer: 'Wolf' },
-  { id: 9, day: 4, time: '8:00 AM', duration: 75, className: 'Yoga', trainer: 'Jodi' },
+  { id: 9, day: 4, time: '9:00 AM', duration: 75, className: 'Yoga', trainer: 'Jodi' },
   { id: 10, day: 4, time: '11:00 AM', duration: 60, className: 'Groundworks', trainer: 'Alec' },
-  { id: 11, day: 5, time: '7:00 AM', duration: 60, className: 'Calisthenics', trainer: 'Rex' },
+  { id: 11, day: 5, time: '9:00 AM', duration: 60, className: 'Calisthenics', trainer: 'Rex' },
   { id: 12, day: 5, time: '3:00 PM', duration: 90, className: 'Capoeira', trainer: 'Rex' },
   { id: 13, day: 5, time: '6:00 PM', duration: 60, className: 'Kickboxing', trainer: 'Wolf' },
   { id: 14, day: 6, time: '9:00 AM', duration: 60, className: 'Mat Pilates', trainer: 'Kate' },

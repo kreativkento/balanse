@@ -1,4 +1,4 @@
-import { formatHourLabel, parseTimeToMinutes, isSameDay, DAY_LABELS_LONG } from './weekCalendarUtils';
+import { formatHourLabel, parseTimeToMinutes, isSameDay, DAY_LABELS_LONG, SCHEDULE_START_HOUR, SCHEDULE_END_HOUR } from './weekCalendarUtils';
 
 // ─────────────────────────────────────────────
 // GOOGLE-CALENDAR-INSPIRED WEEK GRID
@@ -11,7 +11,7 @@ export interface WeekGridEvent {
   id: string | number;
   /** 0 = Sunday ... 6 = Saturday, position within the displayed week */
   dayIndex: number;
-  time: string; // e.g. '7:00 AM'
+  time: string; // e.g. '9:00 AM'
   duration: number; // minutes
   title: string;
   subtitle?: string;
@@ -39,8 +39,8 @@ export function WeekCalendarGrid({
   weekDates,
   events,
   today = new Date(),
-  startHour = 6,
-  endHour = 21,
+  startHour = SCHEDULE_START_HOUR,
+  endHour = SCHEDULE_END_HOUR,
   rowHeight = 56,
   dayLabels = DAY_LABELS_LONG,
   timezoneLabel = 'GMT+8',

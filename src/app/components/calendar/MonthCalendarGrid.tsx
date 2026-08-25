@@ -22,6 +22,7 @@ export interface MonthCalendarGridProps {
   selectedDateKey?: string | null;
   onSelectDate: (dateKey: string) => void;
   maxVisible?: number;
+  className?: string;
 }
 
 export function MonthCalendarGrid({
@@ -32,11 +33,12 @@ export function MonthCalendarGrid({
   selectedDateKey = null,
   onSelectDate,
   maxVisible = 3,
+  className = '',
 }: MonthCalendarGridProps) {
   const grid = buildMonthGrid(year, month);
 
   return (
-    <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden">
+    <div className={`rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden ${className}`}>
       <div className="grid grid-cols-7 border-b border-[#D4CDB5]/40">
         {DAY_LABELS_SHORT.map((d) => (
           <div

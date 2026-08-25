@@ -34,12 +34,12 @@ interface Slot {
 // SCHEDULE DATA — shifted at runtime so the first entry aligns with today
 const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
   '2026-04-07': [
-    { id: 1,  className: 'Yoga',             time: '8:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 4  },
+    { id: 1,  className: 'Yoga',             time: '9:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 4  },
     { id: 2,  className: 'Mat Pilates',       time: '10:00 AM', duration: '60 min', trainer: 'Kate',    spots: 0  },
     { id: 3,  className: 'Calisthenics',      time: '6:00 PM',  duration: '60 min', trainer: 'Rex',     spots: 6  },
   ],
   '2026-04-08': [
-    { id: 4,  className: 'Calisthenics',      time: '7:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 3  },
+    { id: 4,  className: 'Calisthenics',      time: '9:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 3  },
     { id: 5,  className: 'Animal Flow',       time: '9:00 AM',  duration: '60 min', trainer: 'Ephraim', spots: 10 },
     { id: 6,  className: 'Kickboxing',        time: '5:00 PM',  duration: '60 min', trainer: 'Wolf',    spots: 0  },
   ],
@@ -49,11 +49,11 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
     { id: 9,  className: 'Circuit Training',  time: '4:00 PM',  duration: '60 min', trainer: 'Rachelle',spots: 12 },
   ],
   '2026-04-10': [
-    { id: 10, className: 'Yoga',             time: '7:30 AM',  duration: '75 min', trainer: 'Jodi',    spots: 6  },
+    { id: 10, className: 'Yoga',             time: '9:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 6  },
     { id: 11, className: 'Capoeira',         time: '3:00 PM',  duration: '90 min', trainer: 'Rex',     spots: 8  },
   ],
   '2026-04-11': [
-    { id: 12, className: 'Animal Flow',      time: '8:00 AM',  duration: '60 min', trainer: 'Ephraim', spots: 7  },
+    { id: 12, className: 'Animal Flow',      time: '9:00 AM',  duration: '60 min', trainer: 'Ephraim', spots: 7  },
     { id: 13, className: 'Kickboxing',       time: '6:00 PM',  duration: '60 min', trainer: 'Wolf',    spots: 5  },
   ],
   '2026-04-12': [
@@ -66,12 +66,12 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
     { id: 18, className: 'Circuit Training', time: '12:00 PM', duration: '60 min', trainer: 'Rachelle',spots: 11 },
   ],
   '2026-04-14': [
-    { id: 19, className: 'Yoga',            time: '8:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 3  },
+    { id: 19, className: 'Yoga',            time: '9:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 3  },
     { id: 20, className: 'Animal Flow',     time: '10:00 AM', duration: '60 min', trainer: 'Ephraim', spots: 9  },
     { id: 21, className: 'Kickboxing',      time: '5:30 PM',  duration: '60 min', trainer: 'Wolf',    spots: 6  },
   ],
   '2026-04-15': [
-    { id: 22, className: 'Calisthenics',    time: '7:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 5  },
+    { id: 22, className: 'Calisthenics',    time: '9:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 5  },
     { id: 23, className: 'Mat Pilates',     time: '9:30 AM',  duration: '60 min', trainer: 'Kate',    spots: 7  },
     { id: 24, className: 'Capoeira',        time: '4:00 PM',  duration: '90 min', trainer: 'Rex',     spots: 10 },
   ],
@@ -80,7 +80,7 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
     { id: 26, className: 'Groundworks',     time: '6:00 PM',  duration: '60 min', trainer: 'Alec',    spots: 6  },
   ],
   '2026-04-17': [
-    { id: 27, className: 'Yoga',            time: '8:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 5  },
+    { id: 27, className: 'Yoga',            time: '9:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 5  },
     { id: 28, className: 'Kickboxing',      time: '5:00 PM',  duration: '60 min', trainer: 'Wolf',    spots: 4  },
   ],
   '2026-04-18': [
@@ -88,16 +88,16 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
     { id: 30, className: 'Animal Flow',     time: '11:00 AM', duration: '60 min', trainer: 'Ephraim', spots: 8  },
   ],
   '2026-04-21': [
-    { id: 31, className: 'Groundworks',     time: '7:00 AM',  duration: '60 min', trainer: 'Alec',    spots: 6  },
+    { id: 31, className: 'Groundworks',     time: '9:00 AM',  duration: '60 min', trainer: 'Alec',    spots: 6  },
     { id: 32, className: 'Mat Pilates',     time: '10:00 AM', duration: '60 min', trainer: 'Kate',    spots: 9  },
     { id: 33, className: 'Capoeira',        time: '3:00 PM',  duration: '90 min', trainer: 'Rex',     spots: 11 },
   ],
   '2026-04-22': [
-    { id: 34, className: 'Yoga',            time: '8:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 0  },
+    { id: 34, className: 'Yoga',            time: '9:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 0  },
     { id: 35, className: 'Circuit Training',time: '12:00 PM', duration: '60 min', trainer: 'Rachelle',spots: 10 },
   ],
   '2026-04-23': [
-    { id: 36, className: 'Calisthenics',    time: '7:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 5  },
+    { id: 36, className: 'Calisthenics',    time: '9:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 5  },
     { id: 37, className: 'Kickboxing',      time: '5:00 PM',  duration: '60 min', trainer: 'Wolf',    spots: 7  },
   ],
   '2026-04-25': [
@@ -106,7 +106,7 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
     { id: 40, className: 'Groundworks',     time: '3:00 PM',  duration: '60 min', trainer: 'Alec',    spots: 5  },
   ],
   '2026-04-28': [
-    { id: 41, className: 'Calisthenics',    time: '7:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 4  },
+    { id: 41, className: 'Calisthenics',    time: '9:00 AM',  duration: '60 min', trainer: 'Rex',     spots: 4  },
     { id: 42, className: 'Circuit Training',time: '12:00 PM', duration: '60 min', trainer: 'Rachelle',spots: 9  },
   ],
   '2026-04-29': [
@@ -114,7 +114,7 @@ const SCHEDULE_TEMPLATE: Record<string, Slot[]> = {
     { id: 44, className: 'Capoeira',        time: '4:00 PM',  duration: '90 min', trainer: 'Rex',     spots: 8  },
   ],
   '2026-04-30': [
-    { id: 45, className: 'Yoga',            time: '8:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 3  },
+    { id: 45, className: 'Yoga',            time: '9:00 AM',  duration: '75 min', trainer: 'Jodi',    spots: 3  },
     { id: 46, className: 'Kickboxing',      time: '5:00 PM',  duration: '60 min', trainer: 'Wolf',    spots: 6  },
   ],
 };

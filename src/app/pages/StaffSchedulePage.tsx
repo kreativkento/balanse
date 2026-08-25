@@ -11,7 +11,7 @@ import {
   MONTH_NAMES, DAY_LABELS_SHORT, buildMonthGrid, toDateKeyFromParts,
   getTodayLocal, getTodayDateKey, getInitialCalendarMonth,
   addDaysToDate, getMondayOfWeekContaining, formatMonSunWeekRange,
-  shiftDateKeySet, daysBetweenKeys,
+  shiftDateKeySet, daysBetweenKeys, buildScheduleTimeSlots,
 } from '../components/calendar/weekCalendarUtils';
 
 const SCHEDULE_ANCHOR = '2026-04-07';
@@ -30,7 +30,7 @@ const CLASS_TYPES = [
   'Circuit Training', 'Mat Pilates', 'Kickboxing', 'Capoeira', 'Personal Coaching',
 ];
 const COACHES   = ['Rex Santos', 'Jodi Reyes', 'Kate Mercado', 'Ephraim Cruz', 'Wolf Andrada', 'Alec Navarro', 'Rachelle Lim'];
-const TIME_SLOTS = ['6:00 AM','7:00 AM','7:30 AM','8:00 AM','9:00 AM','9:30 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','5:30 PM','6:00 PM','7:00 PM'];
+const TIME_SLOTS = buildScheduleTimeSlots(30);
 const DURATIONS  = ['45 min','60 min','75 min','90 min'];
 const CLASS_COLORS: Record<string, string> = {
   'Yoga': '#745b3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
@@ -53,14 +53,14 @@ interface ApprovedClass {
 }
 
 const APPROVED_SCHEDULE_TEMPLATE = [
-  { id: 1,  dayOffset: 0, className: 'Yoga',            time: '8:00 AM',  trainer: 'Jodi',     enrolled: 11, capacity: 15, isOpen: true  },
+  { id: 1,  dayOffset: 0, className: 'Yoga',            time: '9:00 AM',  trainer: 'Jodi',     enrolled: 11, capacity: 15, isOpen: true  },
   { id: 2,  dayOffset: 0, className: 'Mat Pilates',      time: '10:00 AM', trainer: 'Kate',     enrolled: 8,  capacity: 12, isOpen: true  },
   { id: 3,  dayOffset: 0, className: 'Calisthenics',     time: '6:00 PM',  trainer: 'Rex',      enrolled: 6,  capacity: 12, isOpen: true  },
   { id: 4,  dayOffset: 1, className: 'Animal Flow',      time: '9:00 AM',  trainer: 'Ephraim',  enrolled: 10, capacity: 12, isOpen: true  },
   { id: 5,  dayOffset: 1, className: 'Kickboxing',       time: '5:00 PM',  trainer: 'Wolf',     enrolled: 10, capacity: 10, isOpen: false },
   { id: 6,  dayOffset: 2, className: 'Mat Pilates',      time: '9:00 AM',  trainer: 'Kate',     enrolled: 5,  capacity: 12, isOpen: true  },
   { id: 7,  dayOffset: 2, className: 'Circuit Training', time: '4:00 PM',  trainer: 'Rachelle', enrolled: 12, capacity: 15, isOpen: true  },
-  { id: 8,  dayOffset: 3, className: 'Yoga',             time: '8:00 AM',  trainer: 'Jodi',     enrolled: 9,  capacity: 15, isOpen: true  },
+  { id: 8,  dayOffset: 3, className: 'Yoga',             time: '9:00 AM',  trainer: 'Jodi',     enrolled: 9,  capacity: 15, isOpen: true  },
   { id: 9,  dayOffset: 4, className: 'Groundworks',      time: '10:00 AM', trainer: 'Alec',     enrolled: 4,  capacity: 10, isOpen: true  },
   { id: 10, dayOffset: 5, className: 'Capoeira',         time: '9:00 AM',  trainer: 'Alec',     enrolled: 7,  capacity: 10, isOpen: true  },
   { id: 11, dayOffset: 6, className: 'Personal Coaching',time: '10:00 AM', trainer: 'Rex',      enrolled: 2,  capacity: 4,  isOpen: true  },
@@ -108,8 +108,8 @@ function buildInitialAvailSlots() {
     return toDateKeyFromParts(d.getFullYear(), d.getMonth(), d.getDate());
   };
   return [
-    { id: 1, date: weekKey(8), times: ['8:00 AM', '9:00 AM', '10:00 AM'], available: true },
-    { id: 2, date: weekKey(9), times: ['7:00 AM', '8:00 AM'], available: true },
+    { id: 1, date: weekKey(8), times: ['9:00 AM', '10:00 AM', '11:00 AM'], available: true },
+    { id: 2, date: weekKey(9), times: ['9:00 AM', '10:00 AM'], available: true },
     { id: 3, date: weekKey(10), times: ['9:00 AM', '10:00 AM', '11:00 AM'], available: false },
   ];
 }

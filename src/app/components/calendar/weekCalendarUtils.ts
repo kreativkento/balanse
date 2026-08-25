@@ -13,6 +13,33 @@ export const MONTH_NAMES = [
 export const DAY_LABELS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 export const DAY_LABELS_LONG = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+/** Studio hours shown on every calendar: 9:00 AM – 9:00 PM. */
+export const SCHEDULE_START_HOUR = 9;
+export const SCHEDULE_END_HOUR = 21;
+export const SCHEDULE_START_TIME_24 = '09:00';
+export const SCHEDULE_END_TIME_24 = '21:00';
+
+/** Hour marks for week/admin grids (9 through 21 inclusive). */
+export const SCHEDULE_HOURS: number[] = Array.from(
+  { length: SCHEDULE_END_HOUR - SCHEDULE_START_HOUR + 1 },
+  (_, i) => SCHEDULE_START_HOUR + i,
+);
+
+/** 12-hour time labels from 9:00 AM through 9:00 PM. */
+export function buildScheduleTimeSlots(stepMinutes = 30): string[] {
+  const slots: string[] = [];
+  const start = SCHEDULE_START_HOUR * 60;
+  const end = SCHEDULE_END_HOUR * 60;
+  for (let m = start; m <= end; m += stepMinutes) {
+    const hour = Math.floor(m / 60);
+    const minute = m % 60;
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    slots.push(`${hour12}:${String(minute).padStart(2, '0')} ${period}`);
+  }
+  return slots;
+}
+
 export function parseTimeToMinutes(time: string): number {
   const [clock, period] = time.split(' ');
   const [hourStr, minuteStr] = clock.split(':');
