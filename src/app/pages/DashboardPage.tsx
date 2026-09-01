@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { ProfileAvatar } from '../components/ProfileImages';
 
 // ─────────────────────────────────────────────
 // DATE HELPERS
@@ -476,10 +477,16 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => navigate('/profile')}
-              className="w-11 h-11 bg-[#745b3c]/15 border-2 border-[#745b3c]/40 rounded-full flex items-center justify-center hover:bg-[#745b3c]/25 active:scale-95 transition-all"
+              className="w-11 h-11 bg-[#745b3c]/15 border-2 border-[#745b3c]/40 rounded-full flex items-center justify-center hover:bg-[#745b3c]/25 active:scale-95 transition-all overflow-hidden"
               title="My Profile"
             >
-              <span className="text-[#5e4a30] font-black text-sm">{user?.name?.split(' ').map(n => n[0]).join('') || 'M'}</span>
+              <ProfileAvatar
+                src={user?.profile.photo}
+                initials={user?.name?.split(' ').map(n => n[0]).join('') || 'M'}
+                alt="My profile"
+                className="h-full w-full"
+                initialsClassName="text-[#5e4a30] font-black text-sm"
+              />
             </button>
           </div>
 

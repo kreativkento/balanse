@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { ProfileAvatar } from '../components/ProfileImages';
 
 // ── Mock Data ──────────────────────────────────────────────────
 
@@ -210,13 +211,13 @@ export default function StaffDashboardPage() {
                 title="Edit Profile"
                 className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#1E2A35]/20 hover:border-[#745b3c]/50 hover:shadow-md transition-all relative group shrink-0"
               >
-                {staffProfile?.photo ? (
-                  <img src={staffProfile.photo} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-[#1E2A35]/10 flex items-center justify-center">
-                    <span className="text-[#1E2A35] font-bold text-sm">{(staffProfile?.displayName || staffUser.name).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
-                  </div>
-                )}
+                <ProfileAvatar
+                  src={staffProfile?.photo}
+                  initials={(staffProfile?.displayName || staffUser.name).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  alt="Profile"
+                  className="h-full w-full bg-[#1E2A35]/10"
+                  initialsClassName="text-[#1E2A35] font-bold text-sm"
+                />
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <Pencil size={12} className="text-white" />
                 </div>

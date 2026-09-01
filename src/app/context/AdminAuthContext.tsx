@@ -7,19 +7,23 @@ import {
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId, getProfileDisplayName, isRoleMatch } from '../../lib/profile-service';
+import { fetchAccountWithProfileByAuthUserId, getProfileDisplayName, isRoleMatch, updateOwnProfileImages } from '../../lib/profile-service';
+import { loadOwnProfileImageUrls, mergeProfileImageUrls } from '../../lib/storage-service';
 import type { AccountWithProfile, UserRole } from '../../lib/database.types';
 
 export interface AdminUser {
   name: string;
   email: string;
   role: UserRole;
+  photo: string;
+  coverImage: string;
 }
 
 interface AdminAuthContextType {
   adminUser: AdminUser | null;
   adminLogin: (email: string, password: string) => Promise<AuthResult>;
   adminLogout: () => Promise<void>;
+  updateAdminImages: (images: { photo?: string; coverImage?: string }) => void;
 }
 
 function mapToAdminUser(data: AccountWithProfile): AdminUser {
@@ -27,6 +31,8 @@ function mapToAdminUser(data: AccountWithProfile): AdminUser {
     name: getProfileDisplayName(data.profile, data.account.email),
     email: data.account.email.toLowerCase(),
     role: data.account.role,
+    photo: data.profile.photo ?? '',
+    coverImage: data.profile.cover_image ?? '',
   };
 }
 
@@ -38,7 +44,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const hydrateAdminSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && isRoleMatch(data.account, 'admin')) {
-      setAdminUser(mapToAdminUser(data));
+      const bucket = await loadOwnProfileImageUrls();
+      setAdminUser(mergeProfileImageUrls(mapToAdminUser(data), bucket));
       return;
     }
     setAdminUser(null);
@@ -92,7 +99,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('admin') };
     }
 
-    setAdminUser(mapToAdminUser(accountData));
+    setAdminUser(mergeProfileImageUrls(mapToAdminUser(accountData), await loadOwnProfileImageUrls()));
     return { success: true };
   };
 
@@ -101,8 +108,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setAdminUser(null);
   };
 
+  const updateAdminImages = (images: { photo?: string; coverImage?: string }) => {
+    setAdminUser((prev) => (prev ? { ...prev, ...images } : prev));
+    void (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await updateOwnProfileImages(authUser.id, images);
+      }
+    })();
+  };
+
   return (
-    <AdminAuthContext.Provider value={{ adminUser, adminLogin, adminLogout }}>
+    <AdminAuthContext.Provider value={{ adminUser, adminLogin, adminLogout, updateAdminImages }}>
       {children}
     </AdminAuthContext.Provider>
   );

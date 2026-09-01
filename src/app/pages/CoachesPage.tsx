@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Users, Award, Clock, X, ChevronRight, Globe } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { fetchCoachDirectoryImages } from '../../lib/admin-service';
 
 // ── Coach Data ──
 
@@ -19,6 +20,7 @@ interface Coach {
   color: string;
   initials: string;
   photo: string;
+  coverImage?: string;
   totalClasses: number;
 }
 
@@ -245,7 +247,12 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
           {/* Cover banner with overlapping profile photo */}
           <div className="relative">
             <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${coach.color}20` }}>
-              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${coach.color}35 0%, ${coach.color}08 100%)` }} />
+              {coach.coverImage ? (
+                <img src={coach.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${coach.color}35 0%, ${coach.color}08 100%)` }} />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10" />
               <button
                 type="button"
                 onClick={onClose}
@@ -377,25 +384,37 @@ function CoachModal({ coach, onClose }: { coach: Coach; onClose: () => void }) {
 export default function CoachesPage() {
   const { staffUser, staffProfile } = useStaffAuth();
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
+  const [directoryImages, setDirectoryImages] = useState<
+    { firstName: string; photo: string; coverImage: string }[]
+  >([]);
 
-  // Merge any logged-in coach's updated profile into the static COACHES list
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCoachDirectoryImages().then((images) => {
+      if (!cancelled) setDirectoryImages(images.filter((item) => item.photo || item.coverImage));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const coaches = useMemo(() => {
-    if (!staffUser || !staffProfile) return COACHES;
-    const staffFirstName = staffUser.name.split(' ')[0].toLowerCase();
-    return COACHES.map(c =>
-      c.name.toLowerCase() === staffFirstName
-        ? {
-            ...c,
-            name: staffProfile.displayName || c.name,
-            photo: staffProfile.photo || c.photo,
-            bio: staffProfile.bio || c.bio,
-            experience: staffProfile.experience || c.experience,
-            nationality: staffProfile.nationality || c.nationality,
-            classes: staffProfile.classes.length > 0 ? staffProfile.classes : c.classes,
-          }
-        : c
-    );
-  }, [staffUser, staffProfile]);
+    const staffFirstName = staffUser?.name.split(' ')[0].toLowerCase() ?? '';
+    return COACHES.map((c) => {
+      const fromDirectory = directoryImages.find((item) => item.firstName === c.name.toLowerCase());
+      const isOwn = Boolean(staffUser && staffProfile && c.name.toLowerCase() === staffFirstName);
+      return {
+        ...c,
+        name: isOwn && staffProfile?.displayName ? staffProfile.displayName : c.name,
+        photo: (isOwn ? staffProfile?.photo : undefined) || fromDirectory?.photo || c.photo,
+        coverImage: (isOwn ? staffProfile?.coverImage : undefined) || fromDirectory?.coverImage || c.coverImage,
+        bio: isOwn && staffProfile?.bio ? staffProfile.bio : c.bio,
+        experience: isOwn && staffProfile?.experience ? staffProfile.experience : c.experience,
+        nationality: isOwn && staffProfile?.nationality ? staffProfile.nationality : c.nationality,
+        classes: isOwn && staffProfile && staffProfile.classes.length > 0 ? staffProfile.classes : c.classes,
+      };
+    });
+  }, [staffUser, staffProfile, directoryImages]);
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
+import { ProfileAvatar } from '../ProfileImages';
 
 type NavItem = {
   label: string;
@@ -63,6 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
 interface AdminSidebarNavProps {
   pathname: string;
   adminUserName?: string;
+  photo?: string;
   initials: string;
   onNavClick: () => void;
   onLogoutClick: () => void;
@@ -72,6 +74,7 @@ interface AdminSidebarNavProps {
 function AdminSidebarNav({
   pathname,
   adminUserName,
+  photo,
   initials,
   onNavClick,
   onLogoutClick,
@@ -134,15 +137,26 @@ function AdminSidebarNav({
       </nav>
 
       <div className="px-4 py-4 border-t border-[#D4CDB5]/30">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs">{initials}</span>
+        <Link
+          to="/admin-account"
+          onClick={onNavClick}
+          title="Edit profile images"
+          className="flex items-center gap-3 mb-3 rounded-xl px-1 py-1 -mx-1 hover:bg-[#EDE8D8] transition-colors"
+        >
+          <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+            <ProfileAvatar
+              src={photo}
+              initials={initials}
+              alt=""
+              className="h-full w-full"
+              initialsClassName="text-white font-bold text-xs"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[#1E2A35] text-xs font-semibold leading-none truncate">{adminUserName}</p>
-            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Admin</p>
+            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Edit photos</p>
           </div>
-        </div>
+        </Link>
 
         <button
           onClick={onLogoutClick}
@@ -173,6 +187,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
   const navProps = {
     pathname: location.pathname,
     adminUserName: adminUser?.name,
+    photo: adminUser?.photo,
     initials,
     onNavClick: () => setMobileOpen(false),
     onLogoutClick: () => setShowLogoutModal(true),

@@ -33,6 +33,7 @@ import AdminCoachAvailabilityPage from './pages/AdminCoachAvailabilityPage';
 import AdminDisciplinesPage from './pages/AdminDisciplinesPage';
 import AdminClassesPage from './pages/AdminClassesPage';
 import AdminCoachesPage from './pages/AdminCoachesPage';
+import AdminAccountPage from './pages/AdminAccountPage';
 import { AdminLayout } from './components/layout/AdminLayout';
 import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
 import StaffProfilePage from './pages/StaffProfilePage';
@@ -48,6 +49,7 @@ import DevAccountLogsPage from './pages/DevAccountLogsPage';
 import DevProfileLogsPage from './pages/DevProfileLogsPage';
 import DevTransactionLogsPage from './pages/DevTransactionLogsPage';
 import DevSupportLogsPage from './pages/DevSupportLogsPage';
+import DevAccountPage from './pages/DevAccountPage';
 
 export const router = createBrowserRouter([
   {
@@ -82,6 +84,7 @@ export const router = createBrowserRouter([
         Component: AdminLayout,
         children: [
           { path: 'admin-dashboard', Component: AdminDashboardPage },
+          { path: 'admin-account', Component: AdminAccountPage },
           { path: 'admin-staff', Component: AdminStaffPage },
           { path: 'admin-coaches', Component: AdminCoachesPage },
           { path: 'admin-students', Component: AdminStudentsPage },
@@ -101,6 +104,7 @@ export const router = createBrowserRouter([
       { path: 'admin-coach-availability', Component: AdminCoachAvailabilityPage },
       { path: 'development', Component: DevelopmentLoginPage },
       { path: 'development/dashboard', Component: DevDashboardPage },
+      { path: 'development/account', Component: DevAccountPage },
       { path: 'development/tickets', Component: DevTicketsPage },
       { path: 'development/ai-setup', Component: DevAiSetupPage },
       { path: 'development/logs/accounts', Component: DevAccountLogsPage },

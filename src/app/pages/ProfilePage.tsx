@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { ProfileImageHero } from '../components/ProfileImages';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES
@@ -47,7 +48,7 @@ type TabId = typeof TABS[number]['id'];
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
 
   const [tab, setTab] = useState<TabId>('personal');
 
@@ -129,12 +130,17 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Avatar + Name ── */}
-        <div className="py-6 flex items-center gap-4 border-b border-[#D4CDB5]/50">
-          <div className="w-16 h-16 bg-[#745b3c]/15 border-2 border-[#745b3c]/40 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-[#5e4a30] font-black text-xl">{initials}</span>
-          </div>
-          <div>
+        {/* ── Cover + Avatar ── */}
+        <div className="mt-6 mb-2 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+          <ProfileImageHero
+            photoUrl={user?.profile.photo || ''}
+            coverUrl={user?.profile.coverImage || ''}
+            initials={initials}
+            editable
+            onPhotoUploaded={(url) => updateProfile({ photo: url })}
+            onCoverUploaded={(url) => updateProfile({ coverImage: url })}
+          />
+          <div className="px-6 pb-5 pt-14 md:px-8 md:pt-16">
             <h2
               className="text-[#1E2A35] leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}

@@ -5,6 +5,8 @@ import {
   Activity, Flame, CalendarDays, Clock, Mail, Phone, MapPin, Check,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { fetchClientDirectoryImages } from '../../lib/admin-service';
+import { ProfileAvatar } from '../components/ProfileImages';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -17,6 +19,8 @@ interface Student {
   status: 'active' | 'inactive';
   subscriptionStart: string;
   subscriptionEnd: string;
+  photo?: string;
+  coverImage?: string;
 }
 
 interface StudentCrm {
@@ -128,7 +132,11 @@ function ClientProfileModal({ student, onClose }: { student: Student; onClose: (
         {/* Cover banner with overlapping avatar */}
         <div className="relative">
           <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${accent}20` }}>
-            <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}35 0%, ${accent}08 100%)` }} />
+            {student.coverImage ? (
+              <img src={student.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}35 0%, ${accent}08 100%)` }} />
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -144,16 +152,13 @@ function ClientProfileModal({ student, onClose }: { student: Student; onClose: (
             className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg flex items-center justify-center"
             style={{ backgroundColor: `${accent}18` }}
           >
-            <span
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: '2rem',
-                letterSpacing: '0.08em',
-                color: accent,
-              }}
-            >
-              {initials}
-            </span>
+            <ProfileAvatar
+              src={student.photo}
+              initials={initials}
+              alt=""
+              className="h-full w-full"
+              initialsClassName="flex h-full w-full items-center justify-center text-[#5e4a30]"
+            />
           </div>
         </div>
 
@@ -332,6 +337,47 @@ export default function AdminStudentsPage() {
     if (!adminUser) navigate('/admin-login');
   }, [adminUser, navigate]);
 
+  useEffect(() => {
+    if (!adminUser) return;
+    let cancelled = false;
+    void fetchClientDirectoryImages().then((live) => {
+      if (cancelled || live.length === 0) return;
+      setStudents(() => {
+        const byEmail = new Map(live.map((row) => [row.email, row]));
+        const used = new Set<string>();
+        const merged = INITIAL_STUDENTS.map((student) => {
+          const match = byEmail.get(student.email.toLowerCase());
+          if (!match) return student;
+          used.add(match.email);
+          return {
+            ...student,
+            name: match.name || student.name,
+            photo: match.photo,
+            coverImage: match.coverImage,
+          };
+        });
+        const extras = live
+          .filter((row) => !used.has(row.email))
+          .map((row, index) => ({
+            id: 50_000 + index,
+            name: row.name,
+            email: row.email,
+            membership: 'Single Pass' as const,
+            joinDate: '—',
+            status: 'active' as const,
+            subscriptionStart: '—',
+            subscriptionEnd: '—',
+            photo: row.photo,
+            coverImage: row.coverImage,
+          }));
+        return [...merged, ...extras];
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [adminUser]);
+
   if (!adminUser) return null;
 
   const filtered = students.filter((s) => {
@@ -485,10 +531,14 @@ export default function AdminStudentsPage() {
                   className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0">
-                      <span className="text-[#5e4a30] text-xs font-bold">
-                        {clientInitials(student.name)}
-                      </span>
+                    <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0 overflow-hidden">
+                      <ProfileAvatar
+                        src={student.photo}
+                        initials={clientInitials(student.name)}
+                        alt=""
+                        className="h-full w-full"
+                        initialsClassName="text-[#5e4a30] text-xs font-bold"
+                      />
                     </div>
                     <span className="text-[#1E2A35] text-sm font-semibold truncate">{student.name}</span>
                   </div>

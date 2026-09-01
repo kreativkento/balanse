@@ -9,12 +9,14 @@ import {
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId, isRoleMatch, updateProfileByAuthUserId } from '../../lib/profile-service';
+import { fetchAccountWithProfileByAuthUserId, isRoleMatch, updateOwnProfileImages, updateProfileByAuthUserId } from '../../lib/profile-service';
+import { loadOwnProfileImageUrls, mergeProfileImageUrls } from '../../lib/storage-service';
 import type { AccountWithStaffProfile } from '../../lib/database.types';
 
 export interface CoachProfileData {
   displayName: string;
   photo: string;
+  coverImage: string;
   bio: string;
   experience: string;
   classes: string[];
@@ -58,8 +60,12 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && isRoleMatch(data.account, 'coach') && data.account.role !== 'user') {
       const staffData = data as AccountWithStaffProfile;
+      const bucket = await loadOwnProfileImageUrls();
       setStaffUser(mapToStaffUser(staffData));
-      setStaffProfile(profileRowToCoachProfile(staffData.profile, staffData.account.email));
+      setStaffProfile(mergeProfileImageUrls(
+        profileRowToCoachProfile(staffData.profile, staffData.account.email),
+        bucket,
+      ));
       return;
     }
     setStaffUser(null);
@@ -116,8 +122,12 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const staffData = accountData as AccountWithStaffProfile;
+    const bucket = await loadOwnProfileImageUrls();
     setStaffUser(mapToStaffUser(staffData));
-    setStaffProfile(profileRowToCoachProfile(staffData.profile, staffData.account.email));
+    setStaffProfile(mergeProfileImageUrls(
+      profileRowToCoachProfile(staffData.profile, staffData.account.email),
+      bucket,
+    ));
     return { success: true };
   };
 
@@ -131,8 +141,18 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     setStaffProfile((prev) => (prev ? { ...prev, ...data } : null));
     void (async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await updateProfileByAuthUserId(authUser.id, coachProfileToDbUpdate(data));
+      if (!authUser) return;
+
+      if (data.photo || data.coverImage) {
+        await updateOwnProfileImages(authUser.id, {
+          photo: data.photo,
+          coverImage: data.coverImage,
+        });
+      }
+
+      const dbUpdate = coachProfileToDbUpdate({ ...data, photo: undefined, coverImage: undefined });
+      if (Object.keys(dbUpdate).length > 0) {
+        await updateProfileByAuthUserId(authUser.id, dbUpdate);
       }
     })();
   };

@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ArrowLeft, User, Award, Lock, Eye, EyeOff,
-  Check, AlertTriangle, Save, Camera, ShieldCheck,
+  Check, AlertTriangle, Save, ShieldCheck,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { NATIONALITIES } from '../data/nationalities';
+import { ProfileImageHero } from '../components/ProfileImages';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES  (mirrors ProfilePage exactly)
@@ -55,7 +56,6 @@ const ALL_CLASSES = [
 export default function StaffProfilePage() {
   const navigate = useNavigate();
   const { staffUser, staffProfile, updateStaffProfile, staffLogout } = useStaffAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<TabId>('info');
 
@@ -64,7 +64,7 @@ export default function StaffProfilePage() {
   const [phone, setPhone]             = useState('');
   const [nationality, setNationality] = useState(staffProfile?.nationality || '');
   const [photo, setPhoto]             = useState(staffProfile?.photo || '');
-  const [photoPreview, setPhotoPreview] = useState(staffProfile?.photo || '');
+  const [coverImage, setCoverImage]   = useState(staffProfile?.coverImage || '');
   const [infoSaved, setInfoSaved]     = useState(false);
 
   // ── Credentials ──
@@ -96,7 +96,7 @@ export default function StaffProfilePage() {
     setDisplayName(staffProfile.displayName || staffUser?.name || '');
     setNationality(staffProfile.nationality || '');
     setPhoto(staffProfile.photo || '');
-    setPhotoPreview(staffProfile.photo || '');
+    setCoverImage(staffProfile.coverImage || '');
     setBio(staffProfile.bio || '');
     setExperience(staffProfile.experience || '');
     setClasses(staffProfile.classes || []);
@@ -107,22 +107,11 @@ export default function StaffProfilePage() {
   const initials = (staffProfile?.displayName || staffUser.name)
     .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const url = ev.target?.result as string;
-      setPhoto(url);
-      setPhotoPreview(url);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const saveInfo = () => {
     updateStaffProfile({
       displayName: displayName.trim() || staffUser.name,
       photo,
+      coverImage,
       nationality: nationality.trim(),
     });
     setInfoSaved(true);
@@ -171,28 +160,23 @@ export default function StaffProfilePage() {
           </div>
         </div>
 
-        {/* ── Avatar + Identity ── */}
-        <div className="py-6 flex items-center gap-4 border-b border-[#D4CDB5]/50">
-          {/* Clickable photo avatar */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title="Click to change photo"
-            className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#745b3c]/40 bg-[#745b3c]/15 flex items-center justify-center shrink-0 group hover:border-[#745b3c]/70 transition-all"
-          >
-            {photoPreview ? (
-              <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" onError={() => setPhotoPreview('')} />
-            ) : (
-              <span className="text-[#5e4a30] font-black text-xl">{initials}</span>
-            )}
-            <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-              <Camera size={14} className="text-white" />
-              <span className="text-white text-[9px] font-bold tracking-wide">EDIT</span>
-            </div>
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-
-          <div>
+        {/* ── Cover + Avatar ── */}
+        <div className="mt-6 mb-2 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+          <ProfileImageHero
+            photoUrl={photo}
+            coverUrl={coverImage}
+            initials={initials}
+            editable
+            onPhotoUploaded={(url) => {
+              setPhoto(url);
+              updateStaffProfile({ photo: url });
+            }}
+            onCoverUploaded={(url) => {
+              setCoverImage(url);
+              updateStaffProfile({ coverImage: url });
+            }}
+          />
+          <div className="px-6 pb-5 pt-14 md:px-8 md:pt-16">
             <h2
               className="text-[#1E2A35] leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}

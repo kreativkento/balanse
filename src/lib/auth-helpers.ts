@@ -66,6 +66,8 @@ export function profileRowToUserProfile(row: ProfileClientRow, email: string): U
     termsAccepted: row.terms_accepted ?? false,
     shareAvailability: row.share_availability ?? false,
     profileComplete: row.profile_complete ?? false,
+    photo: row.photo ?? '',
+    coverImage: row.cover_image ?? '',
   };
 }
 
@@ -73,6 +75,7 @@ export function profileRowToCoachProfile(row: ProfileStaffRow, email: string): C
   return {
     displayName: row.display_name || row.name || deriveNameFromEmail(email),
     photo: row.photo ?? '',
+    coverImage: row.cover_image ?? '',
     bio: row.bio ?? '',
     experience: row.experience ?? '',
     classes: row.classes ?? [],
@@ -101,6 +104,8 @@ export function userProfileToDbUpdate(data: Partial<UserProfile>): Record<string
   if (data.termsAccepted !== undefined) update.terms_accepted = data.termsAccepted;
   if (data.shareAvailability !== undefined) update.share_availability = data.shareAvailability;
   if (data.profileComplete !== undefined) update.profile_complete = data.profileComplete;
+  if (data.photo) update.photo = data.photo;
+  if (data.coverImage) update.cover_image = data.coverImage;
 
   return update;
 }
@@ -109,7 +114,8 @@ export function coachProfileToDbUpdate(data: Partial<CoachProfileData>): Record<
   const update: Record<string, unknown> = {};
 
   if (data.displayName !== undefined) update.display_name = data.displayName;
-  if (data.photo !== undefined) update.photo = data.photo;
+  if (data.photo) update.photo = data.photo;
+  if (data.coverImage) update.cover_image = data.coverImage;
   if (data.bio !== undefined) update.bio = data.bio;
   if (data.experience !== undefined) update.experience = data.experience;
   if (data.classes !== undefined) update.classes = data.classes;

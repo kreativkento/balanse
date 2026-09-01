@@ -172,6 +172,25 @@ export async function updateProfileByAuthUserId(
   return updateStaffProfileByAuthUserId(authUserId, update as Partial<ProfileStaffRow>);
 }
 
+export async function updateOwnProfileImages(
+  authUserId: string,
+  images: { photo?: string; coverImage?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const update: Record<string, unknown> = {};
+  if (images.photo) update.photo = images.photo;
+  if (images.coverImage) update.cover_image = images.coverImage;
+  if (Object.keys(update).length === 0) return { ok: true };
+  const result = await updateProfileByAuthUserId(authUserId, update);
+  if (
+    !result.ok
+    && /column|schema cache|does not exist|cover_image/i.test(result.error ?? '')
+  ) {
+    // File is already in profile_images; profile columns may not be migrated yet.
+    return { ok: true };
+  }
+  return result;
+}
+
 export function isRoleMatch(account: AccountRow, expected: UserRole): boolean {
   if (account.role === 'dev') return true;
   if (expected === 'admin') return hasAdminPrivileges(account.role);

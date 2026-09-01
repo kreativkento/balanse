@@ -12,6 +12,7 @@ import {
   isStaffMemberLockedForAdmin,
   staffRowToListItem,
   updateStaffAccountFromForm,
+  withBucketProfileImages,
   type StaffDirectoryAccountRole,
 } from '../../lib/admin-service';
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
@@ -31,6 +32,7 @@ interface StaffMember {
   status: 'active' | 'inactive';
   accountRole: StaffDirectoryAccountRole;
   photo: string;
+  coverImage: string;
   bio: string;
   experience: string;
   phone: string;
@@ -263,7 +265,12 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
         >
           <div className="relative">
             <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${accent}20` }}>
-              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}35 0%, ${accent}08 100%)` }} />
+              {member.coverImage ? (
+                <img src={member.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}35 0%, ${accent}08 100%)` }} />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10" />
               <button
                 type="button"
                 onClick={onClose}
@@ -495,11 +502,16 @@ export default function AdminStaffPage() {
     const coachDisciplineMap = await fetchCoachDisciplineMap(coachIds);
 
     setStaff(
-      rows.map((row) =>
-        staffRowToListItem(
-          row,
-          disciplineNamesById,
-          coachDisciplineMap.get(row.account.id) ?? [],
+      await Promise.all(
+        rows.map((row) =>
+          withBucketProfileImages(
+            staffRowToListItem(
+              row,
+              disciplineNamesById,
+              coachDisciplineMap.get(row.account.id) ?? [],
+            ),
+            row.account.auth_user_id,
+          ),
         ),
       ),
     );

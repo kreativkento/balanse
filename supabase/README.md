@@ -58,6 +58,8 @@ Postgres rejects using new enum values in the same transaction that adds them (`
 
 **Staff nationality:** after `016`, run `017_profiles_staff_nationality.sql` (adds `profiles_staff.nationality`).
 
+**Profile + cover images:** after `017`, run `018_profile_images.sql`, then `019_profile_images_public.sql`. Adds `photo` / `cover_image` on `profiles_client` and `cover_image` on `profiles_staff`. Uses the existing public Storage bucket `profile_images` (created if missing). Files are stored as `{auth_user_id}/photo` and `{auth_user_id}/cover`. Any signed-in user can upload their own images; admins/devs can manage all. `019` lets `/coaches` read stored coach photos without exposing emails.
+
 This creates or syncs:
 
 | Table | Purpose |
@@ -66,6 +68,7 @@ This creates or syncs:
 | `public.accounts` | Login identity (email) + role, linked to `auth.users` |
 | `public.profiles_client` | Client/member profile (`role = user`) — run `012_profiles_client_nationality.sql` |
 | `public.profiles_staff` | Staff/ops profile (coach, admin, dev, frontdesk, marketing) |
+| `storage.profile_images` | Public bucket for profile photos + cover images (`018`) |
 | `public.coach_disciplines` | Multi-tags: coach account ↔ `disciplines` (`015`) |
 | `public.disciplines` | Dynamic discipline list for event/class tagging (`008_disciplines.sql`) |
 | `public.classes` | Class shell: name, discipline tag, date, capacity, status, creator (`013`) |

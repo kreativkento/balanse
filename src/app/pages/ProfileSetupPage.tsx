@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NATIONALITIES } from '../data/nationalities';
+import { ProfileImageHero } from '../components/ProfileImages';
 
 const TC_LAST_UPDATED = 'January 15, 2026';
 
@@ -209,7 +210,7 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: () =
 
 export default function ProfileSetupPage() {
   const navigate = useNavigate();
-  const { completeProfile, user } = useAuth();
+  const { completeProfile, updateProfile, user } = useAuth();
 
   // Pre-filled from signup — editable in case of corrections
   const [firstName, setFirstName]       = useState(user?.profile?.firstName || '');
@@ -293,7 +294,22 @@ export default function ProfileSetupPage() {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-5 py-6 sm:py-8 w-full min-w-0">
         <div className="w-full max-w-md min-w-0">
 
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 sm:p-8 md:p-10 overflow-hidden">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+            <ProfileImageHero
+              photoUrl={user.profile.photo || ''}
+              coverUrl={user.profile.coverImage || ''}
+              initials={
+                [firstName, lastName]
+                  .map((part) => part.trim()[0])
+                  .filter(Boolean)
+                  .join('')
+                  .toUpperCase() || 'U'
+              }
+              editable
+              onPhotoUploaded={(url) => updateProfile({ photo: url })}
+              onCoverUploaded={(url) => updateProfile({ coverImage: url })}
+            />
+            <div className="p-5 sm:p-8 md:p-10 pt-14 sm:pt-16">
             {/* Header */}
             <div className="mb-6 sm:mb-7">
               <div className="w-12 h-12 bg-[#745b3c]/10 border border-[#745b3c]/30 rounded-2xl flex items-center justify-center mb-4">
@@ -568,6 +584,7 @@ export default function ProfileSetupPage() {
                 )}
               </button>
             </form>
+            </div>
           </div>
         </div>
       </div>

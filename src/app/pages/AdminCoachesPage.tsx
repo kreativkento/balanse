@@ -13,6 +13,7 @@ import {
   fetchStaffDirectoryAccounts,
   staffRowToListItem,
   updateStaffAccountFromForm,
+  withBucketProfileImages,
 } from '../../lib/admin-service';
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
 import { AdminCoachAvailabilityPanel } from './AdminCoachAvailabilityPage';
@@ -27,6 +28,7 @@ interface CoachMember {
   disciplineNames: string[];
   status: 'active' | 'inactive';
   photo: string;
+  coverImage: string;
   bio: string;
   experience: string;
   phone: string;
@@ -253,7 +255,12 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
         >
           <div className="relative">
             <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${ACCENT}20` }}>
-              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${ACCENT}35 0%, ${ACCENT}08 100%)` }} />
+              {coach.coverImage ? (
+                <img src={coach.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${ACCENT}35 0%, ${ACCENT}08 100%)` }} />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10" />
               <button
                 type="button"
                 onClick={onClose}
@@ -448,27 +455,33 @@ export default function AdminCoachesPage() {
     const coachDisciplineMap = await fetchCoachDisciplineMap(coachRows.map((row) => row.account.id));
 
     setCoaches(
-      coachRows.map((row) => {
-        const item = staffRowToListItem(
-          row,
-          disciplineNamesById,
-          coachDisciplineMap.get(row.account.id) ?? [],
-        );
-        return {
-          id: item.id,
-          name: item.name,
-          email: item.email,
-          specialty: item.specialty,
-          disciplineIds: item.disciplineIds,
-          disciplineNames: item.disciplineNames,
-          status: item.status,
-          photo: item.photo,
-          bio: item.bio,
-          experience: item.experience,
-          phone: item.phone,
-          nationality: item.nationality,
-        };
-      }),
+      await Promise.all(
+        coachRows.map(async (row) => {
+          const item = await withBucketProfileImages(
+            staffRowToListItem(
+              row,
+              disciplineNamesById,
+              coachDisciplineMap.get(row.account.id) ?? [],
+            ),
+            row.account.auth_user_id,
+          );
+          return {
+            id: item.id,
+            name: item.name,
+            email: item.email,
+            specialty: item.specialty,
+            disciplineIds: item.disciplineIds,
+            disciplineNames: item.disciplineNames,
+            status: item.status,
+            photo: item.photo,
+            coverImage: item.coverImage,
+            bio: item.bio,
+            experience: item.experience,
+            phone: item.phone,
+            nationality: item.nationality,
+          };
+        }),
+      ),
     );
     setLoading(false);
   }, []);

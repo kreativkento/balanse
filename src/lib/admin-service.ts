@@ -10,6 +10,7 @@ import type {
   UserRole,
 } from './database.types';
 import { hasAdminPrivileges } from './database.types';
+import { loadProfileImageUrlsForUser } from './storage-service';
 
 const MANAGED_ROLES: UserRole[] = ['user', 'coach'];
 const STAFF_DIRECTORY_ROLES: UserRole[] = ['coach', 'dev', 'admin', 'frontdesk', 'marketing'];
@@ -407,6 +408,7 @@ export function staffRowToListItem(
   status: 'active' | 'inactive';
   accountRole: StaffDirectoryAccountRole;
   photo: string;
+  coverImage: string;
   bio: string;
   experience: string;
   phone: string;
@@ -422,7 +424,8 @@ export function staffRowToListItem(
       : [];
   const disciplineLabel = disciplineNames.length > 0 ? disciplineNames.join(', ') : '—';
   const profileExtras = {
-    photo: row.profile.photo ?? '',
+    photo: row.profile.photo || '',
+    coverImage: row.profile.cover_image || '',
     bio: row.profile.bio ?? '',
     experience: row.profile.experience ?? '',
     phone: row.profile.phone ?? '',
@@ -514,6 +517,70 @@ export function staffRowToListItem(
     accountRole: 'coach',
     ...profileExtras,
   };
+}
+
+export async function withBucketProfileImages<T extends { photo: string; coverImage: string }>(
+  item: T,
+  authUserId: string,
+): Promise<T> {
+  if ((item.photo && item.coverImage) || !authUserId) return item;
+  const bucket = await loadProfileImageUrlsForUser(authUserId);
+  return {
+    ...item,
+    photo: item.photo || bucket.photo,
+    coverImage: item.coverImage || bucket.coverImage,
+  };
+}
+
+export async function fetchCoachDirectoryImages(): Promise<
+  { firstName: string; photo: string; coverImage: string }[]
+> {
+  const { data: publicRows, error: publicError } = await supabase.rpc('coach_directory_images');
+  if (!publicError && publicRows?.length) {
+    return Promise.all(
+      publicRows.map(async (row) => {
+        const bucket = await loadProfileImageUrlsForUser(row.auth_user_id);
+        return {
+          firstName: (row.first_name || '').toLowerCase(),
+          photo: row.photo || bucket.photo,
+          coverImage: row.cover_image || bucket.coverImage,
+        };
+      }),
+    );
+  }
+
+  const rows = await fetchStaffDirectoryAccounts();
+  const coaches = rows.filter((row) => row.account.role === 'coach');
+  return Promise.all(
+    coaches.map(async (row) => {
+      const bucket = await loadProfileImageUrlsForUser(row.account.auth_user_id);
+      const name = row.profile.display_name || row.profile.name || '';
+      return {
+        firstName: name.split(/\s+/)[0]?.toLowerCase() ?? '',
+        photo: row.profile.photo || bucket.photo,
+        coverImage: row.profile.cover_image || bucket.coverImage,
+      };
+    }),
+  );
+}
+
+export async function fetchClientDirectoryImages(): Promise<
+  { email: string; name: string; photo: string; coverImage: string }[]
+> {
+  const rows = await fetchManagedAccountsWithProfiles('user');
+  return Promise.all(
+    rows
+      .filter((row): row is AccountWithClientProfile => row.account.role === 'user')
+      .map(async (row) => {
+        const bucket = await loadProfileImageUrlsForUser(row.account.auth_user_id);
+        return {
+          email: row.account.email.toLowerCase(),
+          name: row.profile.name || row.account.email,
+          photo: row.profile.photo || bucket.photo,
+          coverImage: row.profile.cover_image || bucket.coverImage,
+        };
+      }),
+  );
 }
 
 export function isStaffMemberLockedForAdmin(
