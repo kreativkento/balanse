@@ -6,7 +6,7 @@ import { StaffAuthProvider } from './context/StaffAuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { DevAuthProvider } from './context/DevAuthContext';
 
-const PAGES_WITH_CTA = ['/', '/gallery', '/pricing', '/classes'];
+const PAGES_WITH_CTA = ['/', '/gallery', '/pricing', '/services', '/classes', '/disciplines'];
 
 // Standalone portals — hide the public NavBar
 const PORTAL_PREFIXES = [
@@ -19,7 +19,11 @@ function Shell() {
   const location = useLocation();
   const isPortal = PORTAL_PREFIXES.some((p) => location.pathname.startsWith(p));
   const showBottomCTA = PAGES_WITH_CTA.includes(location.pathname);
-  const lockScroll = location.pathname === '/login' || location.pathname === '/signup';
+  const lockScroll =
+    location.pathname === '/login'
+    || location.pathname === '/signup'
+    || location.pathname === '/coaches'
+    || location.pathname === '/disciplines';
 
   if (isPortal) {
     return (

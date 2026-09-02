@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, Layers, Loader2, Plus } from 'lucide-react';
+import { AlertCircle, Layers, Loader2, Plus, Search } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminDisciplineCardsGrid } from '../components/disciplines/AdminDisciplineCardsGrid';
+import {
+  AdminDisciplineCardsGrid,
+  DisciplineLayoutToggle,
+  type DisciplineLayoutMode,
+} from '../components/disciplines/AdminDisciplineCardsGrid';
 import { AdminDisciplineModal } from '../components/disciplines/AdminDisciplineModal';
+import { AdminTablePagination, useFitPageSize, type FitLayout } from '../components/layout/AdminTablePagination';
 import {
   createDiscipline,
   createEmptyDisciplineDraft,
@@ -15,19 +20,27 @@ import {
   type DisciplineStatusDisplay,
 } from '../../lib/discipline-service';
 
+const FIT_LAYOUT: Record<DisciplineLayoutMode, FitLayout> = {
+  list: 'discipline-list',
+  compact: 'discipline-compact',
+  large: 'discipline-large',
+};
+
 function AddDisciplineTrigger({
   onClick,
   variant,
+  density = 'large',
 }: {
   onClick: () => void;
   variant: 'button' | 'dashed';
+  density?: 'compact' | 'large';
 }) {
   if (variant === 'button') {
     return (
       <button
         type="button"
         onClick={onClick}
-        className="shrink-0 flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm font-bold shadow-sm"
+        className="shrink-0 flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm font-bold shadow-sm h-[42px]"
         style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
       >
         <Plus size={16} />
@@ -36,22 +49,28 @@ function AddDisciplineTrigger({
     );
   }
 
+  const isCompact = density === 'compact';
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-3xl border-2 border-dashed border-[#D4CDB5] bg-white/50 hover:bg-[#F8F3E8] hover:border-[#745b3c]/50 transition-all px-6 py-10 flex flex-col items-center justify-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] min-h-[220px]"
+      className={`w-full rounded-3xl border-2 border-dashed border-[#D4CDB5] bg-white/50 hover:bg-[#F8F3E8] hover:border-[#745b3c]/50 transition-all px-4 flex flex-col items-center justify-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] ${
+        isCompact ? 'min-h-[10.5rem] md:min-h-[12rem] py-6' : 'min-h-[17.5rem] py-10'
+      }`}
     >
-      <div className="w-12 h-12 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#745b3c]">
-        <Plus size={22} />
+      <div className={`rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#745b3c] ${isCompact ? 'w-10 h-10' : 'w-12 h-12'}`}>
+        <Plus size={isCompact ? 18 : 22} />
       </div>
       <span
         className="text-[#1E2A35]"
-        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.06em' }}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isCompact ? '1rem' : '1.2rem', letterSpacing: '0.06em' }}
       >
         Add Discipline
       </span>
-      <span className="text-sm text-[#8A7E6E]">Create a new class discipline for the studio catalog</span>
+      {!isCompact && (
+        <span className="text-sm text-[#8A7E6E] text-center px-2">Create a new class discipline</span>
+      )}
     </button>
   );
 }
@@ -66,6 +85,14 @@ export default function AdminDisciplinesPage() {
   const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineDisplay | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<DisciplineStatusDisplay | null>(null);
+  const [search, setSearch] = useState('');
+  const [layout, setLayout] = useState<DisciplineLayoutMode>('list');
+  const [page, setPage] = useState(1);
+  const { containerRef, pageSize: fitPageSize } = useFitPageSize({
+    layout: FIT_LAYOUT[layout],
+    fallback: layout === 'list' ? 9 : layout === 'compact' ? 8 : 6,
+  });
+  const pageSize = layout === 'list' ? 9 : fitPageSize;
 
   const loadDisciplines = useCallback(async () => {
     setLoading(true);
@@ -90,6 +117,10 @@ export default function AdminDisciplinesPage() {
       void loadDisciplines();
     }
   }, [adminUser, loadDisciplines]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, layout]);
 
   const openCreateModal = () => {
     setSelectedDiscipline(createEmptyDisciplineDraft(defaultStatus ?? undefined));
@@ -144,6 +175,41 @@ export default function AdminDisciplinesPage() {
     return result;
   };
 
+  const filteredDisciplines = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return disciplines;
+    return disciplines.filter((discipline) =>
+      discipline.name.toLowerCase().includes(query)
+      || discipline.description.toLowerCase().includes(query)
+      || discipline.slug.toLowerCase().includes(query)
+      || discipline.status.name.toLowerCase().includes(query),
+    );
+  }, [disciplines, search]);
+
+  const includeTrailingSlot = layout !== 'list' && filteredDisciplines.length > 0;
+  const totalSlots = filteredDisciplines.length + (includeTrailingSlot ? 1 : 0);
+  const totalPages = Math.max(1, Math.ceil(totalSlots / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+
+  const pageDisciplines = useMemo(() => {
+    return filteredDisciplines.slice(pageStart, pageStart + pageSize);
+  }, [filteredDisciplines, pageStart, pageSize]);
+
+  const showTrailingSlot =
+    includeTrailingSlot
+    && pageStart < totalSlots
+    && pageStart + pageSize > filteredDisciplines.length;
+
+  const rangeStart =
+    pageDisciplines.length === 0
+      ? (filteredDisciplines.length === 0 ? 0 : filteredDisciplines.length)
+      : pageStart + 1;
+  const rangeEnd =
+    pageDisciplines.length === 0
+      ? filteredDisciplines.length
+      : pageStart + pageDisciplines.length;
+
   if (!adminUser) return null;
 
   return (
@@ -164,8 +230,9 @@ export default function AdminDisciplinesPage() {
         />
       )}
 
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="flex items-start justify-between gap-4 mb-8">
+      <div className="h-full min-h-0 overflow-hidden flex flex-col">
+      <div className="max-w-6xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <Layers size={18} className="text-[#745b3c]" />
@@ -181,25 +248,35 @@ export default function AdminDisciplinesPage() {
             >
               Disciplines
             </h1>
-            <p className="text-[#8A7E6E] text-sm mt-2 max-w-xl">
-              Discipline cards are loaded from Supabase. Titles and descriptions use saved data when available,
-              with current copy as fallback. Logo and cover images use placeholders until URLs are stored.
-            </p>
           </div>
+
           {!loading && (
-            <AddDisciplineTrigger onClick={openCreateModal} variant="button" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0 w-full sm:w-auto sm:justify-end">
+              <DisciplineLayoutToggle layout={layout} onChange={setLayout} />
+              <div className="relative flex-1 sm:w-56">
+                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search disciplines…"
+                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
+                />
+              </div>
+              <AddDisciplineTrigger onClick={openCreateModal} variant="button" />
+            </div>
           )}
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center gap-2 py-20 text-[#8A7E6E]">
+          <div ref={containerRef} className="flex-1 min-h-0 flex items-center justify-center gap-2 text-[#8A7E6E]">
             <Loader2 size={18} className="animate-spin" />
             <span className="text-sm">Loading disciplines…</span>
           </div>
         )}
 
         {!loading && loadError && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 flex items-start gap-3 mb-6">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 flex items-start gap-3 mb-6 shrink-0">
             <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-red-700 text-sm font-semibold">Could not load disciplines</p>
@@ -209,27 +286,57 @@ export default function AdminDisciplinesPage() {
         )}
 
         {!loading && !loadError && disciplines.length === 0 && (
-          <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-5 py-8 text-center mb-6">
-            <p className="text-[#1E2A35] text-sm font-semibold">No disciplines found</p>
-            <p className="text-[#8A7E6E] text-sm mt-1">
-              Add your first discipline below, or run{' '}
-              <code className="text-[#5A5048]">supabase/migrations/008_disciplines.sql</code> to seed defaults.
-            </p>
+          <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
+            <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-5 py-8 text-center shrink-0">
+              <p className="text-[#1E2A35] text-sm font-semibold">No disciplines found</p>
+              <p className="text-[#8A7E6E] text-sm mt-1">
+                Add your first discipline below, or run{' '}
+                <code className="text-[#5A5048]">supabase/migrations/008_disciplines.sql</code> to seed defaults.
+              </p>
+            </div>
+            <div ref={containerRef} className="flex-1 min-h-0">
+              <AddDisciplineTrigger onClick={openCreateModal} variant="dashed" density="large" />
+            </div>
           </div>
         )}
 
-        {!loading && disciplines.length > 0 && (
-          <AdminDisciplineCardsGrid
-            disciplines={disciplines}
-            onSelect={openDisciplineModal}
-          />
-        )}
-
-        {!loading && !loadError && (
-          <div className="mt-6">
-            <AddDisciplineTrigger onClick={openCreateModal} variant="dashed" />
+        {!loading && disciplines.length > 0 && filteredDisciplines.length === 0 && (
+          <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
+            No disciplines match your search.
           </div>
         )}
+
+        {!loading && filteredDisciplines.length > 0 && (pageDisciplines.length > 0 || showTrailingSlot) && (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <AdminDisciplineCardsGrid
+              hideCount
+              fillContainer
+              bodyRef={containerRef}
+              density={layout}
+              disciplines={pageDisciplines}
+              onSelect={openDisciplineModal}
+              trailingSlot={
+                showTrailingSlot ? (
+                  <AddDisciplineTrigger
+                    onClick={openCreateModal}
+                    variant="dashed"
+                    density={layout === 'compact' ? 'compact' : 'large'}
+                  />
+                ) : undefined
+              }
+            />
+            <AdminTablePagination
+              page={currentPage}
+              totalPages={totalPages}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              total={filteredDisciplines.length}
+              noun="disciplines"
+              onPageChange={setPage}
+            />
+          </div>
+        )}
+      </div>
       </div>
     </>
   );

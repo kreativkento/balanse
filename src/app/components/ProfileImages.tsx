@@ -122,6 +122,24 @@ export function ProfileImageHero({
 
         {editable && (
           <>
+            {!showCover && (
+              <button
+                type="button"
+                onClick={() => pickFile('cover')}
+                disabled={uploading !== null}
+                className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-1 bg-black/10 hover:bg-black/20 transition-colors"
+                aria-label="Add cover image"
+              >
+                {uploading === 'cover' ? (
+                  <Loader2 size={18} className="animate-spin text-white" />
+                ) : (
+                  <>
+                    <ImagePlus size={18} className="text-white" />
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-white">Add cover</span>
+                  </>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => pickFile('cover')}

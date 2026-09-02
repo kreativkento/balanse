@@ -564,23 +564,304 @@ export async function fetchCoachDirectoryImages(): Promise<
   );
 }
 
-export async function fetchClientDirectoryImages(): Promise<
-  { email: string; name: string; photo: string; coverImage: string }[]
-> {
+export interface PublicCoachProfile {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  experience: string;
+  nationality: string;
+  classes: string[];
+  specialties: string[];
+  photo: string;
+  coverImage: string;
+  initials: string;
+  color: string;
+}
+
+const COACH_COLORS = [
+  '#3A4A5A', '#745b3c', '#6B8E6B', '#8B6F5A', '#B86A4A', '#9A7A8A', '#7A3A4A', '#A07050',
+];
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CO';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+}
+
+function colorFromId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return COACH_COLORS[hash % COACH_COLORS.length];
+}
+
+function mapPublicCoachRow(row: {
+  account_id: string;
+  auth_user_id: string;
+  display_name: string;
+  name: string;
+  staff_type: string;
+  bio: string;
+  experience: string;
+  nationality: string;
+  photo: string;
+  cover_image: string;
+  legacy_classes: string[] | null;
+  discipline_names: string[] | null;
+}, photo: string, coverImage: string): PublicCoachProfile {
+  const displayName =
+    (row.display_name || '').trim()
+    || (row.name || '').trim()
+    || 'Coach';
+  const disciplines = (row.discipline_names ?? []).map((n) => n.trim()).filter(Boolean);
+  const legacy = (row.legacy_classes ?? []).map((n) => n.trim()).filter(Boolean);
+  const classes = disciplines.length > 0 ? disciplines : legacy;
+
+  return {
+    id: row.account_id,
+    name: displayName,
+    role: (row.staff_type || '').trim() || 'Coach',
+    bio: (row.bio || '').trim(),
+    experience: (row.experience || '').trim(),
+    nationality: (row.nationality || '').trim(),
+    classes,
+    specialties: classes,
+    photo,
+    coverImage,
+    initials: initialsFromName(displayName),
+    color: colorFromId(row.account_id),
+  };
+}
+
+/** Public coach directory for /coaches — profiles_staff + disciplines (no emails). */
+export async function fetchPublicCoaches(): Promise<{
+  data: PublicCoachProfile[];
+  error: string | null;
+}> {
+  const { data: publicRows, error: publicError } = await supabase.rpc('coach_directory');
+  if (!publicError && publicRows) {
+    const data = await Promise.all(
+      publicRows.map(async (row) => {
+        const bucket = await loadProfileImageUrlsForUser(row.auth_user_id);
+        return mapPublicCoachRow(
+          row,
+          row.photo || bucket.photo,
+          row.cover_image || bucket.coverImage,
+        );
+      }),
+    );
+    return { data, error: null };
+  }
+
+  // Fallback when RPC not migrated yet (admin-authenticated only).
+  try {
+    const rows = await fetchStaffDirectoryAccounts();
+    const coaches = rows.filter((row) => row.account.role === 'coach');
+    const disciplineMap = await fetchCoachDisciplineMap(coaches.map((row) => row.account.id));
+    const data = await Promise.all(
+      coaches.map(async (row) => {
+        const bucket = await loadProfileImageUrlsForUser(row.account.auth_user_id);
+        const disciplineNames = (disciplineMap.get(row.account.id) ?? []).map((d) => d.name);
+        return mapPublicCoachRow(
+          {
+            account_id: row.account.id,
+            auth_user_id: row.account.auth_user_id,
+            display_name: row.profile.display_name,
+            name: row.profile.name,
+            staff_type: row.profile.staff_type,
+            bio: row.profile.bio,
+            experience: row.profile.experience,
+            nationality: row.profile.nationality,
+            photo: row.profile.photo,
+            cover_image: row.profile.cover_image,
+            legacy_classes: row.profile.classes,
+            discipline_names: disciplineNames,
+          },
+          row.profile.photo || bucket.photo,
+          row.profile.cover_image || bucket.coverImage,
+        );
+      }),
+    );
+    return {
+      data,
+      error: publicError?.message
+        ? `Public directory unavailable (${publicError.message}). Showing fallback list.`
+        : null,
+    };
+  } catch (err) {
+    return {
+      data: [],
+      error: err instanceof Error ? err.message : (publicError?.message ?? 'Could not load coaches.'),
+    };
+  }
+}
+
+export interface ClientDirectoryItem {
+  id: string;
+  authUserId: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  middleInitial: string;
+  email: string;
+  phone: string;
+  nationality: string;
+  address: string;
+  birthday: string | null;
+  sex: string;
+  weight: string;
+  height: string;
+  medicalHistory: string;
+  shareAvailability: boolean;
+  profileComplete: boolean;
+  healthDeclarationSigned: boolean;
+  termsAccepted: boolean;
+  joinDate: string;
+  photo: string;
+  coverImage: string;
+}
+
+function formatClientJoinDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function clientRowToListItem(row: AccountWithClientProfile): ClientDirectoryItem {
+  const profile = row.profile;
+  const fullName =
+    profile.name
+    || [profile.first_name, profile.middle_initial, profile.last_name].filter(Boolean).join(' ').trim()
+    || row.account.email;
+
+  return {
+    id: row.account.id,
+    authUserId: row.account.auth_user_id,
+    name: fullName,
+    firstName: profile.first_name ?? '',
+    lastName: profile.last_name ?? '',
+    middleInitial: profile.middle_initial ?? '',
+    email: row.account.email,
+    phone: profile.phone || '',
+    nationality: profile.nationality || '',
+    address: profile.address || '',
+    birthday: profile.birthday,
+    sex: profile.sex || '',
+    weight: profile.weight || '',
+    height: profile.height || '',
+    medicalHistory: profile.medical_history || '',
+    shareAvailability: profile.share_availability ?? false,
+    profileComplete: profile.profile_complete ?? false,
+    healthDeclarationSigned: profile.health_declaration_signed ?? false,
+    termsAccepted: profile.terms_accepted ?? false,
+    joinDate: formatClientJoinDate(row.account.created_at),
+    photo: profile.photo || '',
+    coverImage: profile.cover_image || '',
+  };
+}
+
+export async function fetchClientDirectory(): Promise<ClientDirectoryItem[]> {
   const rows = await fetchManagedAccountsWithProfiles('user');
   return Promise.all(
     rows
       .filter((row): row is AccountWithClientProfile => row.account.role === 'user')
-      .map(async (row) => {
-        const bucket = await loadProfileImageUrlsForUser(row.account.auth_user_id);
-        return {
-          email: row.account.email.toLowerCase(),
-          name: row.profile.name || row.account.email,
-          photo: row.profile.photo || bucket.photo,
-          coverImage: row.profile.cover_image || bucket.coverImage,
-        };
-      }),
+      .map((row) => withBucketProfileImages(clientRowToListItem(row), row.account.auth_user_id)),
   );
+}
+
+export async function fetchClientDirectoryImages(): Promise<
+  { email: string; name: string; photo: string; coverImage: string }[]
+> {
+  const rows = await fetchClientDirectory();
+  return rows.map((row) => ({
+    email: row.email.toLowerCase(),
+    name: row.name,
+    photo: row.photo,
+    coverImage: row.coverImage,
+  }));
+}
+
+export interface ClientClassBooking {
+  classId: string;
+  className: string;
+  date: string;
+  time: string;
+  status: string;
+}
+
+export async function fetchClientClassBookings(accountId: string): Promise<ClientClassBooking[]> {
+  const { data: enrollments, error: enrollError } = await supabase
+    .from('class_students')
+    .select('class_id, enrolled_at')
+    .eq('account_id', accountId)
+    .order('enrolled_at', { ascending: false })
+    .limit(8);
+
+  if (enrollError) {
+    console.error('Failed to fetch client class bookings:', enrollError.message);
+    return [];
+  }
+
+  if (!enrollments?.length) return [];
+
+  const classIds = enrollments.map((row) => row.class_id);
+  const { data: classes, error: classError } = await supabase
+    .from('classes')
+    .select('id, name, starts_at, status')
+    .in('id', classIds);
+
+  if (classError) {
+    console.error('Failed to fetch booked classes:', classError.message);
+    return [];
+  }
+
+  const classById = new Map((classes ?? []).map((row) => [row.id, row]));
+
+  return enrollments.flatMap((enrollment) => {
+    const cls = classById.get(enrollment.class_id);
+    if (!cls) return [];
+    const start = new Date(cls.starts_at);
+    const valid = !Number.isNaN(start.getTime());
+    return [{
+      classId: cls.id,
+      className: cls.name,
+      date: valid
+        ? start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : '—',
+      time: valid
+        ? start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : '—',
+      status: cls.status,
+    }];
+  });
+}
+
+export async function updateClientAccountFromForm(
+  accountId: string,
+  input: {
+    name: string;
+    email: string;
+    phone?: string;
+    nationality?: string;
+    address?: string;
+  },
+): Promise<{ ok: boolean; error?: string }> {
+  const { firstName, lastName } = splitFullName(input.name);
+
+  const accountResult = await updateManagedAccount(accountId, {
+    email: input.email.trim().toLowerCase(),
+  });
+  if (!accountResult.ok) return accountResult;
+
+  return updateManagedClientProfile(accountId, {
+    first_name: firstName,
+    last_name: lastName,
+    name: input.name.trim(),
+    phone: input.phone?.trim() ?? '',
+    nationality: input.nationality?.trim() ?? '',
+    address: input.address?.trim() ?? '',
+  });
 }
 
 export function isStaffMemberLockedForAdmin(

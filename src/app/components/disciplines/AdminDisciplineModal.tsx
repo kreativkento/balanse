@@ -12,6 +12,8 @@ import {
   type DisciplineStatusDisplay,
 } from '../../../lib/discipline-service';
 import { StatusDisciplineBadge } from './StatusDisciplineBadge';
+import { DisciplineImagePicker } from './DisciplineImagePicker';
+import { isDisciplineBucketImageUrl } from '../../../lib/discipline-images';
 
 export interface DisciplineFormValues {
   name: string;
@@ -41,6 +43,10 @@ function normalizeMediaUrl(url: string, previewName: string, type: 'logo' | 'ima
     type === 'logo'
       ? getDisciplinePlaceholderLogo(previewName)
       : getDisciplinePlaceholderImage(previewName);
+
+  if (isDisciplineBucketImageUrl(trimmed)) {
+    return trimmed.split('?')[0];
+  }
 
   if (trimmed === placeholder || trimmed.includes('placehold.co/')) {
     return '';
@@ -105,6 +111,7 @@ export function AdminDisciplineModal({
   const [error, setError] = useState('');
   const [coaches, setCoaches] = useState<DisciplineCoachDisplay[]>([]);
   const [coachesLoading, setCoachesLoading] = useState(false);
+  const [picker, setPicker] = useState<'logo' | 'cover' | null>(null);
 
   useEffect(() => {
     setName(discipline.name);
@@ -114,6 +121,7 @@ export function AdminDisciplineModal({
     setIsEditing(isCreateMode && !readOnly);
     setShowConfirm(false);
     setShowConfirmDelete(false);
+    setPicker(null);
     setError('');
   }, [discipline, isCreateMode, readOnly]);
 
@@ -173,19 +181,16 @@ export function AdminDisciplineModal({
     setIsEditing(false);
     setShowConfirm(false);
     setShowConfirmDelete(false);
+    setPicker(null);
     setError('');
   };
 
   const handleEditLogo = () => {
-    const next = window.prompt('Enter logo image URL', displayLogoUrl);
-    if (next === null) return;
-    setLogoUrl(next.trim() || defaultLogoUrl);
+    setPicker((current) => (current === 'logo' ? null : 'logo'));
   };
 
   const handleEditCover = () => {
-    const next = window.prompt('Enter cover image URL', displayImageUrl);
-    if (next === null) return;
-    setImageUrl(next.trim() || defaultImageUrl);
+    setPicker((current) => (current === 'cover' ? null : 'cover'));
   };
 
   const buildPayload = (): DisciplineFormValues => ({
@@ -276,18 +281,34 @@ export function AdminDisciplineModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-2xl min-h-[min(720px,92vh)] max-h-[92vh] overflow-y-auto"
+        className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full overflow-y-auto ${
+          readOnly
+            ? 'max-w-5xl min-h-[min(860px,94vh)] max-h-[94vh]'
+            : 'max-w-2xl min-h-[min(720px,92vh)] max-h-[92vh]'
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative h-64 md:h-72 overflow-hidden">
+        <div className={`relative overflow-hidden ${readOnly ? 'h-72 md:h-80' : 'h-64 md:h-72'}`}>
           <EditableMedia
             isEditing={isEditing && !readOnly}
-            label="Edit cover image"
+            label="Choose cover image"
             onEdit={handleEditCover}
             className="block w-full h-full"
           >
             <img src={displayImageUrl} alt={previewName} className="w-full h-full object-cover" />
           </EditableMedia>
+          {isEditing && !readOnly && (
+            <div className="absolute top-14 right-4 z-20">
+              <DisciplineImagePicker
+                open={picker === 'cover'}
+                currentUrl={displayImageUrl}
+                kind="cover"
+                align="right"
+                onSelect={setImageUrl}
+                onClose={() => setPicker(null)}
+              />
+            </div>
+          )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1E2A35]/75 via-[#1E2A35]/20 to-transparent" />
 
           <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
@@ -324,19 +345,31 @@ export function AdminDisciplineModal({
 
           <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-3 z-10">
             <div className="flex items-end gap-3 min-w-0 flex-1">
-              <EditableMedia
-                isEditing={isEditing && !readOnly}
-                label="Edit logo"
-                onEdit={handleEditLogo}
-                className="shrink-0 rounded-2xl overflow-hidden"
-              >
-                <img
-                  src={displayLogoUrl}
-                  alt=""
-                  aria-hidden="true"
-                  className="w-14 h-14 rounded-2xl border border-white/30 bg-white object-cover shadow-sm"
-                />
-              </EditableMedia>
+              <div className="relative shrink-0">
+                <EditableMedia
+                  isEditing={isEditing && !readOnly}
+                  label="Choose logo image"
+                  onEdit={handleEditLogo}
+                  className="shrink-0 rounded-2xl overflow-hidden"
+                >
+                  <img
+                    src={displayLogoUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="w-14 h-14 rounded-2xl border border-white/30 bg-white object-cover shadow-sm"
+                  />
+                </EditableMedia>
+                {isEditing && !readOnly && (
+                  <DisciplineImagePicker
+                    open={picker === 'logo'}
+                    currentUrl={displayLogoUrl}
+                    kind="logo"
+                    placement="top"
+                    onSelect={setLogoUrl}
+                    onClose={() => setPicker(null)}
+                  />
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 {isEditing ? (
                   <input

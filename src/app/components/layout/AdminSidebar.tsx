@@ -46,7 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Marketing',
     items: [
       { label: 'Gallery', path: '/admin-gallery', icon: Images },
-      { label: 'News & Updates', path: '/admin-news', icon: Newspaper },
+      { label: 'Bulletin', path: '/admin-bulletin', icon: Newspaper },
       { label: 'Promotions', path: '/admin-promos', icon: Tag },
     ],
   },
@@ -248,7 +248,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           </Link>
         </div>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </main>
       </div>

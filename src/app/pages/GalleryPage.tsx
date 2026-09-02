@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { ChevronLeft, ChevronRight, Play, Tag, Lock } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { CARD_HOVER_GROW, HOVER_FADE_UP, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
 const STUDIO_VIDEOS = [
@@ -109,37 +107,7 @@ const GALLERY_IMAGES_MORE = [
   },
 ];
 
-const PERSONAL_PHOTOS = [
-  {
-    id: 'p1',
-    url: 'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',
-    alt: 'Yoga morning session',
-    class: 'Yoga with Jodi',
-    date: 'Apr 6, 2026',
-    tall: true,
-  },
-  {
-    id: 'p2',
-    url: 'https://images.unsplash.com/photo-1717500252780-036bfd89f810?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',
-    alt: 'Animal Flow class',
-    class: 'Animal Flow with Ephraim',
-    date: 'Mar 28, 2026',
-    tall: false,
-  },
-  {
-    id: 'p3',
-    url: 'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',
-    alt: 'Mat Pilates session',
-    class: 'Mat Pilates with Kate',
-    date: 'Mar 20, 2026',
-    tall: false,
-  },
-];
-
 export default function GalleryPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<'community' | 'personal'>('community');
   const [videoIndex, setVideoIndex] = useState(0);
   const [showMore, setShowMore] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
@@ -163,7 +131,7 @@ export default function GalleryPage() {
     <div className="bg-[#F8F3E8] min-h-screen">
       {/* Header */}
       <div className="border-b border-[#D4CDB5]/60">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-5 pb-0">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-5 pb-5">
           <h1
             className="text-[#1E2A35] leading-none"
             style={{
@@ -172,100 +140,12 @@ export default function GalleryPage() {
               letterSpacing: '0.05em',
             }}
           >
-            About
+            Our Studio
           </h1>
-          {/* Tabs */}
-          <div className="flex mt-3">
-            <button
-              onClick={() => setActiveTab('community')}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
-                activeTab === 'community'
-                  ? 'border-[#745b3c] text-[#745b3c]'
-                  : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35]'
-              }`}
-            >
-              About Balanse
-            </button>
-            <button
-              onClick={() => isAuthenticated ? setActiveTab('personal') : navigate('/login')}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
-                activeTab === 'personal'
-                  ? 'border-[#745b3c] text-[#745b3c]'
-                  : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35]'
-              }`}
-            >
-              <Tag size={13} />
-              My Photos
-              {!isAuthenticated && <Lock size={11} className="text-[#B0A898]" />}
-            </button>
-          </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-3 md:px-8 py-4 md:py-8">
-
-        {/* ── PERSONAL GALLERY TAB ── */}
-        {activeTab === 'personal' && isAuthenticated && (
-          <div>
-            <div className="flex items-center gap-2 mb-5 px-1">
-              <Tag size={15} className="text-[#745b3c]" />
-              <p className="text-[#8A7E6E] text-sm">
-                Photos where you've been tagged by the BALANSÉ team appear here.
-              </p>
-            </div>
-
-            {PERSONAL_PHOTOS.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 rounded-3xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center mb-4">
-                  <Tag size={24} className="text-[#745b3c]/50" />
-                </div>
-                <h3
-                  className="text-[#1E2A35] mb-1"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}
-                >
-                  No Photos Yet
-                </h3>
-                <p className="text-[#8A7E6E] text-sm max-w-xs leading-relaxed">
-                  Photos taken during your sessions and tagged by our team will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4 md:grid md:grid-cols-3">
-                {PERSONAL_PHOTOS.map(photo => (
-                  <div
-                    key={photo.id}
-                    className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm cursor-pointer ${CARD_HOVER_GROW}`}
-                  >
-                    <img
-                      src={photo.url}
-                      alt={photo.alt}
-                      className={`w-full object-cover ${IMAGE_HOVER_ZOOM} ${photo.tall ? 'h-64' : 'h-48'}`}
-                    />
-                    {/* Tag overlay */}
-                    <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/30 transition-colors flex items-end p-3">
-                      <div className={`opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${HOVER_FADE_UP} w-full`}>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <Tag size={11} className="text-[#745b3c]" />
-                          <span className="text-[#745b3c] text-xs font-bold uppercase tracking-widest">Tagged</span>
-                        </div>
-                        <p className="text-white text-sm font-medium leading-tight">{photo.class}</p>
-                        <p className="text-white/70 text-xs">{photo.date}</p>
-                      </div>
-                    </div>
-                    {/* Persistent tag badge */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-[#745b3c]/90 text-white text-xs px-2 py-0.5 rounded-full">
-                      <Tag size={9} /> Tagged
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── COMMUNITY GALLERY TAB ── */}
-        {activeTab === 'community' && (
-          <>
             <div className="mb-6 md:mb-8 flex flex-col gap-4">
               <p className="text-[#8A7E6E] text-sm md:text-base leading-relaxed text-justify">
                 BALANSÉ is a wellness hub devoted to helping people maintain balance through movement,
@@ -519,8 +399,6 @@ export default function GalleryPage() {
                 BALANSÉ Wellness Hub — A space to restore, move &amp; thrive
               </p>
             </div>
-          </>
-        )}
 
       </div>
     </div>

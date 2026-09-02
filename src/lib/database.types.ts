@@ -245,6 +245,23 @@ export interface Database {
           auth_user_id: string;
         }[];
       };
+      coach_directory: {
+        Args: Record<string, never>;
+        Returns: {
+          account_id: string;
+          auth_user_id: string;
+          display_name: string;
+          name: string;
+          staff_type: string;
+          bio: string;
+          experience: string;
+          nationality: string;
+          photo: string;
+          cover_image: string;
+          legacy_classes: string[];
+          discipline_names: string[];
+        }[];
+      };
     };
   };
 }

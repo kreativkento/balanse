@@ -85,7 +85,25 @@ export async function uploadProfileImage(
     await supabase.storage.from(PROFILE_IMAGES_BUCKET).remove(stale);
   }
 
-  return { ok: true, url: profileImagePublicUrl(user.id, kind, true) };
+  const url = profileImagePublicUrl(user.id, kind, true);
+  if (kind === 'photo') {
+    const existing = await loadProfileImageUrlsForUser(user.id);
+    if (!existing.coverImage) {
+      const copied = await copyOwnPhotoToCover(user.id);
+      if (copied) {
+        await persistOwnImageUrls(user.id, {
+          photo: url,
+          coverImage: profileImagePublicUrl(user.id, 'cover', true),
+        });
+      }
+    } else {
+      await persistOwnImageUrls(user.id, { photo: url });
+    }
+  } else {
+    await persistOwnImageUrls(user.id, { coverImage: url });
+  }
+
+  return { ok: true, url };
 }
 
 export async function loadProfileImageUrlsForUser(
@@ -104,12 +122,75 @@ export async function loadProfileImageUrlsForUser(
   };
 }
 
+async function copyOwnPhotoToCover(authUserId: string): Promise<boolean> {
+  const photoPath = profileImageObjectPath(authUserId, 'photo');
+  const coverPath = profileImageObjectPath(authUserId, 'cover');
+
+  let blob: Blob | null = null;
+  const { data: downloaded, error: downloadError } = await supabase.storage
+    .from(PROFILE_IMAGES_BUCKET)
+    .download(photoPath);
+  if (!downloadError && downloaded) {
+    blob = downloaded;
+  } else {
+    const publicRes = await fetch(profileImagePublicUrl(authUserId, 'photo'));
+    if (publicRes.ok) blob = await publicRes.blob();
+  }
+  if (!blob) return false;
+
+  const { error: uploadError } = await supabase.storage
+    .from(PROFILE_IMAGES_BUCKET)
+    .upload(coverPath, blob, {
+      upsert: true,
+      contentType: blob.type || 'image/png',
+      cacheControl: '3600',
+    });
+
+  if (uploadError) {
+    console.error('Failed to seed cover image from photo:', uploadError.message);
+    return false;
+  }
+  return true;
+}
+
+async function persistOwnImageUrls(
+  authUserId: string,
+  images: { photo?: string; coverImage?: string },
+): Promise<void> {
+  const { data: account } = await supabase
+    .from('accounts')
+    .select('id, role')
+    .eq('auth_user_id', authUserId)
+    .maybeSingle();
+  if (!account) return;
+
+  const update: Record<string, unknown> = {};
+  if (images.photo) update.photo = images.photo;
+  if (images.coverImage) update.cover_image = images.coverImage;
+  if (Object.keys(update).length === 0) return;
+
+  const table = account.role === 'user' ? 'profiles_client' : 'profiles_staff';
+  const { error } = await supabase.from(table).update(update).eq('account_id', account.id);
+  if (error && !/column|schema cache|does not exist/i.test(error.message)) {
+    console.error('Failed to persist profile image URLs:', error.message);
+  }
+}
+
 export async function loadOwnProfileImageUrls(): Promise<{ photo: string; coverImage: string }> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { photo: '', coverImage: '' };
-  return loadProfileImageUrlsForUser(user.id);
+
+  let urls = await loadProfileImageUrlsForUser(user.id);
+  if (urls.photo && !urls.coverImage) {
+    const copied = await copyOwnPhotoToCover(user.id);
+    if (copied) {
+      urls = await loadProfileImageUrlsForUser(user.id);
+      await persistOwnImageUrls(user.id, urls);
+    }
+  }
+  return urls;
 }
 
 export function mergeProfileImageUrls<T extends { photo?: string; coverImage?: string }>(

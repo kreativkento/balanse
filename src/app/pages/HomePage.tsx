@@ -7,42 +7,12 @@ import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 const HERO_IMG =
   'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
-const GALLERY_1 =
-  'https://images.unsplash.com/photo-1767611120077-3697335ec748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
-const GALLERY_2 =
-  'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
-const GALLERY_3 =
-  'https://images.unsplash.com/photo-1602827114685-efbb2717da9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
 const YOGA_IMG =
   'https://images.unsplash.com/photo-1767611120077-3697335ec748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
 const PILATES_IMG =
   'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
 const CALISTHENICS_IMG =
   'https://images.unsplash.com/photo-1758274539089-8b2bd10eee92?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
-
-const pricingPlans = [
-  {
-    name: 'Single Class Pass',
-    price: '₱360',
-    period: '/session',
-    desc: 'Drop in any class, no commitment',
-    highlight: false,
-  },
-  {
-    name: 'Gold Membership',
-    price: '₱4,800',
-    period: '/month',
-    desc: 'Unlimited access to all classes',
-    highlight: true,
-  },
-  {
-    name: 'Silver Membership',
-    price: '₱3,600',
-    period: '/month',
-    desc: 'One class, 12 sessions (10 paid)',
-    highlight: false,
-  },
-];
 
 const classPreview = [
   {
@@ -162,7 +132,7 @@ export default function HomePage() {
               </div>
               <div className="flex gap-3">
                 <GymButton variant="primary" size="lg" onClick={handleBook} className="md:w-auto w-full">
-                  Book / Schedule
+                  Schedule a Class
                 </GymButton>
                 <button
                   onClick={() => navigate('/classes')}
@@ -179,112 +149,20 @@ export default function HomePage() {
       {/* ─── MAIN CONTENT ─── */}
       <div className="max-w-6xl mx-auto">
 
-        {/* ─── GALLERY + PRICING (desktop 2-col) ─── */}
-        <div className="md:grid md:grid-cols-5 md:gap-8 px-4 md:px-8 pt-14 md:pt-20 pb-10 md:pb-16 gap-6">
-
-          {/* Gallery */}
-          <div className="md:col-span-3 mb-6 md:mb-0">
-            <div className="flex items-center justify-between mb-4">
-              <h2
-                className="text-[#1E2A35]"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '1.8rem',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                Our Studio
-              </h2>
-              <button
-                onClick={() => navigate('/gallery')}
-                className="flex items-center gap-1 text-[#745b3c] text-sm font-semibold active:opacity-70 transition-opacity"
-              >
-                View More <ChevronRight size={16} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <img src={GALLERY_1} alt="Yoga practice" className="w-full h-40 md:h-52 object-cover rounded-2xl" />
-              <img src={GALLERY_2} alt="Pilates class" className="w-full h-40 md:h-52 object-cover rounded-2xl" />
-              <img src={GALLERY_3} alt="Circuit training" className="col-span-2 w-full h-36 md:h-44 object-cover rounded-2xl" />
-            </div>
-            <button
-              onClick={() => navigate('/gallery')}
-              className="mt-3 w-full py-3 border border-[#D4CDB5] text-[#8A7E6E] rounded-full text-sm font-medium hover:border-[#745b3c] hover:text-[#745b3c] transition-colors active:scale-95 min-h-[48px]"
-            >
-              View Full Gallery
-            </button>
+        {/* ─── ABOUT ─── */}
+        <section className="px-4 md:px-8 pt-14 md:pt-20 pb-10 md:pb-16">
+          <div className="mb-6 md:mb-8 flex flex-col gap-4">
+            <p className="text-[#8A7E6E] text-sm md:text-base leading-relaxed text-justify">
+              BALANSÉ is a wellness hub devoted to helping people maintain balance through movement, mindfulness, and whole-body well-being. We believe that true wellness is holistic — not a single workout or a passing trend, but a way of living that honors both body and mind. Every detail of our studio is designed to help you arrive, breathe deeply, and leave feeling restored.
+            </p>
+            <p className="text-[#8A7E6E] text-sm md:text-base leading-relaxed text-justify">
+              From yoga and mat pilates to calisthenics, kickboxing, and mindful floor work, our disciplines are curated to meet you wherever you are in your journey. Expert coaches guide each session with care and intention, creating a space where beginners feel welcome and seasoned movers feel challenged. Here, movement is never about perfection — it is about presence, progress, and finding your own rhythm.
+            </p>
+            <p className="text-[#8A7E6E] text-sm md:text-base leading-relaxed text-justify">
+              Whether you are stepping through our doors for the very first time or returning to deepen your practice, you will find a community that moves together and supports one another along the way. Explore the studio below — from sessions in motion to the everyday moments that define life at BALANSÉ — and discover what balance means for you.
+            </p>
           </div>
-
-          {/* Pricing */}
-          <div className="md:col-span-2">
-            <div className="rounded-3xl bg-[#EDE8D8] px-4 py-6 border border-[#D4CDB5]/60 h-full flex flex-col">
-              <h2
-                className="text-[#1E2A35] mb-1"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '1.8rem',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                Membership Plans
-              </h2>
-              <p className="text-[#8A7E6E] text-sm mb-4">Flexible plans for every journey</p>
-              <div className="flex flex-col gap-3 flex-1">
-                {pricingPlans.map((plan) => (
-                  <div
-                    key={plan.name}
-                    role="link"
-                    tabIndex={0}
-                    onClick={() => navigate('/pricing')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        navigate('/pricing');
-                      }
-                    }}
-                    className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer ${CARD_HOVER_GROW} ${
-                      plan.highlight
-                        ? 'bg-[#745b3c]/10 border-[#745b3c]/50'
-                        : 'bg-[#F8F3E8] border-[#D4CDB5]/60'
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className={`font-semibold text-sm ${plan.highlight ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}>
-                          {plan.name}
-                        </p>
-                        {plan.highlight && (
-                          <span className="bg-[#745b3c] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                            Popular
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[#8A7E6E] text-xs mt-0.5">{plan.desc}</p>
-                    </div>
-                    <div className="text-right ml-3 shrink-0">
-                      <span
-                        className={`leading-none ${plan.highlight ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.02em' }}
-                      >
-                        {plan.price}
-                      </span>
-                      <span className="text-[#8A7E6E] text-xs block leading-none mt-0.5">{plan.period}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <GymButton
-                variant="outline"
-                size="md"
-                fullWidth
-                className="mt-4"
-                onClick={() => navigate('/pricing')}
-              >
-                View All Plans
-              </GymButton>
-            </div>
-          </div>
-        </div>
+        </section>
 
         {/* ─── CLASSES PREVIEW ─── */}
         <section className="px-4 md:px-8 pt-2 md:pt-4 pb-14 md:pb-20">

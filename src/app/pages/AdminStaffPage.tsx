@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check } from 'lucide-react';
+import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { NATIONALITIES } from '../data/nationalities';
+import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 import {
   createStaffAccount,
   deleteManagedAccount,
@@ -55,6 +56,8 @@ const STAFF_ACCENT: Record<StaffMember['role'], string> = {
   'Front Desk': '#3A4A5A',
   Marketing: '#B86A4A',
 };
+
+type StaffViewMode = 'list' | 'card';
 
 const EMPTY_FORM = {
   name: '',
@@ -477,6 +480,12 @@ export default function AdminStaffPage() {
   const [staffLoading, setStaffLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<StaffViewMode>('list');
+  const [page, setPage] = useState(1);
+  const { containerRef, pageSize } = useFitPageSize({
+    layout: viewMode === 'card' ? 'staff-card' : 'table',
+    fallback: viewMode === 'card' ? 6 : 8,
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -526,14 +535,26 @@ export default function AdminStaffPage() {
     if (adminUser) void loadStaff();
   }, [adminUser, loadStaff]);
 
-  if (!adminUser) return null;
-
-  // Filtered list
-  const filtered = staff.filter((s) =>
+  const filtered = useMemo(() => staff.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.email.toLowerCase().includes(search.toLowerCase()) ||
     s.specialty.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [staff, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStaff = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, filtered.length);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, viewMode]);
+
+  if (!adminUser) return null;
 
   // Open Add
   const openAdd = () => {
@@ -651,10 +672,11 @@ export default function AdminStaffPage() {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className={pageTab === 'staff' ? 'h-full min-h-0 overflow-hidden flex flex-col' : undefined}>
+      <div className={`max-w-7xl mx-auto px-6 py-8 w-full ${pageTab === 'staff' ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : ''}`}>
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <UserCheck size={14} className="text-[#745b3c]" />
@@ -680,7 +702,7 @@ export default function AdminStaffPage() {
         </div>
 
         {/* ── Page Tabs ── */}
-        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit">
+        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit shrink-0">
           {([['staff', 'Staffing Accounts'], ['logs', 'Account Logs']] as const).map(([id, label]) => (
             <button
               key={id}
@@ -694,40 +716,69 @@ export default function AdminStaffPage() {
 
         {/* ══ STAFF ACCOUNTS TAB ══ */}
         {pageTab === 'staff' && (
-          <>
-            {/* Search + Count */}
-            <div className="flex items-center gap-4 mb-5">
-              <div className="relative flex-1 max-w-sm">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {/* Search + View toggle + Count */}
+            <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
+              <div className="relative flex-1 max-w-sm min-w-[200px]">
                 <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by name, email, or discipline…"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
+                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
                 />
               </div>
-              <span className="text-[#8A7E6E] text-sm">{filtered.length} of {staff.length} staff</span>
+              <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm h-[42px] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  aria-label="List view"
+                  aria-pressed={viewMode === 'list'}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                    viewMode === 'list' ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                  }`}
+                >
+                  <List size={13} /> List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('card')}
+                  aria-label="Card view"
+                  aria-pressed={viewMode === 'card'}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                    viewMode === 'card' ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                  }`}
+                >
+                  <LayoutGrid size={13} /> Card
+                </button>
+              </div>
+              <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} of {staff.length} staff</span>
             </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-              <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-                {['Name', 'Email', 'Role', 'Discipline', 'Status', 'Actions'].map((h) => (
-                  <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-                ))}
+            {staffLoading ? (
+              <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
+                Loading staff accounts…
               </div>
+            ) : filtered.length === 0 ? (
+              <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
+                No staff members match your search.
+              </div>
+            ) : viewMode === 'card' ? (
+              <div
+                ref={containerRef}
+                className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 content-start overflow-hidden"
+              >
+                {pageStaff.map((member) => {
+                  const accent = STAFF_ACCENT[member.role];
+                  const actionsLocked = isStaffMemberLockedForAdmin(member, adminUser?.role);
+                  const disciplineLabels = member.disciplineNames.length > 0
+                    ? member.disciplineNames
+                    : member.specialty !== '—'
+                      ? member.specialty.split(',').map((item) => item.trim()).filter(Boolean)
+                      : [];
 
-              {staffLoading ? (
-                <div className="px-6 py-12 text-center text-[#B0A898] text-sm">Loading staff accounts…</div>
-              ) : filtered.length === 0 ? (
-                <div className="px-6 py-12 text-center text-[#B0A898] text-sm">No staff members match your search.</div>
-              ) : (
-                <div className="divide-y divide-[#D4CDB5]/30">
-                  {filtered.map((member) => {
-                    const actionsLocked = isStaffMemberLockedForAdmin(member, adminUser?.role);
-
-                    return (
+                  return (
                     <div
                       key={member.id}
                       role="button"
@@ -739,52 +790,203 @@ export default function AdminStaffPage() {
                           setSelectedMember(member);
                         }
                       }}
-                      className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
+                      className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#745b3c]/30 transition-all cursor-pointer"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-[#1E2A35]/08 border border-[#1E2A35]/12 flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="relative h-28 overflow-hidden" style={{ backgroundColor: `${accent}15` }}>
+                        {member.coverImage ? (
+                          <img src={member.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}30 0%, ${accent}08 100%)` }} />
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ backgroundColor: accent }} />
+                        <div className="absolute top-3 right-3">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              member.status === 'active'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-white/80 text-[#8A7E6E] border-[#D4CDB5]/60'
+                            }`}
+                          >
+                            {member.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="px-5 pb-5 -mt-8 relative">
+                        <div className="w-16 h-16 rounded-2xl border-4 border-white shadow-md overflow-hidden bg-[#F8F3E8] flex items-center justify-center mb-3">
                           {member.photo ? (
                             <img src={member.photo} alt="" className="h-full w-full object-cover" />
                           ) : (
-                            <span className="text-[#1E2A35] text-xs font-bold">{staffInitials(member.name)}</span>
+                            <span
+                              className="font-bold"
+                              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.06em', color: accent }}
+                            >
+                              {staffInitials(member.name)}
+                            </span>
                           )}
                         </div>
-                        <span className="text-[#1E2A35] text-sm font-semibold truncate">{member.name}</span>
-                      </div>
-                      <span className="text-[#8A7E6E] text-sm truncate">{member.email}</span>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${
-                        member.role === 'Dev' ? 'bg-violet-50 text-violet-700 border border-violet-200' :
-                        member.role === 'Admin' || member.role === 'Front Desk' || member.role === 'Marketing'
-                          ? 'bg-[#1E2A35]/10 text-[#1E2A35] border border-[#1E2A35]/15' :
-                        member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' :
-                        'bg-[#745b3c]/12 text-[#5e4a30]'
-                      }`}>{member.role}</span>
-                      <span className="text-[#5A5048] text-sm truncate">{member.specialty}</span>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{member.status}</span>
-                      {/* Actions — fixed 150px column */}
-                      <div className="flex items-center gap-1 w-[150px]" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                        {actionsLocked ? (
-                          <span className="text-[#B0A898] text-xs italic">Protected</span>
-                        ) : deleteId === member.id ? (
-                          <>
-                            <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Delete?</span>
-                            <button onClick={() => handleDelete(member.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">Yes</button>
-                            <button onClick={() => setDeleteId(null)} className="h-7 px-2.5 bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] text-xs rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">No</button>
-                          </>
+
+                        <h3
+                          className="text-[#1E2A35] leading-none mb-0.5"
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.04em' }}
+                        >
+                          {member.name}
+                        </h3>
+                        <p className="text-[#8A7E6E] text-xs font-semibold mb-1">{member.role}</p>
+                        <p className="text-[#B0A898] text-xs mb-3 truncate">{member.email}</p>
+
+                        {disciplineLabels.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {disciplineLabels.slice(0, 3).map((discipline) => (
+                              <span
+                                key={discipline}
+                                className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                                style={{ backgroundColor: accent }}
+                              >
+                                {discipline}
+                              </span>
+                            ))}
+                            {disciplineLabels.length > 3 && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EDE8D8] text-[#5A5048]">
+                                +{disciplineLabels.length - 3}
+                              </span>
+                            )}
+                          </div>
                         ) : (
-                          <>
-                            <button onClick={() => openEdit(member)} className="h-7 px-2.5 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-xs font-medium rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">Edit</button>
-                            <button onClick={() => setDeleteId(member.id)} className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap">Delete</button>
-                          </>
+                          <p className="text-[#B0A898] text-xs mb-4">No disciplines tagged</p>
                         )}
+
+                        <div
+                          className="flex items-center gap-1.5 pt-3 border-t border-[#D4CDB5]/40"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          {actionsLocked ? (
+                            <span className="text-[#B0A898] text-xs italic">Protected</span>
+                          ) : deleteId === member.id ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(member.id)}
+                                aria-label="Confirm delete"
+                                className="h-8 w-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all"
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteId(null)}
+                                aria-label="Cancel delete"
+                                className="h-8 w-8 rounded-lg bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] flex items-center justify-center hover:bg-[#EDE8D8] active:scale-95 transition-all"
+                              >
+                                <X size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openEdit(member)}
+                                aria-label={`Edit ${member.name}`}
+                                className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteId(member.id)}
+                                aria-label={`Delete ${member.name}`}
+                                className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
+                  {['Name', 'Email', 'Role', 'Discipline', 'Status', 'Actions'].map((h) => (
+                    <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
+                  ))}
+                </div>
+
+                <div ref={containerRef} className="flex-1 min-h-0 divide-y divide-[#D4CDB5]/30 overflow-hidden">
+                  {pageStaff.map((member) => {
+                    const actionsLocked = isStaffMemberLockedForAdmin(member, adminUser?.role);
+
+                    return (
+                      <div
+                        key={member.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedMember(member)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedMember(member);
+                          }
+                        }}
+                        className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-[#1E2A35]/08 border border-[#1E2A35]/12 flex items-center justify-center shrink-0 overflow-hidden">
+                            {member.photo ? (
+                              <img src={member.photo} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <span className="text-[#1E2A35] text-xs font-bold">{staffInitials(member.name)}</span>
+                            )}
+                          </div>
+                          <span className="text-[#1E2A35] text-sm font-semibold truncate">{member.name}</span>
+                        </div>
+                        <span className="text-[#8A7E6E] text-sm truncate">{member.email}</span>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${
+                          member.role === 'Dev' ? 'bg-violet-50 text-violet-700 border border-violet-200' :
+                          member.role === 'Admin' || member.role === 'Front Desk' || member.role === 'Marketing'
+                            ? 'bg-[#1E2A35]/10 text-[#1E2A35] border border-[#1E2A35]/15' :
+                          member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' :
+                          'bg-[#745b3c]/12 text-[#5e4a30]'
+                        }`}>{member.role}</span>
+                        <span className="text-[#5A5048] text-sm truncate">{member.specialty}</span>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{member.status}</span>
+                        <div className="flex items-center gap-1 w-[150px]" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                          {actionsLocked ? (
+                            <span className="text-[#B0A898] text-xs italic">Protected</span>
+                          ) : deleteId === member.id ? (
+                            <>
+                              <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Delete?</span>
+                              <button onClick={() => handleDelete(member.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">Yes</button>
+                              <button onClick={() => setDeleteId(null)} className="h-7 px-2.5 bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] text-xs rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">No</button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => openEdit(member)} className="h-7 px-2.5 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-xs font-medium rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">Edit</button>
+                              <button onClick={() => setDeleteId(member.id)} className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap">Delete</button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              )}
-            </div>
-          </>
+              </div>
+            )}
+
+            <AdminTablePagination
+              page={currentPage}
+              totalPages={totalPages}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              total={filtered.length}
+              noun="staff"
+              onPageChange={setPage}
+            />
+          </div>
         )}
 
         {/* ══ ACCOUNT LOGS TAB ══ */}
@@ -912,6 +1114,7 @@ export default function AdminStaffPage() {
             )}
           </div>
         )}
+      </div>
       </div>
 
       {selectedMember && (
