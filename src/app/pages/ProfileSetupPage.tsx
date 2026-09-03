@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
   User, Calendar, ChevronRight, AlertCircle,
   Shield, FileText, Check, X, Heart, Eye,
-  Phone, Weight, Ruler,
+  Phone, Weight, Ruler, PenLine, Eraser,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NATIONALITIES } from '../data/nationalities';
 import { ProfileImageHero } from '../components/ProfileImages';
-
-const TC_LAST_UPDATED = 'January 15, 2026';
+import { TC_LAST_UPDATED, TERMS_BLOCKS } from '../data/termsAndConditions';
+import { generateAndSaveSignedTermsPdf } from '../../lib/signed-terms';
 
 const HEALTH_DECLARATION_QUESTIONS = [
   'Do you have any cardiovascular conditions (heart disease, hypertension, arrhythmia)?',
@@ -102,107 +102,291 @@ function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; on
   );
 }
 
-function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: () => void }) {
+function SignaturePad({
+  onInkChange,
+  canvasRef,
+}: {
+  onInkChange: (hasInk: boolean) => void;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const drawing = useRef(false);
+  const last = useRef<{ x: number; y: number } | null>(null);
+  const hasInkRef = useRef(false);
+  const sizeRef = useRef({ w: 0, h: 0 });
+  const onInkChangeRef = useRef(onInkChange);
+  onInkChangeRef.current = onInkChange;
+
+  const pointFromEvent = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const setupCanvas = () => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    if (w < 8 || h < 8) return;
+    if (sizeRef.current.w === w && sizeRef.current.h === h && canvas.width > 0) return;
+    sizeRef.current = { w, h };
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1E2A35';
+    ctx.lineWidth = 2.25;
+    hasInkRef.current = false;
+    onInkChangeRef.current(false);
+  };
+
+  useEffect(() => {
+    setupCanvas();
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const ro = new ResizeObserver(() => setupCanvas());
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    canvas.setPointerCapture(e.pointerId);
+    drawing.current = true;
+    last.current = pointFromEvent(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current || !last.current) return;
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    const next = pointFromEvent(e);
+    ctx.beginPath();
+    ctx.moveTo(last.current.x, last.current.y);
+    ctx.lineTo(next.x, next.y);
+    ctx.stroke();
+    last.current = next;
+    if (!hasInkRef.current) {
+      hasInkRef.current = true;
+      onInkChange(true);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    drawing.current = false;
+    last.current = null;
+    try { canvasRef.current?.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+  };
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative h-40 sm:h-52 w-full rounded-2xl bg-[#F8F3E8] border-2 border-[#D4CDB5]/70 overflow-hidden"
+    >
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full touch-none cursor-crosshair"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      />
+      <div className="pointer-events-none absolute left-6 right-6 bottom-8 h-px bg-[#c49a3c]/50" />
+      <p className="pointer-events-none absolute left-0 right-0 bottom-3 text-center text-[#B0A898] text-[11px] uppercase tracking-widest">
+        Sign here
+      </p>
+    </div>
+  );
+}
+
+function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: (signatureDataUrl: string) => void }) {
+  const [step, setStep] = useState<'terms' | 'sign'>('terms');
   const [scrolled, setScrolled] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [hasInk, setHasInk] = useState(false);
+  const [padKey, setPadKey] = useState(0);
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) setScrolled(true);
   };
 
+  const clearSignature = () => {
+    setPadKey((k) => k + 1);
+    setHasInk(false);
+  };
+
+  const confirmSignature = () => {
+    if (!hasInk || !accepted) return;
+    const dataUrl = signatureCanvasRef.current?.toDataURL('image/png') ?? '';
+    if (!dataUrl) return;
+    onAccept(dataUrl);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center">
-              <FileText size={16} className="text-[#c49a3c]" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
+        <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center shrink-0">
+              {step === 'terms' ? <FileText size={16} className="text-[#c49a3c]" /> : <PenLine size={16} className="text-[#c49a3c]" />}
             </div>
-            <div>
-              <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>Terms & Conditions</h3>
-              <p className="text-[#9A8E7E] text-xs">Last Updated: {TC_LAST_UPDATED}</p>
+            <div className="min-w-0">
+              <h3 className="text-[#1E2A35] truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>
+                {step === 'terms' ? 'Balansé Terms & Conditions' : 'E-Signature'}
+              </h3>
+              <p className="text-[#9A8E7E] text-xs">
+                {step === 'terms' ? `Last Updated: ${TC_LAST_UPDATED}` : 'Draw your signature to complete the agreement'}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all">
+          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0">
             <X size={15} />
           </button>
         </div>
 
-        <div className="px-5 sm:px-7 py-5 max-h-[55vh] overflow-y-auto" onScroll={handleScroll}>
-          <div className="space-y-4 text-sm text-[#5A5048] leading-relaxed">
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">1. Membership & Sessions</p>
-              <p>By enrolling at BALANSÉ Wellness Hub, you agree to the terms of your selected membership plan. Session credits are non-transferable and expire at the end of each billing cycle unless otherwise stated. All membership fees are non-refundable except as outlined in Section 3.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">2. Booking & Attendance</p>
-              <p>Members must book classes in advance through the BALANSÉ platform. Attendance is subject to capacity limits. Late arrivals may be denied entry after 5 minutes past class start time. No-shows consume session credits without refund.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">3. Cancellation Policy</p>
-              <p>Cancellations made at least 24 hours before a scheduled class are eligible for a 50% refund of the session fee. Cancellations made less than 24 hours before class start are non-refundable. There are no cancellation fees.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">4. Code of Conduct</p>
-              <p>Members are expected to treat all staff, coaches, and fellow members with respect. Disruptive, disrespectful, or harmful behavior is grounds for immediate membership termination without refund.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">5. Liability Waiver</p>
-              <p>Participation in physical activities at BALANSÉ Wellness Hub is voluntary. BALANSÉ and its staff are not liable for injuries sustained during activities when proper safety guidelines are followed. Members participate at their own risk.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">6. Privacy</p>
-              <p>Personal data collected at registration is used solely for membership management, communication, and service delivery. BALANSÉ does not sell or share your data with third parties without your explicit consent.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">7. Schedule Visibility</p>
-              <p>Members may optionally allow coaches to view their personal schedule for coordination purposes. This setting is off by default and can be changed at any time from the member dashboard.</p>
-            </section>
-            <section>
-              <p className="font-semibold text-[#1E2A35] mb-1">8. Amendments</p>
-              <p>BALANSÉ reserves the right to update these Terms and Conditions at any time. Members will be notified of material changes via email. Continued use of services constitutes acceptance of updated terms.</p>
-            </section>
-          </div>
-
-          {/* PDF view prompt */}
-          <div className="mt-4 bg-[#F8F3E8] border border-[#D4CDB5]/60 rounded-2xl px-4 py-3 flex items-center gap-3">
-            <Eye size={14} className="text-[#c49a3c] shrink-0" />
-            <p className="text-[#8A7E6E] text-xs">You can view these Terms as a PDF anytime from your Profile page.</p>
-          </div>
-        </div>
-
-        {!scrolled && (
-          <p className="text-[#B0A898] text-xs text-center py-2">Scroll to read all terms</p>
-        )}
-
-        <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex flex-col gap-3">
-          <label
-            onClick={() => scrolled && setAccepted(v => !v)}
-            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
-          >
-            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
-              {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
+        <div className="px-5 sm:px-7 pt-4 shrink-0">
+          <div className="flex items-center gap-2 bg-[#F8F3E8] rounded-2xl px-3 py-2.5 border border-[#D4CDB5]/50">
+            <div className={`flex items-center gap-1.5 min-w-0 ${step === 'terms' ? 'text-[#a67f2e]' : 'text-[#8A7E6E]'}`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step === 'sign' || accepted ? 'bg-[#c49a3c] text-white' : 'bg-[#c49a3c] text-white'}`}>
+                {step === 'sign' ? <Check size={11} strokeWidth={3} /> : <span className="text-[10px] font-bold">1</span>}
+              </div>
+              <span className="text-[11px] sm:text-xs font-semibold truncate">Read &amp; Agree</span>
             </div>
-            <p className="text-[#5A5048] text-xs leading-relaxed">
-              I have read and agree to the BALANSÉ Terms &amp; Conditions (Last Updated: {TC_LAST_UPDATED}).
-            </p>
-          </label>
-
-          <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">
-              Cancel
-            </button>
-            <button
-              onClick={onAccept}
-              disabled={!accepted}
-              className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
-            >
-              <Check size={14} /> I Agree
-            </button>
+            <div className={`flex-1 h-px ${step === 'sign' ? 'bg-[#c49a3c]' : 'bg-[#D4CDB5]'}`} />
+            <div className={`flex items-center gap-1.5 min-w-0 ${step === 'sign' ? 'text-[#a67f2e]' : 'text-[#8A7E6E]'}`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step === 'sign' ? 'bg-[#c49a3c] text-white' : 'bg-[#EDE8D8] text-[#9A8E7E]'}`}>
+                <span className="text-[10px] font-bold">2</span>
+              </div>
+              <span className="text-[11px] sm:text-xs font-semibold truncate">E-Signature</span>
+            </div>
           </div>
         </div>
+
+        {step === 'terms' ? (
+          <>
+            <div className="px-5 sm:px-7 py-5 max-h-[46vh] overflow-y-auto flex-1 min-h-0" onScroll={handleScroll}>
+              <div className="space-y-4 text-sm text-[#5A5048] leading-relaxed">
+                {TERMS_BLOCKS.map((block, i) => {
+                  if (block.type === 'heading') {
+                    return <p key={i} className="font-semibold text-[#1E2A35] mb-1">{block.text}</p>;
+                  }
+                  if (block.type === 'labelValue') {
+                    return <p key={i}>{block.label}: {block.value}</p>;
+                  }
+                  if (block.type === 'bullets') {
+                    return (
+                      <ul key={i} className="list-disc pl-5 space-y-2">
+                        {block.items.map((item) => (
+                          <li key={item.label}><span className="font-semibold text-[#1E2A35]">{item.label}</span> {item.text}</li>
+                        ))}
+                      </ul>
+                    );
+                  }
+                  if (block.type === 'numbered') {
+                    return (
+                      <ol key={i} className="list-decimal pl-5 space-y-3">
+                        {block.items.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}
+                      </ol>
+                    );
+                  }
+                  return <p key={i}>{block.text}</p>;
+                })}
+              </div>
+
+              <div className="mt-4 bg-[#F8F3E8] border border-[#D4CDB5]/60 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <Eye size={14} className="text-[#c49a3c] shrink-0" />
+                <p className="text-[#8A7E6E] text-xs">You can download this signed agreement as a PDF anytime from your Profile page.</p>
+              </div>
+            </div>
+
+            {!scrolled && (
+              <p className="text-[#B0A898] text-xs text-center py-2 shrink-0">Scroll to read all terms</p>
+            )}
+
+            <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex flex-col gap-3 shrink-0">
+              <label
+                onClick={() => scrolled && setAccepted(v => !v)}
+                className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
+              >
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
+                  {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
+                </div>
+                <p className="text-[#5A5048] text-xs leading-relaxed">
+                  I have read the above Waiver &amp; Release form and Media Release &amp; Consent Statement, fully understand and agree to its contents.
+                </p>
+              </label>
+
+              <div className="flex gap-3">
+                <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => accepted && setStep('sign')}
+                  disabled={!accepted}
+                  className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+                >
+                  Continue <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="px-5 sm:px-7 py-5 flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
+            <p className="text-[#5A5048] text-sm leading-relaxed">
+              Please draw your electronic signature below using your mouse, trackpad, or touchscreen. This confirms you agree to the Balansé Terms &amp; Conditions.
+            </p>
+
+            <SignaturePad key={padKey} canvasRef={signatureCanvasRef} onInkChange={setHasInk} />
+
+            {!hasInk && (
+              <p className="text-[#B0A898] text-xs text-center -mt-1">A signature is required to complete this agreement.</p>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-auto pt-1">
+              <button
+                type="button"
+                onClick={() => { clearSignature(); setStep('terms'); }}
+                className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={clearSignature}
+                disabled={!hasInk}
+                className={`flex-1 py-3 rounded-full border text-sm transition-all flex items-center justify-center gap-2 ${hasInk ? 'border-[#D4CDB5]/70 text-[#5A5048] hover:bg-[#EDE8D8]' : 'border-[#D4CDB5]/40 text-[#B0A898] cursor-not-allowed'}`}
+              >
+                <Eraser size={14} /> Clear
+              </button>
+              <button
+                type="button"
+                onClick={confirmSignature}
+                disabled={!hasInk || !accepted}
+                className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${hasInk && accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+              >
+                <Check size={14} /> Confirm Signature
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -239,7 +423,7 @@ export default function ProfileSetupPage() {
     if (!birthday) e.birthday = 'Birthday is required.';
     if (!sex) e.sex = 'Please select your sex.';
     if (!healthSigned) e.health = 'You must complete the Health Declaration.';
-    if (!termsSigned)  e.terms  = 'You must accept the Terms & Conditions.';
+    if (!termsSigned)  e.terms  = 'You must accept the Terms & Conditions and provide an e-signature.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -287,7 +471,23 @@ export default function ProfileSetupPage() {
       {showTermsModal && (
         <TermsModal
           onClose={() => setShowTermsModal(false)}
-          onAccept={() => { setTermsSigned(true); setShowTermsModal(false); setErrors(e => ({ ...e, terms: '' })); }}
+          onAccept={async (signatureDataUrl) => {
+            setTermsSigned(true);
+            setShowTermsModal(false);
+            setErrors(e => ({ ...e, terms: '' }));
+            const signerName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || user?.name || 'Member';
+            if (user?.email) {
+              try {
+                await generateAndSaveSignedTermsPdf({
+                  email: user.email,
+                  signerName,
+                  signatureDataUrl,
+                });
+              } catch (err) {
+                console.error('Failed to save signed Terms PDF:', err);
+              }
+            }
+          }}
         />
       )}
 
@@ -309,12 +509,9 @@ export default function ProfileSetupPage() {
               onPhotoUploaded={(url) => updateProfile({ photo: url })}
               onCoverUploaded={(url) => updateProfile({ coverImage: url })}
             />
-            <div className="p-5 sm:p-8 md:p-10 pt-14 sm:pt-16">
+            <div className="px-5 pb-5 sm:px-8 sm:pb-8 md:px-10 md:pb-10 pt-20 sm:pt-24">
             {/* Header */}
-            <div className="mb-6 sm:mb-7">
-              <div className="w-12 h-12 bg-[#c49a3c]/10 border border-[#c49a3c]/30 rounded-2xl flex items-center justify-center mb-4">
-                <User size={22} className="text-[#c49a3c]" />
-              </div>
+            <div className="mb-5 sm:mb-6">
               <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.75rem, 6vw, 2.2rem)', letterSpacing: '0.05em' }}>
                 Profile Setup
               </h1>
@@ -539,7 +736,7 @@ export default function ProfileSetupPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-semibold ${termsSigned ? 'text-green-700' : 'text-[#1E2A35]'}`}>Terms &amp; Conditions</p>
-                        <p className="text-[#9A8E7E] text-xs break-words">{termsSigned ? `Accepted ✓ (Updated ${TC_LAST_UPDATED})` : `Last Updated: ${TC_LAST_UPDATED}`}</p>
+                        <p className="text-[#9A8E7E] text-xs break-words">{termsSigned ? `Accepted & signed ✓ (Updated ${TC_LAST_UPDATED})` : `Last Updated: ${TC_LAST_UPDATED}`}</p>
                       </div>
                     </div>
                     {termsSigned ? (

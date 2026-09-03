@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft, Crown } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -74,9 +74,7 @@ export default function StaffLoginPage() {
             </Link>
           </div>
 
-          {/* Staff badge */}
-          <div className="flex items-center gap-2 bg-[#c49a3c]/15 border border-[#c49a3c]/30 rounded-full px-4 py-1.5 mb-6">
-            <ShieldCheck size={13} className="text-[#c49a3c]" />
+          <div className="bg-[#c49a3c]/15 border border-[#c49a3c]/30 rounded-full px-4 py-1.5 mb-6">
             <span className="text-[#c49a3c] text-xs font-bold uppercase tracking-widest">Staff Access</span>
           </div>
 
@@ -113,9 +111,8 @@ export default function StaffLoginPage() {
           </div>
 
           <div className="mb-8">
-            <div className="flex items-center gap-1.5 bg-[#c49a3c]/10 border border-[#c49a3c]/25 rounded-full px-3 py-1 mb-3 w-fit">
-              <ShieldCheck size={11} className="text-[#c49a3c]" />
-              <span className="text-[#a67f2e] text-xs font-bold uppercase tracking-widest">Staff Portal</span>
+            <div className="bg-[#c49a3c]/10 border border-[#c49a3c]/25 rounded-full px-3 py-1 mb-3 w-fit">
+              <span className="text-[#a67f2e] text-xs uppercase tracking-widest">Staff Portal</span>
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-1"
@@ -183,7 +180,7 @@ export default function StaffLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-4 mt-1 font-semibold text-sm shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
+              className="w-full flex items-center justify-center bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
               style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em', fontSize: '1rem' }}
             >
               {loading ? (
@@ -192,9 +189,7 @@ export default function StaffLoginPage() {
                   Verifying...
                 </span>
               ) : (
-                <>
-                  <ShieldCheck size={16} /> Log In as Staff
-                </>
+                'Log In as Staff'
               )}
             </button>
           </form>
@@ -202,7 +197,7 @@ export default function StaffLoginPage() {
           {/* Back to student site */}
           <p className="text-center text-[#B0A898] text-xs mt-6">
             Not staff?{' '}
-            <Link to="/" className="text-[#8A7E6E] hover:text-[#c49a3c] transition-colors font-medium">
+            <Link to="/" className="text-[#8A7E6E] hover:text-[#c49a3c] transition-colors">
               Return to student site
             </Link>
           </p>
@@ -212,12 +207,10 @@ export default function StaffLoginPage() {
             <p className="text-center text-[#B0A898] text-xs mb-3">Need admin-level access?</p>
             <button
               onClick={() => navigate('/admin-login')}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm hover:border-[#1E2A35]/30 hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
+              className="w-full py-3 rounded-full border border-[#D4CDB5]/70 bg-white text-[#1E2A35] hover:border-[#1E2A35]/30 hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.88rem' }}
             >
-              <Crown size={14} className="text-[#c49a3c]" />
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.88rem' }}>
-                Log in as Admin
-              </span>
+              Log in as Admin
             </button>
           </div>
 

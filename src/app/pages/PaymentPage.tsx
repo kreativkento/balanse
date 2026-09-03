@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useSyncExternalStore, type ComponentType } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
   ArrowLeft, Check, Upload, FileImage,
@@ -6,6 +6,11 @@ import {
   CreditCard, Smartphone, QrCode,
 } from 'lucide-react';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import {
+  getPaymentChannels,
+  subscribePaymentChannels,
+  type PaymentChannel,
+} from '../data/paymentChannels';
 
 // ─────────────────────────────────────────────
 // STEP INDICATOR (reused pattern)
@@ -65,44 +70,29 @@ const CLASS_COLORS: Record<string, string> = {
   'Personal Coaching':'#a67f2e',
 };
 
-/** Decorative placeholder QR for bank transfer (not scannable). */
-function DummyBankQR() {
-  const n = 21;
-  const isDark = (r: number, c: number) => {
-    const inTL = r < 7 && c < 7;
-    const inTR = r < 7 && c >= n - 7;
-    const inBL = r >= n - 7 && c < 7;
-    if (inTL || inTR || inBL) {
-      const lr = inTR ? r : inBL ? r - (n - 7) : r;
-      const lc = inTR ? c - (n - 7) : inBL ? c : c;
-      const outer = lr === 0 || lr === 6 || lc === 0 || lc === 6;
-      const inner = lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4;
-      return outer || inner;
-    }
-    return ((r * 17 + c * 13) % 11) > 4;
-  };
+const METHOD_ICONS: Record<string, ComponentType<{ size?: number; className?: string }>> = {
+  bank: CreditCard,
+  gcash: Smartphone,
+  maya: Smartphone,
+};
+
+function PaymentQrImage({ url, label }: { url: string | null; label: string }) {
+  if (!url) {
+    return (
+      <div className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 bg-white flex flex-col items-center justify-center text-center px-3 shrink-0">
+        <QrCode size={22} className="text-[#B0A898] mb-2" />
+        <p className="text-[#8A7E6E] text-xs leading-relaxed">QR code not available yet for {label}.</p>
+        <p className="text-[#B0A898] text-[11px] mt-1">Use the account details to pay.</p>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl border-2 border-[#D4CDB5]/70 bg-white p-2.5 shrink-0"
-      aria-hidden
-    >
-      <div
-        className="w-full h-full grid gap-px"
-        style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
-      >
-        {Array.from({ length: n * n }, (_, i) => {
-          const r = Math.floor(i / n);
-          const c = i % n;
-          return (
-            <div
-              key={i}
-              className={isDark(r, c) ? 'bg-[#1E2A35]' : 'bg-white'}
-            />
-          );
-        })}
-      </div>
-    </div>
+    <img
+      src={url}
+      alt={`${label} payment QR code`}
+      className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl border-2 border-[#D4CDB5]/70 bg-white p-2 object-contain shrink-0"
+    />
   );
 }
 
@@ -115,7 +105,12 @@ export default function PaymentPage() {
   const location  = useLocation();
   const booking   = location.state?.booking;
 
-  const [paymentMethod, setPaymentMethod] = useState<'bank' | 'gcash' | 'maya'>('bank');
+  const paymentChannels = useSyncExternalStore(
+    subscribePaymentChannels,
+    getPaymentChannels,
+    getPaymentChannels,
+  );
+  const [paymentMethod, setPaymentMethod] = useState(paymentChannels[0]?.id ?? 'bank');
   const [uploadedFile, setUploadedFile]   = useState<File | null>(null);
   const [reference, setReference]         = useState('');
   const [notes, setNotes]                 = useState('');
@@ -133,6 +128,9 @@ export default function PaymentPage() {
   if (!booking) return null;
 
   const classColor = CLASS_COLORS[booking.className] || '#c49a3c';
+  const channel: PaymentChannel | undefined =
+    paymentChannels.find((item) => item.id === paymentMethod) ?? paymentChannels[0];
+  const amount = booking?.priceNum ?? 360;
 
   const handleFileChange = (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -276,36 +274,34 @@ export default function PaymentPage() {
               >
                 Payment Method
               </p>
-              <div className="grid grid-cols-3 gap-3">
-                {/* Bank Transfer */}
-                {([
-                  { id: 'bank' as const, label: 'Bank Transfer', sub: 'BPI / BDO', bg: '#3A4A5A', Icon: CreditCard },
-                  { id: 'gcash' as const, label: 'GCash', sub: 'E-wallet', bg: '#007DFF', Icon: Smartphone },
-                  { id: 'maya' as const, label: 'Maya', sub: 'E-wallet', bg: '#46BFA8', Icon: Smartphone },
-                ]).map(({ id, label, sub, bg, Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setPaymentMethod(id)}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 py-4 px-3 transition-all ${
-                      paymentMethod === id
-                        ? 'border-[#c49a3c] bg-[#c49a3c]/06'
-                        : 'border-[#D4CDB5]/60 bg-[#F8F3E8] hover:border-[#c49a3c]/40'
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: bg }}>
-                      <Icon size={18} className="text-white" />
-                    </div>
-                    <div>
-                      <p className={`text-sm font-bold ${paymentMethod === id ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>{label}</p>
-                      <p className="text-[#9A8E7E] text-xs">{sub}</p>
-                    </div>
-                    {paymentMethod === id && (
-                      <div className="w-5 h-5 rounded-full bg-[#c49a3c] flex items-center justify-center">
-                        <Check size={11} className="text-white" strokeWidth={3} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {paymentChannels.map(({ id, label, sub, bg }) => {
+                  const Icon = METHOD_ICONS[id] ?? Smartphone;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setPaymentMethod(id)}
+                      className={`flex flex-col items-center gap-2 rounded-2xl border-2 py-4 px-3 transition-all ${
+                        paymentMethod === id
+                          ? 'border-[#c49a3c] bg-[#c49a3c]/06'
+                          : 'border-[#D4CDB5]/60 bg-[#F8F3E8] hover:border-[#c49a3c]/40'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: bg }}>
+                        <Icon size={18} className="text-white" />
                       </div>
-                    )}
-                  </button>
-                ))}
+                      <div>
+                        <p className={`text-sm font-bold ${paymentMethod === id ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>{label}</p>
+                        <p className="text-[#9A8E7E] text-xs">{sub}</p>
+                      </div>
+                      {paymentMethod === id && (
+                        <div className="w-5 h-5 rounded-full bg-[#c49a3c] flex items-center justify-center">
+                          <Check size={11} className="text-white" strokeWidth={3} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -315,71 +311,41 @@ export default function PaymentPage() {
                 className="text-[#1E2A35] mb-1"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
               >
-                {paymentMethod === 'bank' ? 'Bank Transfer Details'
-                  : paymentMethod === 'gcash' ? 'GCash Payment Details'
-                  : 'Maya Payment Details'}
+                {channel?.label ?? 'Payment'} Details
               </p>
 
-              {paymentMethod === 'bank' ? (
-                <>
-                  <p className="text-[#8A7E6E] text-xs mb-4">
-                    Scan the QR code and send exactly{' '}
-                    <span className="font-semibold text-[#1E2A35]">₱{booking?.priceNum ?? 360}.00</span>.
-                    Upload your receipt below.
-                  </p>
-                  <div className="bg-[#F8F3E8] border border-[#D4CDB5]/50 rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-5">
-                    <DummyBankQR />
-                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-2 min-w-0">
-                      <div className="flex items-center gap-2 text-[#8A7E6E]">
-                        <QrCode size={14} className="text-[#c49a3c] shrink-0" />
-                        <span className="text-xs uppercase tracking-widest">BPI · BALANSÉ Studio</span>
-                      </div>
-                      <p
-                        className="text-[#c49a3c] leading-none"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem', letterSpacing: '0.02em' }}
-                      >
-                        ₱{booking?.priceNum ?? 360}.00
-                      </p>
-                      <p className="text-[#7A6A52] text-xs leading-relaxed max-w-[220px]">
-                        Use your full name as the payment description.
-                      </p>
-                    </div>
+              <p className="text-[#8A7E6E] text-xs mb-4">
+                {channel?.qrImageUrl
+                  ? <>Scan the QR code and send exactly <span className="font-semibold text-[#1E2A35]">₱{amount}.00</span>. Upload your receipt below.</>
+                  : <>Send exactly <span className="font-semibold text-[#1E2A35]">₱{amount}.00</span> using the {channel?.label ?? 'payment'} details below. Upload your receipt below.</>}
+              </p>
+              <div className="bg-[#F8F3E8] border border-[#D4CDB5]/50 rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-5">
+                <PaymentQrImage url={channel?.qrImageUrl ?? null} label={channel?.label ?? 'this method'} />
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-2 min-w-0">
+                  <div className="flex items-center gap-2 text-[#8A7E6E]">
+                    <QrCode size={14} className="text-[#c49a3c] shrink-0" />
+                    <span className="text-xs uppercase tracking-widest">{channel?.accountHint}</span>
                   </div>
-                </>
-              ) : (
-                /* GCash or Maya */
-                <>
-                  <p className="text-[#8A7E6E] text-xs mb-4">
-                    Send the exact amount to our {paymentMethod === 'gcash' ? 'GCash' : 'Maya'} number and keep a screenshot of your payment confirmation.
-                  </p>
-                  <div className="bg-[#F8F3E8] border border-[#D4CDB5]/50 rounded-2xl p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">{paymentMethod === 'gcash' ? 'GCash' : 'Maya'} Number</p>
-                        <p className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.08em' }}>
-                          0917 - 123 - 4567
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Account Name</p>
-                        <p className="text-[#1E2A35] text-sm font-semibold">BALANSÉ Studio</p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Amount</p>
-                        <p className="text-[#c49a3c]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.02em' }}>
-                          ₱{booking?.priceNum ?? 360}.00
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 mt-3 bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-xl px-3.5 py-2.5">
-                    <Info size={12} className="text-[#c49a3c] mt-0.5 shrink-0" />
-                    <p className="text-[#7A6A52] text-xs leading-relaxed">
-                      Use your full name as the payment note. Screenshot your confirmation and upload it below.
+                  {channel?.accountNumber && (
+                    <p className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.08em' }}>
+                      {channel.accountNumber}
                     </p>
-                  </div>
-                </>
-              )}
+                  )}
+                  <p className="text-[#1E2A35] text-sm font-semibold">{channel?.accountName}</p>
+                  <p
+                    className="text-[#c49a3c] leading-none"
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem', letterSpacing: '0.02em' }}
+                  >
+                    ₱{amount}.00
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 mt-3 bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-xl px-3.5 py-2.5">
+                <Info size={12} className="text-[#c49a3c] mt-0.5 shrink-0" />
+                <p className="text-[#7A6A52] text-xs leading-relaxed">
+                  Use your full name as the payment note. Screenshot your confirmation and upload it below.
+                </p>
+              </div>
             </div>
 
             {/* Upload proof */}

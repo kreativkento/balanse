@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { Images, Plus, Pencil, Trash2, X, Check, Search, Tag, Upload } from 'lucide-react';
+import { Images, Plus, Pencil, Trash2, X, Check, Search, Upload } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
@@ -13,32 +13,38 @@ interface GalleryPhoto {
   url: string;
   caption: string;
   category: Category;
-  taggedStudents: string[];
   uploadedAt: string;
   uploadedBy: string;
   tall: boolean;
 }
 
 const INITIAL_PHOTOS: GalleryPhoto[] = [
-  { id: 1,  url: 'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Morning light in Studio 1',                 category: 'Studio',    taggedStudents: [],                   uploadedAt: 'Apr 6, 2026',  uploadedBy: 'Studio Admin', tall: true  },
-  { id: 2,  url: 'https://images.unsplash.com/photo-1767611120077-3697335ec748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Yoga Morning Session with Coach Jodi',      category: 'Classes',   taggedStudents: ['Alex Johnson', 'Sofia Reyes'],     uploadedAt: 'Apr 7, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 3,  url: 'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Mat Pilates – Core Control',                category: 'Classes',   taggedStudents: ['Maria Santos'],              uploadedAt: 'Apr 6, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 4,  url: 'https://images.unsplash.com/photo-1699378281595-0d75e9e6a05a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'The serene reception lounge',               category: 'Studio',    taggedStudents: [],                   uploadedAt: 'Apr 5, 2026',  uploadedBy: 'Studio Admin', tall: true  },
-  { id: 5,  url: 'https://images.unsplash.com/photo-1686133368810-24f662f65cad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Kickboxing power with Coach Wolf',          category: 'Classes',   taggedStudents: ['Ryan Bautista'],             uploadedAt: 'Apr 4, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 6,  url: 'https://images.unsplash.com/photo-1759352856072-985a4ddab82d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Capoeira – Art in Motion',                  category: 'Events',    taggedStudents: [],                   uploadedAt: 'Apr 3, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 7,  url: 'https://images.unsplash.com/photo-1717500252780-036bfd89f810?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Animal Flow – April Community Session',     category: 'Community', taggedStudents: ['Camille Cruz', 'Lea Mendoza', 'Jan Corpus'], uploadedAt: 'Apr 2, 2026', uploadedBy: 'Studio Admin', tall: true  },
-  { id: 8,  url: 'https://images.unsplash.com/photo-1602827114685-efbb2717da9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Circuit Training – Full Energy',            category: 'Classes',   taggedStudents: [],                   uploadedAt: 'Apr 1, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 9,  url: 'https://images.unsplash.com/photo-1761971975724-31001b4de0bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Quiet mindfulness before class',            category: 'Studio',    taggedStudents: [],                   uploadedAt: 'Mar 30, 2026', uploadedBy: 'Studio Admin', tall: false },
-  { id: 10, url: 'https://images.unsplash.com/photo-1583166614297-a97b68d5cead?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Capoeira Open Workshop 2026',               category: 'Events',    taggedStudents: [],                   uploadedAt: 'Mar 28, 2026', uploadedBy: 'Studio Admin', tall: true  },
-  { id: 11, url: 'https://images.unsplash.com/photo-1758875569414-120ebc62ada3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Personal Coaching – One-on-One Progress',  category: 'Classes',   taggedStudents: ['Diego Tan'],                uploadedAt: 'Mar 25, 2026', uploadedBy: 'Studio Admin', tall: false },
-  { id: 12, url: 'https://images.unsplash.com/photo-1701824429245-ce783f1dc026?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Groundworks – Floor Movement Mastery',     category: 'Classes',   taggedStudents: ['Hannah Ong'],               uploadedAt: 'Mar 22, 2026', uploadedBy: 'Studio Admin', tall: false },
+  { id: 1,  url: 'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Morning light in Studio 1',                 category: 'Studio',    uploadedAt: 'Apr 6, 2026',  uploadedBy: 'Studio Admin', tall: true  },
+  { id: 2,  url: 'https://images.unsplash.com/photo-1767611120077-3697335ec748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Yoga Morning Session with Coach Jodi',      category: 'Classes',   uploadedAt: 'Apr 7, 2026',  uploadedBy: 'Studio Admin', tall: false },
+  { id: 3,  url: 'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Mat Pilates – Core Control',                category: 'Classes',   uploadedAt: 'Apr 6, 2026',  uploadedBy: 'Studio Admin', tall: false },
+  { id: 4,  url: 'https://images.unsplash.com/photo-1699378281595-0d75e9e6a05a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'The serene reception lounge',               category: 'Studio',    uploadedAt: 'Apr 5, 2026',  uploadedBy: 'Studio Admin', tall: true  },
+  { id: 5,  url: 'https://images.unsplash.com/photo-1686133368810-24f662f65cad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Kickboxing power with Coach Wolf',          category: 'Classes',   uploadedAt: 'Apr 4, 2026',  uploadedBy: 'Studio Admin', tall: false },
+  { id: 6,  url: 'https://images.unsplash.com/photo-1759352856072-985a4ddab82d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Capoeira – Art in Motion',                  category: 'Events',    uploadedAt: 'Apr 3, 2026',  uploadedBy: 'Studio Admin', tall: false },
+  { id: 7,  url: 'https://images.unsplash.com/photo-1717500252780-036bfd89f810?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Animal Flow – April Community Session',     category: 'Community', uploadedAt: 'Apr 2, 2026',  uploadedBy: 'Studio Admin', tall: true  },
+  { id: 8,  url: 'https://images.unsplash.com/photo-1602827114685-efbb2717da9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Circuit Training – Full Energy',            category: 'Classes',   uploadedAt: 'Apr 1, 2026',  uploadedBy: 'Studio Admin', tall: false },
+  { id: 9,  url: 'https://images.unsplash.com/photo-1761971975724-31001b4de0bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Quiet mindfulness before class',            category: 'Studio',    uploadedAt: 'Mar 30, 2026', uploadedBy: 'Studio Admin', tall: false },
+  { id: 10, url: 'https://images.unsplash.com/photo-1583166614297-a97b68d5cead?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Capoeira Open Workshop 2026',               category: 'Events',    uploadedAt: 'Mar 28, 2026', uploadedBy: 'Studio Admin', tall: true  },
+  { id: 11, url: 'https://images.unsplash.com/photo-1758875569414-120ebc62ada3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Personal Coaching – One-on-One Progress',  category: 'Classes',   uploadedAt: 'Mar 25, 2026', uploadedBy: 'Studio Admin', tall: false },
+  { id: 12, url: 'https://images.unsplash.com/photo-1701824429245-ce783f1dc026?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Groundworks – Floor Movement Mastery',     category: 'Classes',   uploadedAt: 'Mar 22, 2026', uploadedBy: 'Studio Admin', tall: false },
 ];
 
-const STUDENTS = ['Alex Johnson', 'Maria Santos', 'Cris Dela Cruz', 'Sofia Reyes', 'Marco Lim', 'Pia Villanueva', 'Diego Tan', 'Camille Cruz', 'Ryan Bautista', 'Lea Mendoza', 'Jan Corpus', 'Hannah Ong'];
 const CATEGORIES: Category[] = ['Studio', 'Classes', 'Events', 'Community'];
 const FILTER_TABS = ['All', ...CATEGORIES];
 
-const EMPTY_FORM = { url: '', caption: '', category: 'Studio' as Category, taggedStudents: [] as string[], tall: false };
+const EMPTY_FORM = { url: '', caption: '', category: 'Studio' as Category, tall: false };
+
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png'];
+const ACCEPTED_IMAGE_EXT = /\.(jpe?g|png)$/i;
+
+function isAcceptedImage(file: File) {
+  if (ACCEPTED_IMAGE_TYPES.includes(file.type)) return true;
+  return ACCEPTED_IMAGE_EXT.test(file.name);
+}
 
 // ── Photo Card ─────────────────────────────────────────────────
 
@@ -103,24 +109,7 @@ function PhotoCard({
       {/* Info */}
       <div className="px-3 py-3">
         <p className="text-[#1E2A35] text-sm font-medium leading-snug mb-1.5 line-clamp-2">{photo.caption}</p>
-        <div className="flex items-center justify-between text-xs text-[#B0A898]">
-          <span>{photo.uploadedAt}</span>
-          {photo.taggedStudents.length > 0 && (
-            <span className="flex items-center gap-1 text-[#c49a3c]">
-              <Tag size={10} /> {photo.taggedStudents.length}
-            </span>
-          )}
-        </div>
-        {photo.taggedStudents.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {photo.taggedStudents.slice(0, 2).map(s => (
-              <span key={s} className="text-[10px] bg-[#EDE8D8] text-[#5A5048] px-2 py-0.5 rounded-full">{s.split(' ')[0]}</span>
-            ))}
-            {photo.taggedStudents.length > 2 && (
-              <span className="text-[10px] bg-[#EDE8D8] text-[#5A5048] px-2 py-0.5 rounded-full">+{photo.taggedStudents.length - 2}</span>
-            )}
-          </div>
-        )}
+        <p className="text-[#B0A898] text-xs">{photo.uploadedAt}</p>
       </div>
     </div>
   );
@@ -139,19 +128,26 @@ function PhotoModal({
 }) {
   const [form, setForm] = useState(photo ?? EMPTY_FORM);
   const [error, setError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = photo !== null && 'url' in photo && photo.url !== '';
+  const hasPhoto = form.url.trim().length > 0;
 
-  const toggleStudent = (s: string) => {
-    setForm(f => ({
-      ...f,
-      taggedStudents: f.taggedStudents.includes(s)
-        ? f.taggedStudents.filter(x => x !== s)
-        : [...f.taggedStudents, s],
-    }));
+  const applyFile = (file: File) => {
+    if (!isAcceptedImage(file)) {
+      setError('Please upload a JPG, JPEG, or PNG image.');
+      return;
+    }
+    setError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm(f => ({ ...f, url: String(reader.result ?? '') }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = () => {
-    if (!form.url.trim()) { setError('Photo URL is required.'); return; }
+    if (!form.url.trim()) { setError('Please upload a photo.'); return; }
     if (!form.caption.trim()) { setError('Caption is required.'); return; }
     onSave(form);
   };
@@ -172,15 +168,75 @@ function PhotoModal({
         </div>
 
         <div className="px-7 py-6 flex flex-col gap-4">
-          {/* URL */}
+          {/* Photo Upload */}
           <div>
-            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Photo URL</label>
-            <input type="text" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://…" className={INP} />
-            {form.url && (
-              <div className="mt-2 rounded-xl overflow-hidden border border-[#D4CDB5]/60">
-                <img src={form.url} alt="preview" className="w-full h-32 object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
-              </div>
-            )}
+            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Photo Upload</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) applyFile(file);
+                e.target.value = '';
+              }}
+            />
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => {
+                e.preventDefault();
+                setDragOver(false);
+                const file = e.dataTransfer.files[0];
+                if (file) applyFile(file);
+              }}
+              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed cursor-pointer transition-all overflow-hidden ${
+                hasPhoto ? 'h-44' : 'h-40 py-8 px-4'
+              } ${
+                dragOver
+                  ? 'border-[#c49a3c] bg-[#c49a3c]/06'
+                  : hasPhoto
+                    ? 'border-[#D4CDB5]/70 bg-[#F8F3E8]'
+                    : error && !hasPhoto
+                      ? 'border-red-300 bg-red-50/40'
+                      : 'border-[#D4CDB5]/70 bg-[#F8F3E8]/50 hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/04'
+              }`}
+            >
+              {hasPhoto ? (
+                <>
+                  <img src={form.url} alt="Selected photo preview" className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-[#1E2A35]/0 hover:bg-[#1E2A35]/35 transition-colors flex flex-col items-center justify-center opacity-0 hover:opacity-100">
+                    <p className="text-white text-sm">Click or drop to replace</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setForm(f => ({ ...f, url: '' }));
+                      setError('');
+                    }}
+                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#8A7E6E] hover:bg-red-50 hover:text-red-500 shadow-sm transition-all"
+                    aria-label="Remove photo"
+                  >
+                    <X size={12} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center mb-3">
+                    <Upload size={22} className="text-[#9A8E7E]" />
+                  </div>
+                  <p className="text-[#1E2A35] text-sm">Drag & drop a photo here</p>
+                  <p className="text-[#8A7E6E] text-xs mt-1">or click to browse files</p>
+                  <p className="text-[#B0A898] text-[11px] mt-2">JPG, JPEG, or PNG</p>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Caption */}
@@ -189,48 +245,14 @@ function PhotoModal({
             <textarea value={form.caption} onChange={e => setForm(f => ({ ...f, caption: e.target.value }))} placeholder="Describe this photo…" rows={2} className={INP + ' resize-none'} />
           </div>
 
-          {/* Category + Tall */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Category</label>
-              <div className="relative">
-                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as Category }))} className={SEL}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Image Size</label>
-              <div className="relative">
-                <select value={form.tall ? 'tall' : 'standard'} onChange={e => setForm(f => ({ ...f, tall: e.target.value === 'tall' }))} className={SEL}>
-                  <option value="standard">Standard</option>
-                  <option value="tall">Tall</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Tag students */}
+          {/* Category */}
           <div>
-            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Tag Students (optional)</label>
-            <div className="flex flex-wrap gap-2">
-              {STUDENTS.map(s => (
-                <button
-                  key={s}
-                  onClick={() => toggleStudent(s)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                    form.taggedStudents.includes(s)
-                      ? 'bg-[#c49a3c] text-white border-[#c49a3c]'
-                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#c49a3c]/40 hover:text-[#1E2A35]'
-                  }`}
-                >
-                  {s.split(' ')[0]}
-                </button>
-              ))}
+            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Category</label>
+            <div className="relative">
+              <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as Category }))} className={SEL}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-            {form.taggedStudents.length > 0 && (
-              <p className="text-[#c49a3c] text-xs mt-1.5">{form.taggedStudents.length} student{form.taggedStudents.length !== 1 ? 's' : ''} tagged</p>
-            )}
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-600 text-sm">{error}</p></div>}
@@ -240,7 +262,8 @@ function PhotoModal({
           <button onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
           <button
             onClick={handleSave}
-            className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+            disabled={!hasPhoto}
+            className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-40 disabled:pointer-events-none disabled:active:scale-100"
             style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
           >
             {isEdit ? 'Save Changes' : 'Upload Photo'}
@@ -270,8 +293,7 @@ export default function AdminGalleryPage() {
 
   const filtered = photos.filter(p => {
     const matchCat = filter === 'All' || p.category === filter;
-    const matchSearch = p.caption.toLowerCase().includes(search.toLowerCase()) ||
-      p.taggedStudents.some(s => s.toLowerCase().includes(search.toLowerCase()));
+    const matchSearch = p.caption.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
@@ -298,7 +320,7 @@ export default function AdminGalleryPage() {
     <>
       {showModal && (
         <PhotoModal
-          photo={editingPhoto ? { url: editingPhoto.url, caption: editingPhoto.caption, category: editingPhoto.category, taggedStudents: editingPhoto.taggedStudents, tall: editingPhoto.tall } : null}
+          photo={editingPhoto ? { url: editingPhoto.url, caption: editingPhoto.caption, category: editingPhoto.category, tall: editingPhoto.tall } : null}
           onClose={() => setShowModal(false)}
           onSave={handleSave}
         />
@@ -345,7 +367,7 @@ export default function AdminGalleryPage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search caption or tagged student…"
+              placeholder="Search caption…"
               className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>

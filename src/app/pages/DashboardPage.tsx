@@ -435,7 +435,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
+    <div className="bg-[#F8F3E8] min-h-full">
       {/* Modals */}
       {cancellingBooking && (
         <CancelModal booking={cancellingBooking} onClose={() => setCancellingId(null)} onConfirm={handleConfirmCancel} />

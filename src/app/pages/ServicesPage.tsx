@@ -1,7 +1,6 @@
 import { Check } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
-import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 
 const COACHING_TIERS = [
@@ -27,11 +26,63 @@ const PRIVATE_CLASSES = [
 ];
 
 const RECOVERY_TIERS = [
-  { label: 'Acupressure / Pressure Cupping', price: '₱850' },
-  { label: 'Spinal Manipulation & Blading', price: '₱750' },
-  { label: 'Dry Needling', price: '₱1,100' },
-  { label: 'All-in-One Therapy', price: '₱2,500' },
+  { label: 'Acupressure / Pressure Cupping', price: '₱850', highlight: false },
+  { label: 'Spinal Manipulation & Blading', price: '₱750', highlight: false },
+  { label: 'Dry Needling', price: '₱1,100', highlight: false },
+  { label: 'All-in-One Therapy', price: '₱2,500', highlight: true },
 ];
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <p className="text-[#c49a3c] text-[10px] font-semibold uppercase tracking-[0.14em] mb-2">
+      {children}
+    </p>
+  );
+}
+
+function PriceRow({
+  label,
+  note,
+  price,
+  highlight = false,
+  plain = false,
+}: {
+  label: string;
+  note?: string;
+  price: string;
+  highlight?: boolean;
+  plain?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 ${
+        highlight ? 'bg-[#c49a3c]/10 border border-[#c49a3c]/25' : 'bg-[#F8F3E8] border border-[#D4CDB5]/40'
+      }`}
+    >
+      <div className="min-w-0 pr-1">
+        {plain ? (
+          <p className={`text-xs leading-snug ${highlight ? 'text-[#1E2A35] font-medium' : 'text-[#5A5048]'}`}>{label}</p>
+        ) : (
+          <>
+            <p
+              className="text-[#1E2A35] leading-none"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.04em' }}
+            >
+              {label}
+            </p>
+            {note && <p className="text-[#8A7E6E] text-[11px] mt-0.5 leading-tight">{note}</p>}
+          </>
+        )}
+      </div>
+      <span
+        className={`leading-none shrink-0 ${highlight ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.02em' }}
+      >
+        {price}
+      </span>
+    </div>
+  );
+}
 
 export default function ServicesPage() {
   const navigate = useNavigate();
@@ -39,193 +90,147 @@ export default function ServicesPage() {
   const handleAction = () => navigate(isAuthenticated ? '/dashboard' : '/auth');
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
-      <div className="border-b border-[#D4CDB5]/60">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-5 pb-5">
-          <PublicBreadcrumb parent="Our Rates" current="Services" parentTo="/pricing" />
-          <h1
-            className="text-[#1E2A35] leading-none"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-              letterSpacing: '0.05em',
-            }}
-          >
-            Services
-          </h1>
-          <p className="text-[#8A7E6E] text-sm mt-2 max-w-xl">
-            Premium one-on-one coaching, private sessions, and recovery treatments tailored to you.
-          </p>
-        </div>
-      </div>
+    <div className="bg-[#F8F3E8] flex-1 flex flex-col">
+      <header className="max-w-6xl mx-auto w-full px-4 md:px-8 pt-4 md:pt-5 pb-3">
+        <PublicBreadcrumb parent="Our Rates" current="Services" parentTo="/pricing" />
+        <h1
+          className="text-[#1E2A35] leading-none"
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.05em' }}
+        >
+          Services
+        </h1>
+        <p className="text-[#8A7E6E] text-sm mt-1.5 max-w-xl">
+          One-on-one coaching, private sessions, and recovery treatments tailored to you.
+        </p>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:pb-10 flex flex-col gap-5 md:gap-8">
-        <div className="flex items-center gap-4 -my-1">
-          <div className="flex-1 h-px bg-[#D4CDB5]/50" />
-          <p className="text-[#B0A898] text-xs uppercase tracking-widest shrink-0">Premium Services</p>
-          <div className="flex-1 h-px bg-[#D4CDB5]/50" />
-        </div>
+      <div className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-8 pb-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-stretch">
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 md:items-start">
-          {/* PERSONAL COACHING */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
-            <div className="px-5 pt-5 pb-4">
+          <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
+            <div className="px-4 pt-4 pb-3">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 2.5vw, 1.8rem)', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
               >
                 Personal Coaching
               </h2>
               <p className="text-[#8A7E6E] text-xs leading-relaxed">
-                One-on-one guidance tailored to your unique goals. Focused attention, customized programs, and expert support.
+                One-on-one guidance with customized programs and expert support.
               </p>
             </div>
-
-            <div className="px-5 py-4 border-t border-[#D4CDB5]/40">
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Pricing</p>
-              <div className="flex flex-col gap-2">
-                {COACHING_TIERS.map((tier, i) => (
-                  <div key={i} className="flex items-center justify-between bg-[#F8F3E8] border border-[#D4CDB5]/40 rounded-xl px-3 py-2.5">
-                    <div>
-                      <p className="text-[#1E2A35] text-xs" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em', fontSize: '0.9rem' }}>{tier.label}</p>
-                      <p className="text-[#8A7E6E] text-xs">{tier.note}</p>
-                    </div>
-                    <span
-                      className="text-[#1E2A35] leading-none"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.02em' }}
-                    >
-                      {tier.price}
-                    </span>
-                  </div>
+            <div className="px-4 py-3 border-t border-[#D4CDB5]/35">
+              <SectionLabel>Pricing</SectionLabel>
+              <div className="flex flex-col gap-1.5">
+                {COACHING_TIERS.map((tier) => (
+                  <PriceRow key={`${tier.label}-${tier.note}`} label={tier.label} note={tier.note} price={tier.price} />
                 ))}
               </div>
             </div>
-
-            <div className="px-5 py-4 border-t border-[#D4CDB5]/40 flex-1">
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Inclusions</p>
-              <div className="flex flex-col gap-2">
+            <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
+              <SectionLabel>Inclusions</SectionLabel>
+              <ul className="flex flex-col gap-1.5">
                 {COACHING_INCLUSIONS.map((item) => (
-                  <div key={item} className="flex items-start gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#EDE8D8] border border-[#D4CDB5] flex items-center justify-center shrink-0 mt-0.5">
-                      <Check size={9} className="text-[#8A7E6E]" strokeWidth={3} />
-                    </div>
-                    <span className="text-[#5A5048] text-xs">{item}</span>
-                  </div>
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="w-4 h-4 rounded-full bg-[#c49a3c]/12 flex items-center justify-center shrink-0 mt-0.5">
+                      <Check size={9} className="text-[#c49a3c]" strokeWidth={3} />
+                    </span>
+                    <span className="text-[#5A5048] text-xs leading-snug">{item}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-
-            <div className="px-5 pb-5 pt-2">
+            <div className="px-4 pb-4 pt-1">
               <button
+                type="button"
                 onClick={handleAction}
-                className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5] hover:bg-[#E3DCC8] active:scale-[0.97] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.9rem', letterSpacing: '0.1em' }}
+                className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
               >
                 Inquire Now
               </button>
             </div>
-          </div>
+          </article>
 
-          {/* PRIVATE CLASS */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
-            <div className="px-5 pt-5 pb-4">
+          <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
+            <div className="px-4 pt-4 pb-3">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 2.5vw, 1.8rem)', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
               >
                 Private Class
               </h2>
               <p className="text-[#8A7E6E] text-xs leading-relaxed">
-                An exclusive, personalized experience. One-on-one or a small group with friends — designed around your goals, comfort, and pace.
+                An exclusive session — one-on-one or a small group, at your pace.
               </p>
             </div>
-
-            <div className="px-5 py-4 border-t border-[#D4CDB5]/40">
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Pricing</p>
-              <div className="flex flex-col gap-2">
-                {PRIVATE_TIERS.map((tier, i) => (
-                  <div key={i} className="flex items-center justify-between bg-[#F8F3E8] border border-[#D4CDB5]/40 rounded-xl px-3 py-2.5">
-                    <div>
-                      <p className="text-[#1E2A35] text-xs" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em', fontSize: '0.9rem' }}>{tier.label}</p>
-                      <p className="text-[#8A7E6E] text-xs">{tier.note}</p>
-                    </div>
-                    <span
-                      className="text-[#1E2A35] leading-none"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.02em' }}
-                    >
-                      {tier.price}
-                    </span>
-                  </div>
+            <div className="px-4 py-3 border-t border-[#D4CDB5]/35">
+              <SectionLabel>Pricing</SectionLabel>
+              <div className="flex flex-col gap-1.5">
+                {PRIVATE_TIERS.map((tier) => (
+                  <PriceRow key={tier.label} label={tier.label} note={tier.note} price={tier.price} />
                 ))}
               </div>
             </div>
-
-            <div className="px-5 py-4 border-t border-[#D4CDB5]/40 flex-1">
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Applicable Classes</p>
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {PRIVATE_CLASSES.map((c) => (
-                  <span key={c} className="text-[11px] bg-[#F0EBE0] border border-[#D4CDB5]/70 text-[#5A4E3E] px-2.5 py-0.5 rounded-full">
-                    {c}
+            <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
+              <SectionLabel>Applicable Classes</SectionLabel>
+              <div className="flex flex-wrap gap-1">
+                {PRIVATE_CLASSES.map((name) => (
+                  <span
+                    key={name}
+                    className="text-[10px] bg-[#F8F3E8] border border-[#D4CDB5]/50 text-[#5A5048] px-2 py-0.5 rounded-full"
+                  >
+                    {name}
                   </span>
                 ))}
               </div>
             </div>
-
-            <div className="px-5 pb-5 pt-2">
+            <div className="px-4 pb-4 pt-1">
               <button
+                type="button"
                 onClick={handleAction}
-                className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5] hover:bg-[#E3DCC8] active:scale-[0.97] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.9rem', letterSpacing: '0.1em' }}
+                className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
               >
                 Inquire Now
               </button>
             </div>
-          </div>
+          </article>
 
-          {/* SPORTS RECOVERY */}
-          <div className={`rounded-3xl bg-white border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-md`}>
-            <div className="px-5 pt-5 pb-4">
+          <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
+            <div className="px-4 pt-4 pb-3">
               <h2
                 className="text-[#1E2A35] leading-none mb-1"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 2.5vw, 1.8rem)', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
               >
                 Sports Recovery
               </h2>
               <p className="text-[#8A7E6E] text-xs leading-relaxed">
-                Specialized recovery services for athletes and active individuals. Target tension, aid mobility, and promote faster recovery.
+                Targeted treatments to ease tension, restore mobility, and speed recovery.
               </p>
             </div>
-
-            <div className="px-5 py-4 border-t border-[#D4CDB5]/40 flex-1">
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Treatments</p>
-              <div className="flex flex-col gap-2">
-                {RECOVERY_TIERS.map((tier, i) => (
-                  <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${i === 3 ? 'bg-[#c49a3c]/08 border border-[#c49a3c]/25' : 'bg-[#F8F3E8] border border-[#D4CDB5]/40'}`}>
-                    <p className={`text-sm leading-snug pr-2 ${i === 3 ? 'text-[#1E2A35]' : 'text-[#5A5048]'}`}>{tier.label}</p>
-                    <span
-                      className={`leading-none shrink-0 ${i === 3 ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.02em' }}
-                    >
-                      {tier.price}
-                    </span>
-                  </div>
+            <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
+              <SectionLabel>Treatments</SectionLabel>
+              <div className="flex flex-col gap-1.5">
+                {RECOVERY_TIERS.map((tier) => (
+                  <PriceRow key={tier.label} label={tier.label} price={tier.price} highlight={tier.highlight} plain />
                 ))}
               </div>
             </div>
-
-            <div className="px-5 pb-5 pt-4">
+            <div className="px-4 pb-4 pt-3">
               <button
+                type="button"
                 onClick={handleAction}
-                className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5] hover:bg-[#E3DCC8] active:scale-[0.97] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.9rem', letterSpacing: '0.1em' }}
+                className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
               >
                 Inquire Now
               </button>
             </div>
-          </div>
+          </article>
         </div>
 
-        <p className="text-[#B0A898] text-xs text-center px-4 pb-2">
+        <p className="text-[#8A7E6E] text-[11px] text-center pt-4">
           All rates are in Philippine Peso (₱). Prices are subject to change — confirm with our team for the latest rates.
         </p>
       </div>

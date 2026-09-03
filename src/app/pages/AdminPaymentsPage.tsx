@@ -8,6 +8,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PAYMENT_METHOD_LABEL_TO_ID, setPaymentChannelQr } from '../data/paymentChannels';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -392,14 +393,14 @@ function HistoryPaymentModal({ payment, onClose, onReissue, onPrint }: {
 
 function ChannelManagerModal({ uploads, onClose, onUpload }: {
   uploads: Channel[]; onClose: () => void;
-  onUpload: (method: PaymentMethod, filename: string) => void;
+  onUpload: (method: PaymentMethod, file: File) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<PaymentMethod>('GCash');
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) onUpload(selected, file.name);
+    if (file) onUpload(selected, file);
   };
 
   const methods: { method: PaymentMethod; color: string; desc: string }[] = [
@@ -511,11 +512,16 @@ export default function AdminPaymentsPage() {
     setPrintPayment(null);
   };
 
-  const handleChannelUpload = (method: PaymentMethod, filename: string) => {
+  const handleChannelUpload = (method: PaymentMethod, file: File) => {
     setChannels(prev => {
       const filtered = prev.filter(u => u.method !== method);
-      return [...filtered, { method, filename, uploadedAt: 'Apr 14, 2026' }];
+      return [...filtered, { method, filename: file.name, uploadedAt: 'Apr 14, 2026' }];
     });
+    const channelId = PAYMENT_METHOD_LABEL_TO_ID[method];
+    if (!channelId) return;
+    const reader = new FileReader();
+    reader.onload = () => setPaymentChannelQr(channelId, String(reader.result ?? ''));
+    reader.readAsDataURL(file);
   };
 
   const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';

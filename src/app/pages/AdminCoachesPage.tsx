@@ -433,6 +433,7 @@ export default function AdminCoachesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -603,11 +604,22 @@ export default function AdminCoachesPage() {
     setShowModal(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const result = await deleteManagedAccount(id);
+  const coachToDelete = deleteId ? coaches.find((coach) => coach.id === deleteId) ?? null : null;
+
+  const handleDelete = async () => {
+    if (!deleteId || deleting) return;
+    setDeleting(true);
+    const result = await deleteManagedAccount(deleteId);
     if (result.ok) {
+      if (selectedCoach?.id === deleteId) setSelectedCoach(null);
       await loadCoaches();
     }
+    setDeleting(false);
+    setDeleteId(null);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleting) return;
     setDeleteId(null);
   };
 
@@ -801,45 +813,22 @@ export default function AdminCoachesPage() {
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                     >
-                      {deleteId === coach.id ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(coach.id)}
-                            aria-label="Confirm delete"
-                            className="h-8 w-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all"
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteId(null)}
-                            aria-label="Cancel delete"
-                            className="h-8 w-8 rounded-lg bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] flex items-center justify-center hover:bg-[#EDE8D8] active:scale-95 transition-all"
-                          >
-                            <X size={14} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(coach)}
-                            aria-label={`Edit ${coach.name}`}
-                            className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteId(coach.id)}
-                            aria-label={`Delete ${coach.name}`}
-                            className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openEdit(coach)}
+                        aria-label={`Edit ${coach.name}`}
+                        className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(coach.id)}
+                        aria-label={`Delete ${coach.name}`}
+                        className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -895,45 +884,22 @@ export default function AdminCoachesPage() {
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
-                    {deleteId === coach.id ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(coach.id)}
-                          aria-label="Confirm delete"
-                          className="h-8 w-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all"
-                        >
-                          <Check size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(null)}
-                          aria-label="Cancel delete"
-                          className="h-8 w-8 rounded-lg bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] flex items-center justify-center hover:bg-[#EDE8D8] active:scale-95 transition-all"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(coach)}
-                          aria-label={`Edit ${coach.name}`}
-                          className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(coach.id)}
-                          aria-label={`Delete ${coach.name}`}
-                          className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => openEdit(coach)}
+                      aria-label={`Edit ${coach.name}`}
+                      className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(coach.id)}
+                      aria-label={`Delete ${coach.name}`}
+                      className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -946,6 +912,70 @@ export default function AdminCoachesPage() {
 
       {selectedCoach && (
         <CoachSummaryModal coach={selectedCoach} onClose={() => setSelectedCoach(null)} />
+      )}
+
+      {coachToDelete && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeDeleteModal(); }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-coach-title"
+        >
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-[420px] overflow-hidden">
+            <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">Confirm delete</p>
+                <h3
+                  id="delete-coach-title"
+                  className="text-[#1E2A35] leading-tight"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                >
+                  Delete Coach
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+                className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0 disabled:opacity-50"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-7 py-6">
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                <AlertOctagon size={15} className="text-red-500 shrink-0 mt-0.5" />
+                <p className="text-[#5A5048] text-sm leading-relaxed">
+                  Delete <span className="font-semibold text-[#1E2A35]">{coachToDelete.name}</span>? This removes their account and cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-7 pb-7 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 bg-white text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showModal && (

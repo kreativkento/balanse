@@ -8,25 +8,31 @@ import { useAuth } from '../../context/AuthContext';
 import { useStaffAuth } from '../../context/StaffAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
 
-const ratesLinks = [
+export const ratesLinks = [
   { label: 'Pricing and Plans', path: '/pricing', icon: <CreditCard size={18} /> },
   { label: 'Services', path: '/services', icon: <Sparkles size={18} /> },
 ];
 
-const communityLinks = [
+export const communityLinks = [
   { label: 'Bulletin', path: '/bulletin', icon: <Newspaper size={18} /> },
   { label: 'Events', path: '/events', icon: <CalendarDays size={18} /> },
 ];
 
-const classesLinks = [
+export const classesLinks = [
   { label: 'Class Schedules', path: '/classes', icon: <CalendarDays size={18} /> },
   { label: 'Disciplines', path: '/disciplines', icon: <Layers size={18} /> },
 ];
 
-const studioLinks = [
+export const studioLinks = [
   { label: 'Amenities', path: '/studio', icon: <Images size={18} /> },
   { label: 'Guidelines', path: '/studio/guidelines', icon: <ClipboardList size={18} /> },
 ];
+
+export const aboutLink = { label: 'About Us', path: '/', icon: <Home size={18} /> };
+
+export function isPublicNavActive(pathname: string, path: string) {
+  return path === '/' ? pathname === '/' : pathname === path;
+}
 
 function DesktopDropdown({
   label,
@@ -160,12 +166,9 @@ export function NavBar() {
     navigate('/');
   };
 
-  const navLinks = [
-    { label: 'About Us', path: '/', icon: <Home size={18} /> },
-  ];
+  const navLinks = [aboutLink];
 
-  const isActive = (path: string) =>
-    path === '/' ? location.pathname === '/' : location.pathname === path;
+  const isActive = (path: string) => isPublicNavActive(location.pathname, path);
 
   const closeMenu = () => {
     setMenuOpen(false);

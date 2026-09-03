@@ -3,12 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Crown, LogOut, LayoutDashboard, Users,
   CalendarDays, CreditCard, Images,
-  Tag, ShieldCheck, Menu, Layers, CalendarRange, Newspaper,
+  Tag, ShieldCheck, Layers, CalendarRange, Newspaper,
   Award, Briefcase,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
 import { ProfileAvatar } from '../ProfileImages';
+import { AppSidebarLayout } from './AppSidebarLayout';
 
 type NavItem = {
   label: string;
@@ -178,23 +179,13 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
   const location = useLocation();
   const { adminUser, adminLogout } = useAdminAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const desktopNavRef = useRef<HTMLElement>(null);
 
   const handleLogout = () => { adminLogout(); navigate('/admin-login'); };
   const initials = adminUser?.name.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? 'SA';
 
-  const navProps = {
-    pathname: location.pathname,
-    adminUserName: adminUser?.name,
-    photo: adminUser?.photo,
-    initials,
-    onNavClick: () => setMobileOpen(false),
-    onLogoutClick: () => setShowLogoutModal(true),
-  };
-
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8F3E8]">
+    <>
       {showLogoutModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-sm p-7 flex flex-col gap-5">
@@ -218,27 +209,20 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           </div>
         </div>
       )}
-      <aside className="hidden md:flex w-56 bg-white border-r border-[#D4CDB5]/60 shadow-sm flex-col shrink-0 z-30">
-        <AdminSidebarNav {...navProps} navRef={desktopNavRef} />
-      </aside>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-[#1E2A35]/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-56 bg-white shadow-2xl z-50 flex flex-col">
-            <AdminSidebarNav {...navProps} />
-          </aside>
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="md:hidden bg-white border-b border-[#D4CDB5]/60 px-4 py-3 flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="w-9 h-9 rounded-xl bg-[#EDE8D8] flex items-center justify-center text-[#1E2A35]"
-          >
-            <Menu size={18} />
-          </button>
+      <AppSidebarLayout
+        renderSidebar={(closeMobile) => (
+          <AdminSidebarNav
+            pathname={location.pathname}
+            adminUserName={adminUser?.name}
+            photo={adminUser?.photo}
+            initials={initials}
+            onNavClick={closeMobile}
+            onLogoutClick={() => setShowLogoutModal(true)}
+            navRef={desktopNavRef}
+          />
+        )}
+        mobileBrand={
           <Link to="/admin-dashboard" className="flex items-center gap-2 min-w-0">
             <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto object-contain shrink-0" />
             <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
@@ -246,12 +230,10 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
               <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
             </div>
           </Link>
-        </div>
-
-        <main className="flex-1 min-h-0 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+        }
+      >
+        {children}
+      </AppSidebarLayout>
+    </>
   );
 }

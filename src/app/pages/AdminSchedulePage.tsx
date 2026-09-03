@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, CalendarDays, ChevronDown, Check, AlertCircle, Clock, Undo2 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { MonthCalendarGrid, type MonthGridEvent } from '../components/calendar/MonthCalendarGrid';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import {
   MONTH_NAMES,
   addDaysToDate,
@@ -54,9 +55,15 @@ interface ClassScheduleRequest {
 }
 
 interface CancelRequest {
-  id: number; student: string; email: string; class: string;
-  date: string; time: string; coach: string;
-  requestedAt: string; hoursUntilClass: number;
+  id: number;
+  coach: string;
+  email: string;
+  className: string;
+  date: string;
+  time: string;
+  enrolled: number;
+  requestedAt: string;
+  hoursUntilClass: number;
   status: ReqStatus;
 }
 
@@ -113,12 +120,21 @@ const INITIAL_SCHEDULE_REQS: ClassScheduleRequest[] = [
 ];
 
 const INITIAL_CANCEL_REQS: CancelRequest[] = [
-  { id: 1, student: 'Sofia Reyes', email: 'sofia.r@email.com',   class: 'Yoga',             date: 'Tue, Apr 14', time: '9:00 AM',  coach: 'Jodi',     requestedAt: '1 hr ago',   hoursUntilClass: 18, status: 'pending'  },
-  { id: 2, student: 'Marco Lim',   email: 'marco.lim@email.com', class: 'Calisthenics',     date: 'Wed, Apr 16', time: '9:00 AM',  coach: 'Rex',      requestedAt: '30 min ago', hoursUntilClass: 42, status: 'pending'  },
-  { id: 3, student: 'Diego Tan',   email: 'diego.t@email.com',   class: 'Circuit Training', date: 'Mon, Apr 13', time: '4:00 PM',  coach: 'Rachelle', requestedAt: '3 hrs ago',  hoursUntilClass: 6,  status: 'approved' },
+  { id: 1, coach: 'Jodi Reyes',    email: 'jodi.reyes@balanse.com',    className: 'Yoga',             date: 'Tue, Apr 14', time: '9:00 AM',  enrolled: 11, requestedAt: '1 hr ago',   hoursUntilClass: 18, status: 'pending'  },
+  { id: 2, coach: 'Rex Santos',    email: 'rex.santos@balanse.com',    className: 'Calisthenics',     date: 'Wed, Apr 16', time: '9:00 AM',  enrolled: 3,  requestedAt: '30 min ago', hoursUntilClass: 42, status: 'pending'  },
+  { id: 3, coach: 'Rachelle Lim',  email: 'rachelle.lim@balanse.com',  className: 'Circuit Training', date: 'Mon, Apr 13', time: '4:00 PM',  enrolled: 12, requestedAt: '3 hrs ago',  hoursUntilClass: 6,  status: 'approved' },
 ];
 
-const EMPTY_FORM = { className: 'Yoga', coach: 'Jodi', dayIndex: 0, startHour: 9, duration: 60, capacity: 12, isOpen: true, status: 'upcoming' as const };
+const EMPTY_FORM: {
+  className: string;
+  coach: string;
+  dayIndex: number;
+  startHour: number;
+  duration: number;
+  capacity: number;
+  isOpen: boolean;
+  status: ScheduleBlock['status'];
+} = { className: 'Yoga', coach: 'Jodi', dayIndex: 0, startHour: 9, duration: 60, capacity: 12, isOpen: true, status: 'upcoming' };
 
 // ── Component ──────────────────────────────────────────────────
 
@@ -139,7 +155,7 @@ export default function AdminSchedulePage() {
   const [form, setForm]               = useState(EMPTY_FORM);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [selectedReqId, setSelectedReqId] = useState<number | null>(null);
-  const [rejectCId, setRejectCId]     = useState<number | null>(null);
+  const [selectedCancelId, setSelectedCancelId] = useState<number | null>(null);
   const [coachFilter, setCoachFilter] = useState<string>('All Coaches');
   const [reqStatusFilter, setReqStatusFilter] = useState<'all' | ReqStatus>('all');
 
@@ -294,8 +310,11 @@ export default function AdminSchedulePage() {
   };
 
   const selectedReq = scheduleReqs.find(r => r.id === selectedReqId) ?? null;
-  const approveCancel  = (id: number) => setCancelReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
-  const rejectCancel   = (id: number) => { setCancelReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r)); setRejectCId(null); };
+  const selectedCancel = cancelReqs.find(r => r.id === selectedCancelId) ?? null;
+
+  const setCancelStatus = (id: number, status: ReqStatus) => {
+    setCancelReqs(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+  };
 
   const pendingB = scheduleReqs.filter(r => r.status === 'pending').length;
   const approvedB = scheduleReqs.filter(r => r.status === 'approved').length;
@@ -315,6 +334,72 @@ export default function AdminSchedulePage() {
       'bg-red-50 text-red-600 border border-red-200'
     }`}>{s}</span>
   );
+
+  const ReviewActions = ({
+    status,
+    onApprove,
+    onReject,
+    onUndo,
+  }: {
+    status: ReqStatus;
+    onApprove: () => void;
+    onReject: () => void;
+    onUndo: () => void;
+  }) => {
+    const left =
+      status === 'rejected'
+        ? {
+            label: 'Undo Reject',
+            onClick: onUndo,
+            className: 'flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 text-[#1E2A35] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all',
+            icon: true,
+            bebas: false,
+          }
+        : {
+            label: 'Reject',
+            onClick: onReject,
+            className: 'flex-1 py-3 rounded-full bg-red-50 text-red-600 border border-red-200 text-sm font-semibold hover:bg-red-100 active:scale-[0.97] transition-all',
+            icon: false,
+            bebas: false,
+          };
+
+    const right =
+      status === 'approved'
+        ? {
+            label: 'Undo Approve',
+            onClick: onUndo,
+            className: 'flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 text-[#1E2A35] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all',
+            icon: true,
+            bebas: false,
+          }
+        : {
+            label: 'Approve',
+            onClick: onApprove,
+            className: 'flex-1 py-3 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 active:scale-[0.97] transition-all shadow-sm',
+            icon: false,
+            bebas: true,
+          };
+
+    return (
+      <div className="px-7 pb-7">
+        <div className="flex gap-3">
+          <button type="button" onClick={left.onClick} className={left.className}>
+            {left.icon && <Undo2 size={14} />}
+            {left.label}
+          </button>
+          <button
+            type="button"
+            onClick={right.onClick}
+            className={right.className}
+            style={right.bebas ? { fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' } : undefined}
+          >
+            {right.icon && <Undo2 size={14} />}
+            {right.label}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -674,49 +759,44 @@ export default function AdminSchedulePage() {
         {activeTab === 'cancellations' && (
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between bg-[#F8F3E8]/60">
-              <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Cancellation Requests</h2>
+              <div>
+                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Cancellation Requests</h2>
+                <p className="text-[#8A7E6E] text-xs mt-0.5">Coaches requesting to cancel their scheduled classes · click a row to review</p>
+              </div>
               <span className="text-[#8A7E6E] text-xs">{cancelReqs.length} total · {pendingC} pending</span>
             </div>
-            <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
-              {['Student', 'Class / Date', 'Notice', 'Status', 'Actions'].map(h => (
-                <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-              ))}
-            </div>
-            <div className="divide-y divide-[#D4CDB5]/30">
-              {cancelReqs.map(req => (
-                <div key={req.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px]">
-                  <div className="min-w-0">
-                    <p className="text-[#1E2A35] text-sm font-semibold truncate">{req.student}</p>
-                    <p className="text-[#B0A898] text-xs truncate">{req.email}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[#1E2A35] text-sm font-medium truncate">{req.class}</p>
-                    <p className="text-[#9A8E7E] text-xs truncate">{req.date} · {req.time} · {req.coach}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-[#9A8E7E]" />
-                    <span className="text-[#5A5048] text-sm">{req.hoursUntilClass} hrs before</span>
-                  </div>
-                  <StatusBadge s={req.status} />
-                  {/* Actions — fixed 150px column */}
-                  <div className="flex items-center gap-1 w-[150px]">
-                    {req.status === 'pending' && (
-                      rejectCId === req.id ? (
-                        <>
-                          <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Reject?</span>
-                          <button onClick={() => rejectCancel(req.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all">Yes</button>
-                          <button onClick={() => setRejectCId(null)} className="h-7 px-2.5 bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] text-xs rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all">No</button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => approveCancel(req.id)} className="h-7 px-2.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 active:scale-95 transition-all whitespace-nowrap">Approve</button>
-                          <button onClick={() => setRejectCId(req.id)} className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-bold rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap">Reject</button>
-                        </>
-                      )
-                    )}
-                  </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[720px]">
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
+                  {['Coach', 'Class / Date', 'Notice', 'Status'].map(h => (
+                    <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
+                  ))}
                 </div>
-              ))}
+                <div className="divide-y divide-[#D4CDB5]/30">
+                  {cancelReqs.map(req => (
+                    <button
+                      type="button"
+                      key={req.id}
+                      onClick={() => setSelectedCancelId(req.id)}
+                      className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] w-full text-left cursor-pointer bg-transparent border-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[#1E2A35] text-sm font-semibold truncate">{req.coach}</p>
+                        <p className="text-[#B0A898] text-xs truncate">{req.email}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[#1E2A35] text-sm font-medium truncate">{req.className}</p>
+                        <p className="text-[#9A8E7E] text-xs truncate">{req.date} · {req.time} · {req.enrolled} enrolled</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} className="text-[#9A8E7E]" />
+                        <span className="text-[#5A5048] text-sm">{req.hoursUntilClass} hrs before</span>
+                      </div>
+                      <StatusBadge s={req.status} />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -792,231 +872,257 @@ export default function AdminSchedulePage() {
               </div>
             </div>
 
-            <div className="px-7 pb-7 flex flex-col gap-2">
-              {selectedReq.status === 'pending' && (
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRequestStatus(selectedReq.id, 'rejected')}
-                    className="flex-1 py-3 rounded-full bg-red-50 text-red-600 border border-red-200 text-sm font-semibold hover:bg-red-100 active:scale-[0.97] transition-all"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRequestStatus(selectedReq.id, 'approved')}
-                    className="flex-1 py-3 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 active:scale-[0.97] transition-all shadow-sm"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
-                  >
-                    Approve
-                  </button>
-                </div>
-              )}
-              {selectedReq.status === 'approved' && (
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRequestStatus(selectedReq.id, 'pending')}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 text-[#1E2A35] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
-                  >
-                    <Undo2 size={14} /> Undo Approve
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRequestStatus(selectedReq.id, 'rejected')}
-                    className="flex-1 py-3 rounded-full bg-red-50 text-red-600 border border-red-200 text-sm font-semibold hover:bg-red-100 active:scale-[0.97] transition-all"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
-              {selectedReq.status === 'rejected' && (
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRequestStatus(selectedReq.id, 'pending')}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 text-[#1E2A35] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
-                  >
-                    <Undo2 size={14} /> Undo Reject
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRequestStatus(selectedReq.id, 'approved')}
-                    className="flex-1 py-3 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 active:scale-[0.97] transition-all shadow-sm"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
-                  >
-                    Approve
-                  </button>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedReqId(null)}
-                className="w-full py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all"
-              >
-                Close
-              </button>
-            </div>
+            <ReviewActions
+              status={selectedReq.status}
+              onApprove={() => setRequestStatus(selectedReq.id, 'approved')}
+              onReject={() => setRequestStatus(selectedReq.id, 'rejected')}
+              onUndo={() => setRequestStatus(selectedReq.id, 'pending')}
+            />
           </div>
         </div>
       )}
 
-      {/* ── Add / Edit Modal ── */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }} onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-[440px] max-h-[90vh] overflow-y-auto">
-            <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between">
-              <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
-                {editingBlock ? 'Edit Schedule Block' : 'Add Schedule Block'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] flex items-center justify-center transition-all"><X size={16} /></button>
+      {selectedCancel && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSelectedCancelId(null); }}
+        >
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-[460px] max-h-[90vh] overflow-y-auto">
+            <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">Class cancellation request</p>
+                <h3 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+                  {selectedCancel.className}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCancelId(null)}
+                className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            {/* Conflict warning */}
-            {hasConflict && (
-              <div className="mx-7 mt-5 flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
-                <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-red-700 text-sm font-semibold">Schedule Conflict Detected</p>
-                  <p className="text-red-600 text-xs mt-0.5">Coach <strong>{form.coach}</strong> is already assigned to a class at this day and time. Please choose a different time slot or coach.</p>
-                </div>
-              </div>
-            )}
-
             <div className="px-7 py-6 flex flex-col gap-4">
-              {/* Class */}
-              <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Class</label>
-                <div className="relative">
-                  <select value={form.className} onChange={e => setForm(f => ({ ...f, className: e.target.value }))} className={selectClass}>
-                    {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full" style={{ backgroundColor: CLASS_COLORS[form.className] }} />
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[#8A7E6E] text-xs">Requested by {selectedCancel.coach} · {selectedCancel.requestedAt}</p>
+                <StatusBadge s={selectedCancel.status} />
               </div>
-              {/* Coach */}
-              <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Coach</label>
-                <div className="relative">
-                  <select value={form.coach} onChange={e => setForm(f => ({ ...f, coach: e.target.value }))} className={selectClass}>
-                    {COACHES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+
+              {selectedCancel.status === 'approved' && (
+                <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
+                  <Check size={15} className="text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-green-700 text-xs leading-relaxed">This cancellation is approved. The class will be taken off the schedule. You can undo this decision below.</p>
                 </div>
-              </div>
-              {/* Day + Time */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Day</label>
-                  <div className="relative">
-                    <select value={form.dayIndex} onChange={e => setForm(f => ({ ...f, dayIndex: Number(e.target.value) }))} className={selectClass}>
-                      {WEEK_LABELS.map((d, i) => <option key={d} value={i}>{d} {formatDayShort(weekDates[i])}</option>)}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  </div>
+              )}
+              {selectedCancel.status === 'rejected' && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                  <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-red-700 text-xs leading-relaxed">This cancellation was rejected. The class stays on the schedule. You can undo this decision below.</p>
                 </div>
-                <div>
-                  <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Start Time</label>
-                  <div className="relative">
-                    <select value={form.startHour} onChange={e => setForm(f => ({ ...f, startHour: Number(e.target.value) }))} className={selectClass}>
-                      {HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  </div>
+              )}
+              {selectedCancel.status === 'pending' && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                  <Clock size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-amber-700 text-xs leading-relaxed">Approve to cancel this class, or reject to keep it on the schedule.</p>
                 </div>
-              </div>
-              {/* Duration + Capacity */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Duration</label>
-                  <div className="relative">
-                    <select value={form.duration} onChange={e => setForm(f => ({ ...f, duration: Number(e.target.value) }))} className={selectClass}>
-                      {DURATIONS.map(d => <option key={d} value={d}>{d} min</option>)}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Capacity</label>
-                  <input type="number" min={1} max={50} value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: Math.max(1, Number(e.target.value)) }))} className={inputClass} />
-                </div>
-              </div>
-              {/* Status Toggle */}
-              <div className="flex items-center justify-between bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 px-4 py-3">
-                <div>
-                  <p className="text-[#1E2A35] text-sm font-semibold">Schedule Status</p>
-                  <p className="text-[#9A8E7E] text-xs">{form.isOpen ? 'Open — accepting bookings' : 'Closed — no new bookings'}</p>
-                </div>
-                <button
-                  onClick={() => setForm(f => ({ ...f, isOpen: !f.isOpen }))}
-                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${form.isOpen ? 'bg-[#6B8E6B]' : 'bg-[#D4CDB5]'}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${form.isOpen ? 'left-6' : 'left-1'}`} />
-                </button>
-              </div>
-              {/* Status */}
-              <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Block Status</label>
-                <div className="flex gap-2">
-                  {([
-                    { value: 'upcoming',  label: 'Upcoming',  color: 'bg-[#6B8E6B]' },
-                    { value: 'completed', label: 'Completed', color: 'bg-[#3A4A5A]' },
-                    { value: 'cancelled', label: 'Cancelled', color: 'bg-red-400' },
-                  ] as const).map(opt => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-medium ${
-                        form.status === opt.value
-                          ? 'bg-[#1E2A35] border-[#1E2A35] text-white'
-                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#c49a3c]/40'
-                      }`}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${form.status === opt.value ? 'border-white bg-white' : 'border-[#B0A898]'}`}>
-                        {form.status === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[#1E2A35]" />}
-                      </div>
-                      <input type="radio" value={opt.value} checked={form.status === opt.value} onChange={() => setForm(f => ({ ...f, status: opt.value }))} className="sr-only" />
-                      {opt.label}
-                    </label>
+              )}
+
+              <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 overflow-hidden">
+                <div className="h-1.5" style={{ backgroundColor: CLASS_COLORS[selectedCancel.className] || '#c49a3c' }} />
+                <div className="p-4 flex flex-col gap-3">
+                  {[
+                    ['Coach', selectedCancel.coach],
+                    ['Class', selectedCancel.className],
+                    ['Date', selectedCancel.date],
+                    ['Time', selectedCancel.time],
+                    ['Enrolled', `${selectedCancel.enrolled} students`],
+                    ['Notice', `${selectedCancel.hoursUntilClass} hrs before class`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between gap-3">
+                      <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">{label}</span>
+                      <span className="text-[#1E2A35] text-sm font-semibold text-right">{value}</span>
+                    </div>
                   ))}
                 </div>
               </div>
-              {/* Preview */}
-              <div className="flex items-center gap-3 p-3 bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50">
-                <div className="w-3 h-10 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[form.className] }} />
-                <div>
-                  <p className="text-[#1E2A35] text-sm font-semibold">{form.className}</p>
-                  <p className="text-[#8A7E6E] text-xs">Coach {form.coach} · {WEEK_LABELS[form.dayIndex]} · {fmtHour(form.startHour)} · {form.duration} min · {form.capacity} spots · {form.isOpen ? 'Open' : 'Closed'}</p>
-                </div>
-              </div>
             </div>
-            <div className="px-7 pb-7 flex gap-3">
-              {editingBlock && (
-                confirmDeleteId === editingBlock.id ? (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-4">
-                    <span className="text-red-700 text-xs font-semibold">Delete?</span>
-                    <button onClick={() => handleDelete(editingBlock.id)} className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center"><Check size={11} /></button>
-                    <button onClick={() => setConfirmDeleteId(null)} className="w-6 h-6 rounded-full bg-white border border-[#D4CDB5] flex items-center justify-center text-[#8A7E6E]"><X size={11} /></button>
-                  </div>
-                ) : (
-                  <button onClick={() => setConfirmDeleteId(editingBlock.id)} className="flex items-center gap-1 px-4 py-3 bg-red-50 text-red-500 border border-red-200 rounded-full text-xs font-semibold hover:bg-red-100 transition-all">
-                    <Trash2 size={13} /> Delete
-                  </button>
-                )
-              )}
-              <button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
-              <button
-                onClick={handleSave}
-                disabled={hasConflict}
-                className={`flex-1 py-3 rounded-full text-white shadow-sm active:scale-[0.97] transition-all ${hasConflict ? 'bg-[#8A7E6E] cursor-not-allowed' : 'bg-[#1E2A35] hover:bg-[#263545]'}`}
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
-              >
-                {editingBlock ? 'Save Changes' : 'Add Block'}
-              </button>
-            </div>
+
+            <ReviewActions
+              status={selectedCancel.status}
+              onApprove={() => setCancelStatus(selectedCancel.id, 'approved')}
+              onReject={() => setCancelStatus(selectedCancel.id, 'rejected')}
+              onUndo={() => setCancelStatus(selectedCancel.id, 'pending')}
+            />
           </div>
         </div>
       )}
+
+      {/* ── Add / Edit side panel ── */}
+      <Sheet
+        open={showModal}
+        onOpenChange={(open) => {
+          setShowModal(open);
+          if (!open) setConfirmDeleteId(null);
+        }}
+      >
+        <SheetContent side="right" className="bg-[#FBF9F3] border-l border-[#D4CDB5]/60 w-full sm:max-w-md flex flex-col gap-0 p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50 text-left space-y-1">
+            <SheetTitle
+              className="text-[#1E2A35] leading-none"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+            >
+              {editingBlock ? 'Edit Schedule Block' : 'Add Schedule Block'}
+            </SheetTitle>
+            <p className="text-[#8A7E6E] text-xs">
+              {editingBlock
+                ? `${editingBlock.className} · Coach ${editingBlock.coach}`
+                : 'Create a new class block on the calendar'}
+            </p>
+          </SheetHeader>
+
+          {hasConflict && (
+            <div className="mx-6 mt-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+              <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-700 text-sm font-semibold">Schedule Conflict Detected</p>
+                <p className="text-red-600 text-xs mt-0.5">Coach <strong>{form.coach}</strong> is already assigned to a class at this day and time. Please choose a different time slot or coach.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+            <div>
+              <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Class</label>
+              <div className="relative">
+                <select value={form.className} onChange={e => setForm(f => ({ ...f, className: e.target.value }))} className={selectClass}>
+                  {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full" style={{ backgroundColor: CLASS_COLORS[form.className] }} />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Coach</label>
+              <div className="relative">
+                <select value={form.coach} onChange={e => setForm(f => ({ ...f, coach: e.target.value }))} className={selectClass}>
+                  {COACHES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Day</label>
+                <div className="relative">
+                  <select value={form.dayIndex} onChange={e => setForm(f => ({ ...f, dayIndex: Number(e.target.value) }))} className={selectClass}>
+                    {WEEK_LABELS.map((d, i) => <option key={d} value={i}>{d} {formatDayShort(weekDates[i])}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Start Time</label>
+                <div className="relative">
+                  <select value={form.startHour} onChange={e => setForm(f => ({ ...f, startHour: Number(e.target.value) }))} className={selectClass}>
+                    {HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Duration</label>
+                <div className="relative">
+                  <select value={form.duration} onChange={e => setForm(f => ({ ...f, duration: Number(e.target.value) }))} className={selectClass}>
+                    {DURATIONS.map(d => <option key={d} value={d}>{d} min</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Capacity</label>
+                <input type="number" min={1} max={50} value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: Math.max(1, Number(e.target.value)) }))} className={inputClass} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between bg-white rounded-2xl border border-[#D4CDB5]/50 px-4 py-3">
+              <div>
+                <p className="text-[#1E2A35] text-sm font-semibold">Schedule Status</p>
+                <p className="text-[#9A8E7E] text-xs">{form.isOpen ? 'Open — accepting bookings' : 'Closed — no new bookings'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, isOpen: !f.isOpen }))}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${form.isOpen ? 'bg-[#6B8E6B]' : 'bg-[#D4CDB5]'}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${form.isOpen ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+            <div>
+              <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Block Status</label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'upcoming',  label: 'Upcoming',  color: 'bg-[#6B8E6B]' },
+                  { value: 'completed', label: 'Completed', color: 'bg-[#3A4A5A]' },
+                  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-400' },
+                ] as const).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-medium ${
+                      form.status === opt.value
+                        ? 'bg-[#1E2A35] border-[#1E2A35] text-white'
+                        : 'bg-white border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#c49a3c]/40'
+                    }`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${form.status === opt.value ? 'border-white bg-white' : 'border-[#B0A898]'}`}>
+                      {form.status === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[#1E2A35]" />}
+                    </div>
+                    <input type="radio" value={opt.value} checked={form.status === opt.value} onChange={() => setForm(f => ({ ...f, status: opt.value }))} className="sr-only" />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-[#D4CDB5]/50">
+              <div className="w-3 h-10 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[form.className] }} />
+              <div>
+                <p className="text-[#1E2A35] text-sm font-semibold">{form.className}</p>
+                <p className="text-[#8A7E6E] text-xs">Coach {form.coach} · {WEEK_LABELS[form.dayIndex]} · {fmtHour(form.startHour)} · {form.duration} min · {form.capacity} spots · {form.isOpen ? 'Open' : 'Closed'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-[#D4CDB5]/50 bg-white px-6 py-4 shrink-0 flex gap-3">
+            {editingBlock && (
+              confirmDeleteId === editingBlock.id ? (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-4">
+                  <span className="text-red-700 text-xs font-semibold">Delete?</span>
+                  <button type="button" onClick={() => handleDelete(editingBlock.id)} className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center"><Check size={11} /></button>
+                  <button type="button" onClick={() => setConfirmDeleteId(null)} className="w-6 h-6 rounded-full bg-white border border-[#D4CDB5] flex items-center justify-center text-[#8A7E6E]"><X size={11} /></button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setConfirmDeleteId(editingBlock.id)} className="flex items-center gap-1 px-4 py-3 bg-red-50 text-red-500 border border-red-200 rounded-full text-xs font-semibold hover:bg-red-100 transition-all">
+                  <Trash2 size={13} /> Delete
+                </button>
+              )
+            )}
+            <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={hasConflict}
+              className={`flex-1 py-3 rounded-full text-white shadow-sm active:scale-[0.97] transition-all ${hasConflict ? 'bg-[#8A7E6E] cursor-not-allowed' : 'bg-[#1E2A35] hover:bg-[#263545]'}`}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+            >
+              {editingBlock ? 'Save Changes' : 'Add Block'}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

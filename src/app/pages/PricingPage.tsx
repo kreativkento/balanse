@@ -181,7 +181,7 @@ export default function PricingPage() {
   }, []);
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
+    <div className="bg-[#F8F3E8] flex-1 flex flex-col">
       {membershipModal && (
         <MembershipDetailsModal plan={membershipModal} onClose={() => setMembershipModal(null)} />
       )}
@@ -276,7 +276,7 @@ export default function PricingPage() {
       {/* ══════════════════════════════════════════════
           2 & 3. GOLD + SILVER MEMBERSHIPS (side-by-side on desktop)
       ══════════════════════════════════════════════ */}
-      <section className="bg-[#1E2A35] py-6 md:py-10">
+      <section className="flex-1 bg-[#EDE8D8] py-6 md:py-10">
         <div className="max-w-6xl mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 md:items-start">
 
@@ -373,13 +373,13 @@ export default function PricingPage() {
               </button>
             </div>
           </div>
-        </div>
+          </div>
+
+          <p className="text-[#8A7E6E] text-xs text-center pt-6 md:pt-8">
+            All rates are in Philippine Peso (₱). Prices are subject to change — confirm with our team for the latest rates.
+          </p>
         </div>
       </section>
-
-      <p className="text-[#B0A898] text-xs text-center px-4 py-6">
-        All rates are in Philippine Peso (₱). Prices are subject to change — confirm with our team for the latest rates.
-      </p>
     </div>
   );
 }

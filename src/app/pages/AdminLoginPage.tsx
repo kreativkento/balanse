@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { Eye, EyeOff, Lock, Mail, Crown, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -75,9 +75,7 @@ export default function AdminLoginPage() {
             </Link>
           </div>
 
-          {/* Admin badge */}
-          <div className="flex items-center gap-2 bg-[#c49a3c]/15 border border-[#c49a3c]/35 rounded-full px-4 py-1.5 mb-7">
-            <Crown size={13} className="text-[#c49a3c]" />
+          <div className="bg-[#c49a3c]/15 border border-[#c49a3c]/35 rounded-full px-4 py-1.5 mb-7">
             <span className="text-[#c49a3c] text-xs font-bold uppercase tracking-widest">Admin Portal</span>
           </div>
 
@@ -131,9 +129,8 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="mb-8">
-            <div className="flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3 w-fit">
-              <Crown size={11} className="text-[#c49a3c]" />
-              <span className="text-[#1E2A35] text-xs font-bold uppercase tracking-widest">Admin Access</span>
+            <div className="bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3 w-fit">
+              <span className="text-[#1E2A35] text-xs uppercase tracking-widest">Admin Access</span>
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-1"
@@ -194,7 +191,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
+              className="w-full flex items-center justify-center bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
               style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em', fontSize: '1rem' }}
             >
               {loading ? (
@@ -203,9 +200,7 @@ export default function AdminLoginPage() {
                   Verifying...
                 </span>
               ) : (
-                <>
-                  <Crown size={16} /> Access Admin Panel
-                </>
+                'Access Admin Panel'
               )}
             </button>
           </form>
@@ -213,7 +208,7 @@ export default function AdminLoginPage() {
           {/* Back to staff */}
           <p className="text-center text-[#B0A898] text-xs mt-6">
             Not an admin?{' '}
-            <Link to="/staff-login" className="text-[#8A7E6E] hover:text-[#c49a3c] transition-colors font-medium">
+            <Link to="/staff-login" className="text-[#8A7E6E] hover:text-[#c49a3c] transition-colors">
               Back to Staff Login
             </Link>
           </p>

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ArrowLeft, User, Heart, Lock, Eye, EyeOff,
-  Check, AlertTriangle, Shield, Save,
+  Check, AlertTriangle, Shield, Save, FileText, Download,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { ProfileImageHero } from '../components/ProfileImages';
+import { TC_LAST_UPDATED } from '../data/termsAndConditions';
+import { downloadSignedTermsPdf, getSignedTermsRecord } from '../../lib/signed-terms';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES
@@ -36,11 +38,116 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // ─────────────────────────────────────────────
 
 const TABS = [
-  { id: 'personal' as const, label: 'Personal Info',    Icon: User  },
-  { id: 'medical'  as const, label: 'Medical History',  Icon: Heart },
-  { id: 'account'  as const, label: 'Account',          Icon: Lock  },
+  { id: 'personal' as const, label: 'Personal Info',    Icon: User     },
+  { id: 'medical'  as const, label: 'Medical History',  Icon: Heart    },
+  { id: 'account'  as const, label: 'Account',          Icon: Lock     },
+  { id: 'terms'    as const, label: 'Terms & Conditions', Icon: FileText },
 ];
 type TabId = typeof TABS[number]['id'];
+
+function TermsTab({
+  email,
+  name,
+  termsAccepted,
+}: {
+  email?: string;
+  name?: string;
+  termsAccepted: boolean;
+}) {
+  const navigate = useNavigate();
+  const record = getSignedTermsRecord(email);
+  const signed = Boolean(record?.pdfDataUrl);
+
+  const signedLabel = record?.signedAt
+    ? new Date(record.signedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
+    : null;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className={CARD}>
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <h3 className="text-[#1E2A35] mb-1" style={SECTION_TITLE}>Signed Agreement</h3>
+            <p className="text-[#8A7E6E] text-xs">Your personal copy of the Balansé Terms &amp; Conditions.</p>
+          </div>
+          <span
+            className={`text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+              signed
+                ? 'bg-green-50 text-green-700 border-green-200'
+                : 'bg-[#EDE8D8] text-[#8A7E6E] border-[#D4CDB5]/60'
+            }`}
+          >
+            {signed ? 'Signed' : 'Not signed'}
+          </span>
+        </div>
+
+        {signed && record ? (
+          <>
+            <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 p-4 flex flex-col gap-2.5 mb-5">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Document</span>
+                <span className="text-[#1E2A35] text-xs font-semibold text-right">Terms &amp; Conditions PDF</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Signed by</span>
+                <span className="text-[#1E2A35] text-xs font-semibold text-right">{record.signerName || name}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Account</span>
+                <span className="text-[#1E2A35] text-xs font-semibold text-right break-all">{record.email || email}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Signed on</span>
+                <span className="text-[#1E2A35] text-xs font-semibold text-right">{signedLabel}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Version</span>
+                <span className="text-[#1E2A35] text-xs font-semibold text-right">Updated {TC_LAST_UPDATED}</span>
+              </div>
+            </div>
+
+            {record.signatureDataUrl && (
+              <div className="mb-5">
+                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Electronic signature</p>
+                <div className="rounded-2xl border border-[#D4CDB5]/60 bg-[#F8F3E8] px-4 py-3">
+                  <img src={record.signatureDataUrl} alt="Your electronic signature" className="h-16 w-auto max-w-full object-contain" />
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => downloadSignedTermsPdf(record)}
+              className="w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-3.5 hover:bg-[#263545] active:scale-[0.97] transition-all"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+            >
+              <Download size={16} /> Download Signed PDF
+            </button>
+          </>
+        ) : (
+          <div className="flex flex-col items-center text-center py-6">
+            <div className="w-14 h-14 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center mb-3">
+              <FileText size={22} className="text-[#c49a3c]/70" />
+            </div>
+            <p className="text-[#1E2A35] text-sm font-semibold mb-1">No signed PDF on file</p>
+            <p className="text-[#8A7E6E] text-xs leading-relaxed max-w-sm">
+              {termsAccepted
+                ? 'Your Terms & Conditions acceptance is recorded, but a signed PDF is not available for this account yet. Complete the e-signature step in Profile Setup to generate your downloadable copy.'
+                : 'You have not completed the Terms & Conditions agreement and e-signature yet. Once you sign, your personal PDF will appear here.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/profile-setup')}
+              className="mt-4 flex items-center justify-center gap-1 text-[#c49a3c] text-xs font-bold border border-[#c49a3c]/40 px-4 py-2 rounded-xl hover:bg-[#c49a3c]/08 transition-all"
+            >
+              Go to Profile Setup
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────
 // PAGE
@@ -155,14 +262,14 @@ export default function ProfilePage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex border-b border-[#D4CDB5]/60 mt-2 mb-6">
+        <div className="flex border-b border-[#D4CDB5]/60 mt-2 mb-6 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map(({ id, label, Icon }) => {
             const active = tab === id;
             return (
               <button
                 key={id}
                 onClick={() => setTab(id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px ${
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap shrink-0 ${
                   active
                     ? 'border-[#c49a3c] text-[#c49a3c]'
                     : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35] hover:border-[#D4CDB5]'
@@ -495,6 +602,15 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ══ TERMS & CONDITIONS ══ */}
+          {tab === 'terms' && (
+            <TermsTab
+              email={user?.email}
+              name={user?.name}
+              termsAccepted={!!user?.profile?.termsAccepted}
+            />
           )}
 
         </div>
