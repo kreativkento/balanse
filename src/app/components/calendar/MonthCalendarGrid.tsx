@@ -22,6 +22,7 @@ export interface MonthCalendarGridProps {
   selectedDateKey?: string | null;
   onSelectDate: (dateKey: string) => void;
   maxVisible?: number;
+  className?: string;
 }
 
 export function MonthCalendarGrid({
@@ -32,11 +33,12 @@ export function MonthCalendarGrid({
   selectedDateKey = null,
   onSelectDate,
   maxVisible = 3,
+  className = '',
 }: MonthCalendarGridProps) {
   const grid = buildMonthGrid(year, month);
 
   return (
-    <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden">
+    <div className={`rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden ${className}`}>
       <div className="grid grid-cols-7 border-b border-[#D4CDB5]/40">
         {DAY_LABELS_SHORT.map((d) => (
           <div
@@ -71,12 +73,12 @@ export function MonthCalendarGrid({
               type="button"
               onClick={() => onSelectDate(key)}
               className={`min-h-[104px] flex flex-col items-stretch text-left px-1.5 py-1.5 border-r border-b border-[#D4CDB5]/20 transition-colors last:border-r-0 ${
-                isSelected ? 'bg-[#C49A3C]/10' : 'hover:bg-[#F5F2E8]'
+                isSelected ? 'bg-[#c49a3c]/10' : 'hover:bg-[#F5F2E8]'
               }`}
             >
               <span
                 className={`self-start w-6 h-6 flex items-center justify-center rounded-full text-xs mb-1 shrink-0 ${
-                  isToday ? 'bg-[#C49A3C] text-white' : isSelected ? 'text-[#C49A3C] font-bold' : 'text-[#1E2A35]'
+                  isToday ? 'bg-[#c49a3c] text-white' : isSelected ? 'text-[#c49a3c] font-bold' : 'text-[#1E2A35]'
                 }`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.02em' }}
               >

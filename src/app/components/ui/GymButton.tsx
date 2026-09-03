@@ -20,13 +20,13 @@ export function GymButton({
 
   const variants: Record<string, string> = {
     primary:
-      'bg-[#C49A3C] text-white hover:bg-[#A67E2A] shadow-[0_4px_20px_rgba(196,154,60,0.35)]',
+      'bg-[#c49a3c] text-white hover:bg-[#a67f2e] shadow-[0_4px_20px_rgba(196,154,60,0.35)]',
     secondary:
       'bg-[#EDE8D8] text-[#1E2A35] hover:bg-[#E3DCC8] border border-[#D4CDB5]',
     ghost:
       'bg-transparent text-[#1E2A35] hover:bg-[#EDE8D8]',
     outline:
-      'bg-transparent text-[#C49A3C] border-2 border-[#C49A3C] hover:bg-[#C49A3C] hover:text-white',
+      'bg-transparent text-[#c49a3c] border-2 border-[#c49a3c] hover:bg-[#c49a3c] hover:text-white',
     danger:
       'bg-red-100/80 text-red-700 border border-red-200 hover:bg-red-100',
   };

@@ -76,8 +76,8 @@ export default function LoginPage() {
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-7 md:p-9">
             {/* Header */}
             <div className="mb-6">
-              <div className="w-12 h-12 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-2xl flex items-center justify-center mb-4">
-                <Leaf size={22} className="text-[#C49A3C]" />
+              <div className="w-12 h-12 bg-[#c49a3c]/10 border border-[#c49a3c]/30 rounded-2xl flex items-center justify-center mb-4">
+                <Leaf size={22} className="text-[#c49a3c]" />
               </div>
               <h1
                 className="text-[#1E2A35] leading-tight"
@@ -113,7 +113,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setError(''); }}
                     placeholder="you@example.com"
-                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-4 py-3.5 min-h-[52px] outline-none focus:border-[#C49A3C]/60 focus:ring-2 focus:ring-[#C49A3C]/20 transition-all"
+                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-4 py-3.5 min-h-[52px] outline-none focus:border-[#c49a3c]/60 focus:ring-2 focus:ring-[#c49a3c]/20 transition-all"
                     autoComplete="email"
                   />
                 </div>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter your password"
-                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-12 py-3.5 min-h-[52px] outline-none focus:border-[#C49A3C]/60 focus:ring-2 focus:ring-[#C49A3C]/20 transition-all"
+                    className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-11 pr-12 py-3.5 min-h-[52px] outline-none focus:border-[#c49a3c]/60 focus:ring-2 focus:ring-[#c49a3c]/20 transition-all"
                     autoComplete="current-password"
                   />
                   <button
@@ -146,7 +146,7 @@ export default function LoginPage() {
 
               {/* Forgot */}
               <div className="flex justify-end -mt-1">
-                <button type="button" className="text-[#C49A3C] text-sm font-medium hover:underline active:opacity-70">
+                <button type="button" className="text-[#c49a3c] text-sm font-medium hover:underline active:opacity-70">
                   Forgot password?
                 </button>
               </div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-3.5 min-h-[52px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-base rounded-full py-3.5 min-h-[52px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
               >
                 {loading ? (
                   <>
@@ -173,7 +173,7 @@ export default function LoginPage() {
               Don't have an account?{' '}
               <button
                 onClick={() => navigate('/signup')}
-                className="text-[#C49A3C] font-semibold hover:underline active:opacity-70"
+                className="text-[#c49a3c] font-semibold hover:underline active:opacity-70"
               >
                 Sign Up
               </button>

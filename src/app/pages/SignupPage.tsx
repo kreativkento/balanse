@@ -40,8 +40,8 @@ export default function SignupPage() {
   };
 
   const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-  const strengthBgColor = ['', 'bg-red-400', 'bg-amber-400', 'bg-[#A67E2A]', 'bg-[#C49A3C]'];
-  const strengthTextColor = ['', 'text-red-500', 'text-amber-500', 'text-[#A67E2A]', 'text-[#C49A3C]'];
+  const strengthBgColor = ['', 'bg-red-400', 'bg-amber-400', 'bg-[#a67f2e]', 'bg-[#c49a3c]'];
+  const strengthTextColor = ['', 'text-red-500', 'text-amber-500', 'text-[#a67f2e]', 'text-[#c49a3c]'];
 
   const validate = (): boolean => {
     const newErrors: FieldErrors = {};
@@ -95,7 +95,7 @@ export default function SignupPage() {
 
   const strength = passwordStrength();
   const inputBase =
-    'w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl py-3.5 min-h-[52px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all';
+    'w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl py-3.5 min-h-[52px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all';
 
   return (
     <div className="h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
@@ -103,8 +103,8 @@ export default function SignupPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-sm p-7 flex flex-col gap-6">
             <div className="flex flex-col items-center text-center gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-[#C49A3C]/10 border border-[#C49A3C]/30 flex items-center justify-center">
-                <User size={28} className="text-[#C49A3C]" />
+              <div className="w-16 h-16 rounded-2xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center">
+                <User size={28} className="text-[#c49a3c]" />
               </div>
               <div>
                 <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.7rem', letterSpacing: '0.05em' }}>Account Created!</h3>
@@ -119,7 +119,7 @@ export default function SignupPage() {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => navigate('/profile-setup')}
-                className="w-full py-4 rounded-full bg-[#C49A3C] text-white font-bold hover:bg-[#A67E2A] active:scale-95 transition-all shadow-[0_4px_16px_rgba(196,154,60,0.3)] flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-full bg-[#c49a3c] text-white font-bold hover:bg-[#a67f2e] active:scale-95 transition-all shadow-[0_4px_16px_rgba(196,154,60,0.3)] flex items-center justify-center gap-2"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
                 <User size={16} /> Set Up Profile Now
@@ -160,8 +160,8 @@ export default function SignupPage() {
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-7 md:p-9">
             {/* Header */}
             <div className="mb-5">
-              <div className="w-12 h-12 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-2xl flex items-center justify-center mb-3">
-                <Leaf size={22} className="text-[#C49A3C]" />
+              <div className="w-12 h-12 bg-[#c49a3c]/10 border border-[#c49a3c]/30 rounded-2xl flex items-center justify-center mb-3">
+                <Leaf size={22} className="text-[#c49a3c]" />
               </div>
               <h1
                 className="text-[#1E2A35] leading-tight"
@@ -175,10 +175,10 @@ export default function SignupPage() {
             {/* Step indicator */}
             <div className="flex items-center gap-3 mb-5 bg-[#F8F3E8] rounded-2xl px-4 py-3 border border-[#D4CDB5]/50">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#C49A3C] flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#c49a3c] flex items-center justify-center shrink-0">
                   <span className="text-white text-xs font-bold">1</span>
                 </div>
-                <span className="text-[#A67E2A] text-xs font-semibold">Create Account</span>
+                <span className="text-[#a67f2e] text-xs font-semibold">Create Account</span>
               </div>
               <div className="flex-1 h-px bg-[#D4CDB5]" />
               <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export default function SignupPage() {
                   <p className="text-red-700 text-sm font-semibold mb-0.5">Account already exists.</p>
                   <p className="text-red-500 text-xs">
                     This email is already registered.{' '}
-                    <button onClick={() => navigate('/login')} className="text-[#C49A3C] underline font-medium">
+                    <button onClick={() => navigate('/login')} className="text-[#c49a3c] underline font-medium">
                       Please log in
                     </button>
                     .
@@ -224,7 +224,7 @@ export default function SignupPage() {
                     value={firstName}
                     onChange={(e) => { setFirstName(e.target.value); setErrors((p) => ({ ...p, firstName: '' })); }}
                     placeholder="Juan"
-                    className={`${inputBase} px-4 ${errors.firstName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    className={`${inputBase} px-4 ${errors.firstName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'}`}
                     autoComplete="given-name"
                   />
                   {errors.firstName && (
@@ -241,7 +241,7 @@ export default function SignupPage() {
                     onChange={(e) => setMiddleInitial(e.target.value.slice(0, 2))}
                     placeholder="A"
                     maxLength={2}
-                    className={`${inputBase} px-2 border-[#D4CDB5] focus:border-[#C49A3C]/60 text-center`}
+                    className={`${inputBase} px-2 border-[#D4CDB5] focus:border-[#c49a3c]/60 text-center`}
                     autoComplete="additional-name"
                   />
                 </div>
@@ -254,7 +254,7 @@ export default function SignupPage() {
                     value={lastName}
                     onChange={(e) => { setLastName(e.target.value); setErrors((p) => ({ ...p, lastName: '' })); }}
                     placeholder="dela Cruz"
-                    className={`${inputBase} px-4 ${errors.lastName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    className={`${inputBase} px-4 ${errors.lastName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'}`}
                     autoComplete="family-name"
                   />
                   {errors.lastName && (
@@ -278,7 +278,7 @@ export default function SignupPage() {
                     onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: '' })); setAccountExistsError(false); }}
                     placeholder="you@example.com"
                     className={`${inputBase} pl-11 pr-4 ${
-                      errors.email || accountExistsError ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
+                      errors.email || accountExistsError ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'
                     }`}
                     autoComplete="email"
                   />
@@ -304,7 +304,7 @@ export default function SignupPage() {
                       onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: '' })); }}
                       placeholder="Create a password"
                       className={`${inputBase} pl-11 pr-12 ${
-                        errors.password ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
+                        errors.password ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'
                       }`}
                       autoComplete="new-password"
                     />
@@ -353,8 +353,8 @@ export default function SignupPage() {
                         errors.confirm
                           ? 'border-red-400'
                           : confirm && confirm === password
-                            ? 'border-[#C49A3C]/50'
-                            : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'
+                            ? 'border-[#c49a3c]/50'
+                            : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'
                       }`}
                       autoComplete="new-password"
                     />
@@ -377,7 +377,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-3.5 min-h-[52px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-base rounded-full py-3.5 min-h-[52px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e] disabled:opacity-60 disabled:cursor-not-allowed mt-1"
               >
                 {loading ? (
                   <>
@@ -394,7 +394,7 @@ export default function SignupPage() {
               Already have an account?{' '}
               <button
                 onClick={() => navigate('/login')}
-                className="text-[#C49A3C] font-semibold hover:underline active:opacity-70"
+                className="text-[#c49a3c] font-semibold hover:underline active:opacity-70"
               >
                 Log In
               </button>

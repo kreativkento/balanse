@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NATIONALITIES } from '../data/nationalities';
+import { ProfileImageHero } from '../components/ProfileImages';
 
 const TC_LAST_UPDATED = 'January 15, 2026';
 
@@ -50,7 +51,7 @@ function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; on
 
           <div className="flex flex-col gap-3">
             {HEALTH_DECLARATION_QUESTIONS.map((q, i) => (
-              <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-2xl border border-[#D4CDB5]/50 hover:border-[#C49A3C]/30 transition-colors">
+              <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-2xl border border-[#D4CDB5]/50 hover:border-[#c49a3c]/30 transition-colors">
                 <p className="text-[#5A5048] text-sm flex-1 min-w-0">{q}</p>
                 <div className="flex gap-2 shrink-0 self-end sm:self-auto">
                   <button
@@ -72,9 +73,9 @@ function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; on
 
           <label
             onClick={() => setAcknowledged(v => !v)}
-            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${acknowledged ? 'border-[#C49A3C]/60 bg-[#C49A3C]/06' : 'border-[#D4CDB5]/60 hover:border-[#C49A3C]/30'}`}
+            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${acknowledged ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30'}`}
           >
-            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${acknowledged ? 'bg-[#C49A3C] border-[#C49A3C]' : 'border-[#D4CDB5]'}`}>
+            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${acknowledged ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
               {acknowledged && <Check size={12} className="text-white" strokeWidth={3} />}
             </div>
             <p className="text-[#5A5048] text-xs leading-relaxed">
@@ -115,8 +116,8 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: () =
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#C49A3C]/10 border border-[#C49A3C]/30 flex items-center justify-center">
-              <FileText size={16} className="text-[#C49A3C]" />
+            <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center">
+              <FileText size={16} className="text-[#c49a3c]" />
             </div>
             <div>
               <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>Terms & Conditions</h3>
@@ -166,7 +167,7 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: () =
 
           {/* PDF view prompt */}
           <div className="mt-4 bg-[#F8F3E8] border border-[#D4CDB5]/60 rounded-2xl px-4 py-3 flex items-center gap-3">
-            <Eye size={14} className="text-[#C49A3C] shrink-0" />
+            <Eye size={14} className="text-[#c49a3c] shrink-0" />
             <p className="text-[#8A7E6E] text-xs">You can view these Terms as a PDF anytime from your Profile page.</p>
           </div>
         </div>
@@ -178,9 +179,9 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: () =
         <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex flex-col gap-3">
           <label
             onClick={() => scrolled && setAccepted(v => !v)}
-            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#C49A3C]/60 bg-[#C49A3C]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#C49A3C]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
+            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
           >
-            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#C49A3C] border-[#C49A3C]' : 'border-[#D4CDB5]'}`}>
+            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
               {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
             </div>
             <p className="text-[#5A5048] text-xs leading-relaxed">
@@ -209,7 +210,7 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: () =
 
 export default function ProfileSetupPage() {
   const navigate = useNavigate();
-  const { completeProfile, user } = useAuth();
+  const { completeProfile, updateProfile, user } = useAuth();
 
   // Pre-filled from signup — editable in case of corrections
   const [firstName, setFirstName]       = useState(user?.profile?.firstName || '');
@@ -293,11 +294,26 @@ export default function ProfileSetupPage() {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-5 py-6 sm:py-8 w-full min-w-0">
         <div className="w-full max-w-md min-w-0">
 
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 sm:p-8 md:p-10 overflow-hidden">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+            <ProfileImageHero
+              photoUrl={user.profile.photo || ''}
+              coverUrl={user.profile.coverImage || ''}
+              initials={
+                [firstName, lastName]
+                  .map((part) => part.trim()[0])
+                  .filter(Boolean)
+                  .join('')
+                  .toUpperCase() || 'U'
+              }
+              editable
+              onPhotoUploaded={(url) => updateProfile({ photo: url })}
+              onCoverUploaded={(url) => updateProfile({ coverImage: url })}
+            />
+            <div className="p-5 sm:p-8 md:p-10 pt-14 sm:pt-16">
             {/* Header */}
             <div className="mb-6 sm:mb-7">
-              <div className="w-12 h-12 bg-[#C49A3C]/10 border border-[#C49A3C]/30 rounded-2xl flex items-center justify-center mb-4">
-                <User size={22} className="text-[#C49A3C]" />
+              <div className="w-12 h-12 bg-[#c49a3c]/10 border border-[#c49a3c]/30 rounded-2xl flex items-center justify-center mb-4">
+                <User size={22} className="text-[#c49a3c]" />
               </div>
               <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.75rem, 6vw, 2.2rem)', letterSpacing: '0.05em' }}>
                 Profile Setup
@@ -308,17 +324,17 @@ export default function ProfileSetupPage() {
             {/* Step indicator */}
             <div className="flex items-center gap-2 sm:gap-3 mb-6 bg-[#F8F3E8] rounded-2xl px-3 sm:px-4 py-3 border border-[#D4CDB5]/50 min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-full bg-[#C49A3C] flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#c49a3c] flex items-center justify-center shrink-0">
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
                 <span className="text-[#8A7E6E] text-[11px] sm:text-xs truncate">Account Created</span>
               </div>
-              <div className="flex-1 min-w-4 h-px bg-[#C49A3C]" />
+              <div className="flex-1 min-w-4 h-px bg-[#c49a3c]" />
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-full bg-[#C49A3C] flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-[#c49a3c] flex items-center justify-center shrink-0">
                   <span className="text-white text-xs font-bold">2</span>
                 </div>
-                <span className="text-[#A67E2A] text-[11px] sm:text-xs font-semibold truncate">Profile Setup</span>
+                <span className="text-[#a67f2e] text-[11px] sm:text-xs font-semibold truncate">Profile Setup</span>
               </div>
             </div>
 
@@ -328,7 +344,7 @@ export default function ProfileSetupPage() {
               <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/60 p-3 sm:p-4 flex flex-col gap-3 min-w-0">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2 mb-1">
                   <div className="flex items-center gap-2 min-w-0">
-                    <User size={13} className="text-[#C49A3C] shrink-0" />
+                    <User size={13} className="text-[#c49a3c] shrink-0" />
                     <p className="text-[#5A5048] text-sm font-semibold">Full Name</p>
                   </div>
                   <span className="text-[#B0A898] text-xs sm:ml-auto">From registration</span>
@@ -343,7 +359,7 @@ export default function ProfileSetupPage() {
                       value={firstName}
                       onChange={e => { setFirstName(e.target.value); setErrors(v => ({ ...v, firstName: '' })); }}
                       placeholder="Juan"
-                      className={`w-full bg-white border text-[#1E2A35] placeholder-[#B0A898] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all text-sm ${errors.firstName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                      className={`w-full bg-white border text-[#1E2A35] placeholder-[#B0A898] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all text-sm ${errors.firstName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'}`}
                       autoComplete="given-name"
                     />
                     {errors.firstName && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle size={11} /> {errors.firstName}</p>}
@@ -356,7 +372,7 @@ export default function ProfileSetupPage() {
                       onChange={e => setMiddleInitial(e.target.value.slice(0, 2))}
                       placeholder="A"
                       maxLength={2}
-                      className="w-full bg-white border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/60 transition-all text-sm text-center"
+                      className="w-full bg-white border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#c49a3c]/20 focus:border-[#c49a3c]/60 transition-all text-sm text-center"
                       autoComplete="additional-name"
                     />
                   </div>
@@ -370,7 +386,7 @@ export default function ProfileSetupPage() {
                     value={lastName}
                     onChange={e => { setLastName(e.target.value); setErrors(v => ({ ...v, lastName: '' })); }}
                     placeholder="dela Cruz"
-                    className={`w-full bg-white border text-[#1E2A35] placeholder-[#B0A898] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all text-sm ${errors.lastName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    className={`w-full bg-white border text-[#1E2A35] placeholder-[#B0A898] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all text-sm ${errors.lastName ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'}`}
                     autoComplete="family-name"
                   />
                   {errors.lastName && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle size={11} /> {errors.lastName}</p>}
@@ -380,7 +396,7 @@ export default function ProfileSetupPage() {
               {/* Phone Number → profiles_client.phone */}
               <div>
                 <label className="text-[#5A5048] text-sm font-semibold mb-2 flex items-center gap-1.5 block">
-                  <Phone size={13} className="text-[#C49A3C]" /> Phone Number <span className="text-red-500">*</span>
+                  <Phone size={13} className="text-[#c49a3c]" /> Phone Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A7E6E] text-sm font-medium pointer-events-none">+63</span>
@@ -389,7 +405,7 @@ export default function ProfileSetupPage() {
                     value={phone}
                     onChange={e => { setPhone(e.target.value); setErrors(v => ({ ...v, phone: '' })); }}
                     placeholder="9XX XXX XXXX"
-                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-14 pr-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${errors.phone ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                    className={`w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-14 pr-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all ${errors.phone ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'}`}
                     autoComplete="tel"
                   />
                 </div>
@@ -404,7 +420,7 @@ export default function ProfileSetupPage() {
                 <select
                   value={nationality}
                   onChange={e => { setNationality(e.target.value); setErrors(v => ({ ...v, nationality: '' })); }}
-                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all appearance-none ${errors.nationality ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'} ${!nationality ? 'text-[#B0A898]' : ''}`}
+                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all appearance-none ${errors.nationality ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'} ${!nationality ? 'text-[#B0A898]' : ''}`}
                 >
                   <option value="">Select nationality…</option>
                   {NATIONALITIES.map((item) => (
@@ -419,13 +435,13 @@ export default function ProfileSetupPage() {
               {/* Birthday */}
               <div>
                 <label className="text-[#5A5048] text-sm font-semibold mb-2 block flex items-center gap-1.5">
-                  <Calendar size={14} className="text-[#C49A3C]" /> Birthday <span className="text-red-500">*</span>
+                  <Calendar size={14} className="text-[#c49a3c]" /> Birthday <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={birthday}
                   onChange={e => { setBirthday(e.target.value); setErrors(v => ({ ...v, birthday: '' })); }}
-                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 transition-all ${errors.birthday ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#C49A3C]/60'}`}
+                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all ${errors.birthday ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'}`}
                 />
                 {errors.birthday && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.birthday}</p>}
               </div>
@@ -439,7 +455,7 @@ export default function ProfileSetupPage() {
                       key={val}
                       type="button"
                       onClick={() => { setSex(val); setErrors(v => ({ ...v, sex: '' })); }}
-                      className={`py-3 px-2 rounded-2xl border-2 text-xs font-semibold transition-all text-center ${sex === val ? 'border-[#C49A3C] bg-[#C49A3C]/08 text-[#C49A3C]' : 'border-[#D4CDB5]/60 bg-[#F8F3E8] text-[#5A5048] hover:border-[#C49A3C]/40'}`}
+                      className={`py-3 px-2 rounded-2xl border-2 text-xs font-semibold transition-all text-center ${sex === val ? 'border-[#c49a3c] bg-[#c49a3c]/08 text-[#c49a3c]' : 'border-[#D4CDB5]/60 bg-[#F8F3E8] text-[#5A5048] hover:border-[#c49a3c]/40'}`}
                     >
                       {label}
                     </button>
@@ -452,7 +468,7 @@ export default function ProfileSetupPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[#5A5048] text-sm font-semibold mb-2 flex items-center gap-1.5 block">
-                    <Weight size={13} className="text-[#C49A3C]" /> Weight
+                    <Weight size={13} className="text-[#c49a3c]" /> Weight
                   </label>
                   <div className="relative">
                     <input
@@ -461,14 +477,14 @@ export default function ProfileSetupPage() {
                       onChange={e => setWeight(e.target.value)}
                       placeholder="65"
                       min={1}
-                      className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-4 pr-12 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/60 transition-all"
+                      className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-4 pr-12 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 focus:border-[#c49a3c]/60 transition-all"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9A8E7E] text-xs font-medium pointer-events-none">kg</span>
                   </div>
                 </div>
                 <div>
                   <label className="text-[#5A5048] text-sm font-semibold mb-2 flex items-center gap-1.5 block">
-                    <Ruler size={13} className="text-[#C49A3C]" /> Height
+                    <Ruler size={13} className="text-[#c49a3c]" /> Height
                   </label>
                   <div className="relative">
                     <input
@@ -477,7 +493,7 @@ export default function ProfileSetupPage() {
                       onChange={e => setHeight(e.target.value)}
                       placeholder="170"
                       min={1}
-                      className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-4 pr-12 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/60 transition-all"
+                      className="w-full bg-[#F8F3E8] border border-[#D4CDB5] text-[#1E2A35] placeholder-[#B0A898] rounded-2xl pl-4 pr-12 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 focus:border-[#c49a3c]/60 transition-all"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9A8E7E] text-xs font-medium pointer-events-none">cm</span>
                   </div>
@@ -508,7 +524,7 @@ export default function ProfileSetupPage() {
                       <button
                         type="button"
                         onClick={() => setShowHealthModal(true)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-1 text-[#C49A3C] text-xs font-bold border border-[#C49A3C]/40 px-3 py-2 sm:py-1.5 rounded-xl hover:bg-[#C49A3C]/08 transition-all shrink-0"
+                        className="w-full sm:w-auto flex items-center justify-center gap-1 text-[#c49a3c] text-xs font-bold border border-[#c49a3c]/40 px-3 py-2 sm:py-1.5 rounded-xl hover:bg-[#c49a3c]/08 transition-all shrink-0"
                       >
                         Complete <ChevronRight size={12} />
                       </button>
@@ -518,8 +534,8 @@ export default function ProfileSetupPage() {
                   {/* Terms & Conditions */}
                   <div className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border transition-all min-w-0 ${termsSigned ? 'border-green-300 bg-green-50' : errors.terms ? 'border-red-300 bg-red-50/30' : 'border-[#D4CDB5]/60'}`}>
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${termsSigned ? 'bg-green-100' : 'bg-[#C49A3C]/10'}`}>
-                        <FileText size={16} className={termsSigned ? 'text-green-600' : 'text-[#C49A3C]'} />
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${termsSigned ? 'bg-green-100' : 'bg-[#c49a3c]/10'}`}>
+                        <FileText size={16} className={termsSigned ? 'text-green-600' : 'text-[#c49a3c]'} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-semibold ${termsSigned ? 'text-green-700' : 'text-[#1E2A35]'}`}>Terms &amp; Conditions</p>
@@ -534,7 +550,7 @@ export default function ProfileSetupPage() {
                       <button
                         type="button"
                         onClick={() => setShowTermsModal(true)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-1 text-[#C49A3C] text-xs font-bold border border-[#C49A3C]/40 px-3 py-2 sm:py-1.5 rounded-xl hover:bg-[#C49A3C]/08 transition-all shrink-0"
+                        className="w-full sm:w-auto flex items-center justify-center gap-1 text-[#c49a3c] text-xs font-bold border border-[#c49a3c]/40 px-3 py-2 sm:py-1.5 rounded-xl hover:bg-[#c49a3c]/08 transition-all shrink-0"
                       >
                         View &amp; Accept <ChevronRight size={12} />
                       </button>
@@ -554,7 +570,7 @@ export default function ProfileSetupPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-base rounded-full py-4 min-h-[56px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#A67E2A] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-base rounded-full py-4 min-h-[56px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               >
                 {loading ? (
                   <>
@@ -568,6 +584,7 @@ export default function ProfileSetupPage() {
                 )}
               </button>
             </form>
+            </div>
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   MONTH_NAMES, DAY_LABELS_SHORT, buildMonthGrid, toDateKeyFromParts,
   getTodayDateKey, getInitialCalendarMonth, dateKeyFromOffset,
   formatDateShortFromKey, formatTimeRange24,
+  SCHEDULE_START_TIME_24, SCHEDULE_END_TIME_24,
 } from '../components/calendar/weekCalendarUtils';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -35,13 +36,13 @@ function buildInitialEntries(): AvailabilityEntry[] {
     {
       id: 1, date: dateKeyFromOffset(1), dayOff: false, note: '',
       periods: [
-        { id: 101, start: '07:00', end: '09:00' },
+        { id: 101, start: '09:00', end: '11:00' },
         { id: 102, start: '14:00', end: '17:00' },
       ],
     },
     {
       id: 2, date: dateKeyFromOffset(2), dayOff: false, note: '',
-      periods: [{ id: 201, start: '07:00', end: '08:00' }],
+      periods: [{ id: 201, start: '09:00', end: '10:00' }],
     },
     {
       id: 3, date: dateKeyFromOffset(3), dayOff: true, note: 'Personal leave',
@@ -49,14 +50,14 @@ function buildInitialEntries(): AvailabilityEntry[] {
     },
     {
       id: 4, date: dateKeyFromOffset(4), dayOff: false, note: '',
-      periods: [{ id: 401, start: '07:00', end: '09:00' }],
+      periods: [{ id: 401, start: '09:00', end: '11:00' }],
     },
   ];
 }
 
 function isValidRange(start: string, end: string): boolean {
   if (!start || !end) return false;
-  return start < end;
+  return start < end && start >= SCHEDULE_START_TIME_24 && end <= SCHEDULE_END_TIME_24;
 }
 
 // New blank period for the editor
@@ -117,6 +118,8 @@ function PeriodRow({ period, onChange, onRemove, showRemove }: {
         <Clock size={12} className="text-[#B0A898] shrink-0" />
         <input
           type="time"
+          min={SCHEDULE_START_TIME_24}
+          max={SCHEDULE_END_TIME_24}
           value={period.start}
           onChange={e => onChange(period.id, 'start', e.target.value)}
           className="flex-1 bg-transparent text-[#1E2A35] text-sm outline-none min-w-0"
@@ -124,6 +127,8 @@ function PeriodRow({ period, onChange, onRemove, showRemove }: {
         <span className="text-[#B0A898] text-xs font-medium shrink-0">to</span>
         <input
           type="time"
+          min={SCHEDULE_START_TIME_24}
+          max={SCHEDULE_END_TIME_24}
           value={period.end}
           onChange={e => onChange(period.id, 'end', e.target.value)}
           className="flex-1 bg-transparent text-[#1E2A35] text-sm outline-none min-w-0"
@@ -297,7 +302,7 @@ export default function StaffAvailabilityPage() {
           {[
             { label: 'Available Days',   value: availableCount, color: 'text-green-600', bg: 'bg-green-50',       border: 'border-green-200',    icon: <CalendarDays size={14} className="text-green-600" /> },
             { label: 'Days Off',          value: dayOffCount,    color: 'text-red-500',   bg: 'bg-red-50',         border: 'border-red-200',      icon: <X size={14} className="text-red-500" /> },
-            { label: 'Time Periods',      value: periodCount,    color: 'text-[#C49A3C]', bg: 'bg-[#C49A3C]/10',  border: 'border-[#C49A3C]/30', icon: <AlarmClock size={14} className="text-[#C49A3C]" /> },
+            { label: 'Time Periods',      value: periodCount,    color: 'text-[#c49a3c]', bg: 'bg-[#c49a3c]/10',  border: 'border-[#c49a3c]/30', icon: <AlarmClock size={14} className="text-[#c49a3c]" /> },
           ].map(s => (
             <div key={s.label} className={`bg-white rounded-xl border ${s.border} px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-2.5 min-w-0`}>
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${s.bg}`}>
@@ -352,10 +357,10 @@ export default function StaffAvailabilityPage() {
                       onClick={() => openDate(key)}
                       className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all hover:bg-[#F0EBE0] ${
                         isSel ? 'bg-[#1E2A35] hover:bg-[#263545]' : ''
-                      } ${isToday && !isSel ? 'ring-1 ring-[#C49A3C]/50' : ''}`}
+                      } ${isToday && !isSel ? 'ring-1 ring-[#c49a3c]/50' : ''}`}
                     >
                       <span className={`text-xs leading-none mb-0.5 ${
-                        isSel ? 'text-white' : isToday ? 'text-[#C49A3C] font-bold' : 'text-[#1E2A35]'
+                        isSel ? 'text-white' : isToday ? 'text-[#c49a3c] font-bold' : 'text-[#1E2A35]'
                       }`}>{day}</span>
                       {entry ? (
                         <span className={`w-1.5 h-1.5 rounded-full ${entry.dayOff ? 'bg-red-400' : 'bg-green-500'}`} />
@@ -376,7 +381,7 @@ export default function StaffAvailabilityPage() {
 
             <button
               onClick={() => openDate(todayKey)}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#C49A3C]/40 text-[#A67E2A] text-xs sm:text-sm font-semibold hover:bg-[#C49A3C]/08 active:scale-[0.98] transition-all"
+              className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#c49a3c]/40 text-[#a67f2e] text-xs sm:text-sm font-semibold hover:bg-[#c49a3c]/08 active:scale-[0.98] transition-all"
             >
               <Plus size={14} /> Add for Today
             </button>
@@ -433,7 +438,7 @@ export default function StaffAvailabilityPage() {
                         <p className="text-[#8A7E6E] text-[10px] uppercase tracking-widest">Time Ranges</p>
                         <button
                           onClick={addPeriod}
-                          className="flex items-center gap-1 text-[#C49A3C] text-[11px] font-semibold hover:text-[#A67E2A] transition-colors"
+                          className="flex items-center gap-1 text-[#c49a3c] text-[11px] font-semibold hover:text-[#a67f2e] transition-colors"
                         >
                           <Plus size={12} /> Add
                         </button>
@@ -469,7 +474,7 @@ export default function StaffAvailabilityPage() {
                       value={editorNote}
                       onChange={e => setEditorNote(e.target.value)}
                       placeholder={editorDayOff ? 'Personal leave, travel…' : 'Available after 10 AM…'}
-                      className="w-full px-2.5 py-2 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 transition-all placeholder-[#C0B8A8]"
+                      className="w-full px-2.5 py-2 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 transition-all placeholder-[#C0B8A8]"
                     />
                   </div>
                 </div>
@@ -540,7 +545,7 @@ export default function StaffAvailabilityPage() {
                         {/* Date + note */}
                         <div className="flex sm:block items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className={`text-sm font-semibold leading-tight ${isActive ? 'text-[#C49A3C]' : 'text-[#1E2A35]'}`}>
+                            <p className={`text-sm font-semibold leading-tight ${isActive ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>
                               {formatDateShortFromKey(entry.date)}
                             </p>
                             {entry.note && (

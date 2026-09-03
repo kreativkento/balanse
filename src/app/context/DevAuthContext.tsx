@@ -6,24 +6,30 @@ import {
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId, getProfileDisplayName } from '../../lib/profile-service';
+import { fetchAccountWithProfileByAuthUserId, getProfileDisplayName, updateOwnProfileImages } from '../../lib/profile-service';
+import { loadOwnProfileImageUrls, mergeProfileImageUrls } from '../../lib/storage-service';
 import type { AccountWithProfile } from '../../lib/database.types';
 
 export interface DevUser {
   name: string;
   email: string;
+  photo: string;
+  coverImage: string;
 }
 
 interface DevAuthContextType {
   devUser: DevUser | null;
   devLogin: (email: string, password: string) => Promise<AuthResult>;
   devLogout: () => Promise<void>;
+  updateDevImages: (images: { photo?: string; coverImage?: string }) => void;
 }
 
 function mapToDevUser(data: AccountWithProfile): DevUser {
   return {
     name: getProfileDisplayName(data.profile, data.account.email),
     email: data.account.email.toLowerCase(),
+    photo: data.profile.photo ?? '',
+    coverImage: data.profile.cover_image ?? '',
   };
 }
 
@@ -39,7 +45,8 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
   const hydrateDevSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && isDevRole(data.account.role)) {
-      setDevUser(mapToDevUser(data));
+      const bucket = await loadOwnProfileImageUrls();
+      setDevUser(mergeProfileImageUrls(mapToDevUser(data), bucket));
       return;
     }
     setDevUser(null);
@@ -93,7 +100,7 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('dev') };
     }
 
-    setDevUser(mapToDevUser(accountData));
+    setDevUser(mergeProfileImageUrls(mapToDevUser(accountData), await loadOwnProfileImageUrls()));
     return { success: true };
   };
 
@@ -102,8 +109,18 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
     setDevUser(null);
   };
 
+  const updateDevImages = (images: { photo?: string; coverImage?: string }) => {
+    setDevUser((prev) => (prev ? { ...prev, ...images } : prev));
+    void (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await updateOwnProfileImages(authUser.id, images);
+      }
+    })();
+  };
+
   return (
-    <DevAuthContext.Provider value={{ devUser, devLogin, devLogout }}>
+    <DevAuthContext.Provider value={{ devUser, devLogin, devLogout, updateDevImages }}>
       {children}
     </DevAuthContext.Provider>
   );

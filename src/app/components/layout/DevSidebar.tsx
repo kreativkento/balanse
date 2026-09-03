@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useDevAuth } from '../../context/DevAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
+import { ProfileAvatar } from '../ProfileImages';
 
 const NAV_LINKS = [
   { label: 'Ticket Management', path: '/development/tickets', icon: Ticket },
@@ -44,7 +45,7 @@ export function DevSidebar({ children }: DevSidebarProps) {
         <Link to="/development/dashboard" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
           <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
           <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-            <Code2 size={8} className="text-[#C49A3C]" />
+            <Code2 size={8} className="text-[#c49a3c]" />
             <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Dev</span>
           </div>
         </Link>
@@ -64,7 +65,7 @@ export function DevSidebar({ children }: DevSidebarProps) {
                   active ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
                 }`}
               >
-                <Icon size={16} className={active ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
+                <Icon size={16} className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
                 {label}
               </Link>
             );
@@ -78,7 +79,7 @@ export function DevSidebar({ children }: DevSidebarProps) {
                 logsActive ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
               }`}
             >
-              <ScrollText size={16} className={logsActive ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
+              <ScrollText size={16} className={logsActive ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
               <span className="flex-1 text-left">System Logs</span>
               <ChevronDown size={14} className={`transition-transform ${logsOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -92,10 +93,10 @@ export function DevSidebar({ children }: DevSidebarProps) {
                       to={l.path}
                       onClick={() => setMobileOpen(false)}
                       className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                        active ? 'bg-[#C49A3C]/15 text-[#A67E2A]' : 'text-[#5A5048] hover:bg-[#EDE8D8]'
+                        active ? 'bg-[#c49a3c]/15 text-[#a67f2e]' : 'text-[#5A5048] hover:bg-[#EDE8D8]'
                       }`}
                     >
-                      <l.icon size={13} className={active ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
+                      <l.icon size={13} className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
                       {l.label}
                     </Link>
                   );
@@ -107,15 +108,26 @@ export function DevSidebar({ children }: DevSidebarProps) {
       </nav>
 
       <div className="px-4 py-4 border-t border-[#D4CDB5]/30">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs">{initials}</span>
+        <Link
+          to="/development/account"
+          onClick={() => setMobileOpen(false)}
+          title="Edit profile images"
+          className="flex items-center gap-3 mb-3 rounded-xl px-1 py-1 -mx-1 hover:bg-[#EDE8D8] transition-colors"
+        >
+          <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+            <ProfileAvatar
+              src={devUser?.photo}
+              initials={initials}
+              alt=""
+              className="h-full w-full"
+              initialsClassName="text-white font-bold text-xs"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[#1E2A35] text-xs font-semibold leading-none truncate">{devUser?.name}</p>
-            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Developer</p>
+            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Edit photos</p>
           </div>
-        </div>
+        </Link>
 
         <button
           onClick={() => setShowLogoutModal(true)}
@@ -177,7 +189,7 @@ export function DevSidebar({ children }: DevSidebarProps) {
           <Link to="/development/dashboard" className="flex items-center gap-2 min-w-0">
             <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto object-contain shrink-0" />
             <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-              <Code2 size={8} className="text-[#C49A3C]" />
+              <Code2 size={8} className="text-[#c49a3c]" />
               <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Dev</span>
             </div>
           </Link>

@@ -236,6 +236,32 @@ export interface Database {
         Args: { p_class_id: string };
         Returns: undefined;
       };
+      coach_directory_images: {
+        Args: Record<string, never>;
+        Returns: {
+          first_name: string;
+          photo: string;
+          cover_image: string;
+          auth_user_id: string;
+        }[];
+      };
+      coach_directory: {
+        Args: Record<string, never>;
+        Returns: {
+          account_id: string;
+          auth_user_id: string;
+          display_name: string;
+          name: string;
+          staff_type: string;
+          bio: string;
+          experience: string;
+          nationality: string;
+          photo: string;
+          cover_image: string;
+          legacy_classes: string[];
+          discipline_names: string[];
+        }[];
+      };
     };
   };
 }
@@ -268,6 +294,8 @@ export interface ProfileClientRow {
   terms_accepted: boolean;
   share_availability: boolean;
   profile_complete: boolean;
+  photo: string;
+  cover_image: string;
   created_at: string;
   updated_at: string;
 }
@@ -283,6 +311,7 @@ export interface ProfileStaffRow {
   nationality: string;
   display_name: string;
   photo: string;
+  cover_image: string;
   bio: string;
   experience: string;
   /** @deprecated Legacy free-text labels. Prefer coach_disciplines → disciplines.id */

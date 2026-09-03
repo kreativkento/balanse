@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Crown, LogOut, LayoutDashboard, Users,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
+import { ProfileAvatar } from '../ProfileImages';
 
 type NavItem = {
   label: string;
@@ -45,7 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Marketing',
     items: [
       { label: 'Gallery', path: '/admin-gallery', icon: Images },
-      { label: 'News & Updates', path: '/admin-news', icon: Newspaper },
+      { label: 'Bulletin', path: '/admin-bulletin', icon: Newspaper },
       { label: 'Promotions', path: '/admin-promos', icon: Tag },
     ],
   },
@@ -60,33 +61,38 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-interface AdminSidebarProps {
-  children: React.ReactNode;
+interface AdminSidebarNavProps {
+  pathname: string;
+  adminUserName?: string;
+  photo?: string;
+  initials: string;
+  onNavClick: () => void;
+  onLogoutClick: () => void;
+  navRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function AdminSidebar({ children }: AdminSidebarProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { adminUser, adminLogout } = useAdminAuth();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  const handleLogout = () => { adminLogout(); navigate('/admin-login'); };
-  const initials = adminUser?.name.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? 'SA';
-
-  const SidebarContent = () => (
+function AdminSidebarNav({
+  pathname,
+  adminUserName,
+  photo,
+  initials,
+  onNavClick,
+  onLogoutClick,
+  navRef,
+}: AdminSidebarNavProps) {
+  return (
     <div className="flex flex-col h-full">
       <div className="px-5 py-5 border-b border-[#D4CDB5]/30">
-        <Link to="/admin-dashboard" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
+        <Link to="/admin-dashboard" className="flex items-center gap-2 group" onClick={onNavClick}>
           <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
           <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-            <Crown size={8} className="text-[#C49A3C]" />
+            <Crown size={8} className="text-[#c49a3c]" />
             <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav ref={navRef} className="flex-1 overflow-y-auto px-3 py-4">
         <div className="flex flex-col gap-3">
           {NAV_SECTIONS.map((section, sectionIndex) => (
             <div key={section.label ?? `section-${sectionIndex}`}>
@@ -107,19 +113,19 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
 
               <div className="flex flex-col gap-0.5">
                 {section.items.map(({ label, path, icon: Icon }) => {
-                  const active = location.pathname === path;
+                  const active = pathname === path;
                   return (
                     <Link
                       key={path}
                       to={path}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={onNavClick}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                         active
                           ? 'bg-[#1E2A35] text-white shadow-sm'
                           : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
                       }`}
                     >
-                      <Icon size={16} className={active ? 'text-[#C49A3C]' : 'text-[#8A7E6E]'} />
+                      <Icon size={16} className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
                       {label}
                     </Link>
                   );
@@ -131,18 +137,29 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
       </nav>
 
       <div className="px-4 py-4 border-t border-[#D4CDB5]/30">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs">{initials}</span>
+        <Link
+          to="/admin-account"
+          onClick={onNavClick}
+          title="Edit profile images"
+          className="flex items-center gap-3 mb-3 rounded-xl px-1 py-1 -mx-1 hover:bg-[#EDE8D8] transition-colors"
+        >
+          <div className="w-9 h-9 bg-[#1E2A35] rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+            <ProfileAvatar
+              src={photo}
+              initials={initials}
+              alt=""
+              className="h-full w-full"
+              initialsClassName="text-white font-bold text-xs"
+            />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[#1E2A35] text-xs font-semibold leading-none truncate">{adminUser?.name}</p>
-            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Admin</p>
+            <p className="text-[#1E2A35] text-xs font-semibold leading-none truncate">{adminUserName}</p>
+            <p className="text-[#B0A898] text-[0.6rem] mt-0.5">Edit photos</p>
           </div>
-        </div>
+        </Link>
 
         <button
-          onClick={() => setShowLogoutModal(true)}
+          onClick={onLogoutClick}
           className="w-full flex items-center justify-center gap-2 text-[#8A7E6E] hover:text-red-600 text-xs transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-transparent hover:border-red-100"
         >
           <LogOut size={13} /> Log Out
@@ -150,6 +167,31 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
       </div>
     </div>
   );
+}
+
+interface AdminSidebarProps {
+  children: React.ReactNode;
+}
+
+export function AdminSidebar({ children }: AdminSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { adminUser, adminLogout } = useAdminAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const desktopNavRef = useRef<HTMLElement>(null);
+
+  const handleLogout = () => { adminLogout(); navigate('/admin-login'); };
+  const initials = adminUser?.name.split(' ').map((n) => n[0]).join('').slice(0, 2) ?? 'SA';
+
+  const navProps = {
+    pathname: location.pathname,
+    adminUserName: adminUser?.name,
+    photo: adminUser?.photo,
+    initials,
+    onNavClick: () => setMobileOpen(false),
+    onLogoutClick: () => setShowLogoutModal(true),
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8F3E8]">
@@ -177,14 +219,14 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         </div>
       )}
       <aside className="hidden md:flex w-56 bg-white border-r border-[#D4CDB5]/60 shadow-sm flex-col shrink-0 z-30">
-        <SidebarContent />
+        <AdminSidebarNav {...navProps} navRef={desktopNavRef} />
       </aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-[#1E2A35]/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-56 bg-white shadow-2xl z-50 flex flex-col">
-            <SidebarContent />
+            <AdminSidebarNav {...navProps} />
           </aside>
         </div>
       )}
@@ -200,13 +242,13 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           <Link to="/admin-dashboard" className="flex items-center gap-2 min-w-0">
             <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto object-contain shrink-0" />
             <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-              <Crown size={8} className="text-[#C49A3C]" />
+              <Crown size={8} className="text-[#c49a3c]" />
               <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
             </div>
           </Link>
         </div>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </main>
       </div>

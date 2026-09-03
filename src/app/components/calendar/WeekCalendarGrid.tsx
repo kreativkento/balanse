@@ -1,4 +1,4 @@
-import { formatHourLabel, parseTimeToMinutes, isSameDay, DAY_LABELS_LONG } from './weekCalendarUtils';
+import { formatHourLabel, parseTimeToMinutes, isSameDay, DAY_LABELS_LONG, SCHEDULE_START_HOUR, SCHEDULE_END_HOUR } from './weekCalendarUtils';
 
 // ─────────────────────────────────────────────
 // GOOGLE-CALENDAR-INSPIRED WEEK GRID
@@ -11,7 +11,7 @@ export interface WeekGridEvent {
   id: string | number;
   /** 0 = Sunday ... 6 = Saturday, position within the displayed week */
   dayIndex: number;
-  time: string; // e.g. '7:00 AM'
+  time: string; // e.g. '9:00 AM'
   duration: number; // minutes
   title: string;
   subtitle?: string;
@@ -39,8 +39,8 @@ export function WeekCalendarGrid({
   weekDates,
   events,
   today = new Date(),
-  startHour = 6,
-  endHour = 21,
+  startHour = SCHEDULE_START_HOUR,
+  endHour = SCHEDULE_END_HOUR,
   rowHeight = 56,
   dayLabels = DAY_LABELS_LONG,
   timezoneLabel = 'GMT+8',
@@ -90,12 +90,12 @@ export function WeekCalendarGrid({
                   type="button"
                   onClick={onDayHeaderClick ? () => onDayHeaderClick(date, dayIdx) : undefined}
                   className={`w-full h-14 flex flex-col items-center justify-center border-b border-[#D4CDB5]/40 transition-colors ${
-                    isSelected ? 'bg-[#C49A3C]/14' : isToday ? 'bg-[#C49A3C]/8' : ''
-                  } ${onDayHeaderClick ? 'hover:bg-[#C49A3C]/10 cursor-pointer' : 'cursor-default'}`}
+                    isSelected ? 'bg-[#c49a3c]/14' : isToday ? 'bg-[#c49a3c]/8' : ''
+                  } ${onDayHeaderClick ? 'hover:bg-[#c49a3c]/10 cursor-pointer' : 'cursor-default'}`}
                 >
                   <span className="text-[10px] text-[#9A8E7E] tracking-wide">{dayLabels[dayIdx]}</span>
                   <span
-                    className={isToday || isSelected ? 'text-[#C49A3C]' : 'text-[#1E2A35]'}
+                    className={isToday || isSelected ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}
                     style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.03em' }}
                   >
                     {date.getDate()}

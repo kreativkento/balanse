@@ -12,6 +12,8 @@ import {
   type DisciplineStatusDisplay,
 } from '../../../lib/discipline-service';
 import { StatusDisciplineBadge } from './StatusDisciplineBadge';
+import { DisciplineImagePicker } from './DisciplineImagePicker';
+import { isDisciplineBucketImageUrl } from '../../../lib/discipline-images';
 
 export interface DisciplineFormValues {
   name: string;
@@ -41,6 +43,10 @@ function normalizeMediaUrl(url: string, previewName: string, type: 'logo' | 'ima
     type === 'logo'
       ? getDisciplinePlaceholderLogo(previewName)
       : getDisciplinePlaceholderImage(previewName);
+
+  if (isDisciplineBucketImageUrl(trimmed)) {
+    return trimmed.split('?')[0];
+  }
 
   if (trimmed === placeholder || trimmed.includes('placehold.co/')) {
     return '';
@@ -105,6 +111,7 @@ export function AdminDisciplineModal({
   const [error, setError] = useState('');
   const [coaches, setCoaches] = useState<DisciplineCoachDisplay[]>([]);
   const [coachesLoading, setCoachesLoading] = useState(false);
+  const [picker, setPicker] = useState<'logo' | 'cover' | null>(null);
 
   useEffect(() => {
     setName(discipline.name);
@@ -114,6 +121,7 @@ export function AdminDisciplineModal({
     setIsEditing(isCreateMode && !readOnly);
     setShowConfirm(false);
     setShowConfirmDelete(false);
+    setPicker(null);
     setError('');
   }, [discipline, isCreateMode, readOnly]);
 
@@ -173,19 +181,16 @@ export function AdminDisciplineModal({
     setIsEditing(false);
     setShowConfirm(false);
     setShowConfirmDelete(false);
+    setPicker(null);
     setError('');
   };
 
   const handleEditLogo = () => {
-    const next = window.prompt('Enter logo image URL', displayLogoUrl);
-    if (next === null) return;
-    setLogoUrl(next.trim() || defaultLogoUrl);
+    setPicker((current) => (current === 'logo' ? null : 'logo'));
   };
 
   const handleEditCover = () => {
-    const next = window.prompt('Enter cover image URL', displayImageUrl);
-    if (next === null) return;
-    setImageUrl(next.trim() || defaultImageUrl);
+    setPicker((current) => (current === 'cover' ? null : 'cover'));
   };
 
   const buildPayload = (): DisciplineFormValues => ({
@@ -276,18 +281,34 @@ export function AdminDisciplineModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-2xl min-h-[min(720px,92vh)] max-h-[92vh] overflow-y-auto"
+        className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full overflow-y-auto ${
+          readOnly
+            ? 'max-w-5xl min-h-[min(860px,94vh)] max-h-[94vh]'
+            : 'max-w-2xl min-h-[min(720px,92vh)] max-h-[92vh]'
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative h-64 md:h-72 overflow-hidden">
+        <div className={`relative overflow-hidden ${readOnly ? 'h-72 md:h-80' : 'h-64 md:h-72'}`}>
           <EditableMedia
             isEditing={isEditing && !readOnly}
-            label="Edit cover image"
+            label="Choose cover image"
             onEdit={handleEditCover}
             className="block w-full h-full"
           >
             <img src={displayImageUrl} alt={previewName} className="w-full h-full object-cover" />
           </EditableMedia>
+          {isEditing && !readOnly && (
+            <div className="absolute top-14 right-4 z-20">
+              <DisciplineImagePicker
+                open={picker === 'cover'}
+                currentUrl={displayImageUrl}
+                kind="cover"
+                align="right"
+                onSelect={setImageUrl}
+                onClose={() => setPicker(null)}
+              />
+            </div>
+          )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1E2A35]/75 via-[#1E2A35]/20 to-transparent" />
 
           <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
@@ -303,7 +324,7 @@ export function AdminDisciplineModal({
               <button
                 type="button"
                 onClick={handleStartEdit}
-                className="w-9 h-9 rounded-full bg-[#C49A3C] border border-[#A67E2A] flex items-center justify-center text-white hover:bg-[#A67E2A] transition-colors shadow-md"
+                className="w-9 h-9 rounded-full bg-[#c49a3c] border border-[#a67f2e] flex items-center justify-center text-white hover:bg-[#a67f2e] transition-colors shadow-md"
                 aria-label="Edit discipline"
               >
                 <Pencil size={18} />
@@ -324,26 +345,38 @@ export function AdminDisciplineModal({
 
           <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-3 z-10">
             <div className="flex items-end gap-3 min-w-0 flex-1">
-              <EditableMedia
-                isEditing={isEditing && !readOnly}
-                label="Edit logo"
-                onEdit={handleEditLogo}
-                className="shrink-0 rounded-2xl overflow-hidden"
-              >
-                <img
-                  src={displayLogoUrl}
-                  alt=""
-                  aria-hidden="true"
-                  className="w-14 h-14 rounded-2xl border border-white/30 bg-white object-cover shadow-sm"
-                />
-              </EditableMedia>
+              <div className="relative shrink-0">
+                <EditableMedia
+                  isEditing={isEditing && !readOnly}
+                  label="Choose logo image"
+                  onEdit={handleEditLogo}
+                  className="shrink-0 rounded-2xl overflow-hidden"
+                >
+                  <img
+                    src={displayLogoUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="w-14 h-14 rounded-2xl border border-white/30 bg-white object-cover shadow-sm"
+                  />
+                </EditableMedia>
+                {isEditing && !readOnly && (
+                  <DisciplineImagePicker
+                    open={picker === 'logo'}
+                    currentUrl={displayLogoUrl}
+                    kind="logo"
+                    placement="top"
+                    onSelect={setLogoUrl}
+                    onClose={() => setPicker(null)}
+                  />
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 {isEditing ? (
                   <input
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Discipline name"
-                    className="w-full px-3 py-2 rounded-xl bg-white/95 border border-[#D4CDB5]/70 text-[#1E2A35] text-lg font-semibold outline-none focus:ring-2 focus:ring-[#C49A3C]/30"
+                    className="w-full px-3 py-2 rounded-xl bg-white/95 border border-[#D4CDB5]/70 text-[#1E2A35] text-lg font-semibold outline-none focus:ring-2 focus:ring-[#c49a3c]/30"
                     style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}
                   />
                 ) : (
@@ -370,7 +403,7 @@ export function AdminDisciplineModal({
                 onChange={(event) => setDescription(event.target.value)}
                 rows={6}
                 placeholder="Describe this discipline…"
-                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 resize-y min-h-[140px]"
+                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 resize-y min-h-[140px]"
               />
             ) : (
               <p className="text-[#5A5048] text-sm leading-relaxed whitespace-pre-wrap">
@@ -381,7 +414,7 @@ export function AdminDisciplineModal({
 
           <div>
             <div className="flex items-center gap-2 mb-2.5">
-              <Users size={13} className="text-[#C49A3C]" />
+              <Users size={13} className="text-[#c49a3c]" />
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Coaches</p>
             </div>
             {isCreateMode ? (
@@ -438,7 +471,7 @@ export function AdminDisciplineModal({
               <button
                 type="button"
                 onClick={onEnroll}
-                className="w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#A67E2A]"
+                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
               >
                 Enroll
@@ -475,7 +508,7 @@ export function AdminDisciplineModal({
           )}
 
           {!readOnly && showConfirm && (
-            <div className="rounded-2xl border border-[#C49A3C]/30 bg-[#C49A3C]/08 px-4 py-4">
+            <div className="rounded-2xl border border-[#c49a3c]/30 bg-[#c49a3c]/08 px-4 py-4">
               <p className="text-[#1E2A35] text-sm font-semibold mb-1">
                 {isCreateMode ? 'Add this discipline?' : 'Save changes?'}
               </p>
@@ -497,7 +530,7 @@ export function AdminDisciplineModal({
                   type="button"
                   onClick={handleConfirmSave}
                   disabled={saving}
-                  className="flex-1 py-2.5 rounded-full bg-[#C49A3C] text-white text-sm font-bold hover:bg-[#A67E2A] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 rounded-full bg-[#c49a3c] text-white text-sm font-bold hover:bg-[#a67f2e] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
                   <Check size={14} />
                   {saving ? 'Saving…' : isCreateMode ? 'Confirm Add' : 'Confirm Save'}

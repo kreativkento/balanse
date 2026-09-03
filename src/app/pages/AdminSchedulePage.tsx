@@ -1,8 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, ChevronLeft, ChevronRight, X, Trash2, CalendarDays, ChevronDown, Check, AlertCircle, Clock } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, X, Trash2, CalendarDays, ChevronDown, Check, AlertCircle, Clock, Undo2 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
+import { MonthCalendarGrid, type MonthGridEvent } from '../components/calendar/MonthCalendarGrid';
+import {
+  MONTH_NAMES,
+  addDaysToDate,
+  dateKeyToDate,
+  formatMonSunWeekRange,
+  getInitialCalendarMonth,
+  getMondayOfWeekContaining,
+  getTodayDateKey,
+  getTodayLocal,
+  toDateKey,
+  toDateKeyFromParts,
+  SCHEDULE_HOURS,
+} from '../components/calendar/weekCalendarUtils';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -22,10 +35,22 @@ interface ScheduleBlock {
 
 type ReqStatus = 'pending' | 'approved' | 'rejected';
 
-interface BookingRequest {
-  id: number; student: string; email: string; class: string;
-  date: string; time: string; coach: string; amount: number;
-  method: string; ref: string; submittedAt: string; status: ReqStatus;
+interface ClassScheduleRequest {
+  id: number;
+  staff: string;
+  email: string;
+  className: string;
+  discipline: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  classLimit: number;
+  submittedAt: string;
+  status: ReqStatus;
+  dayIndex: number;
+  startHour: number;
+  duration: number;
+  coach: string;
 }
 
 interface CancelRequest {
@@ -36,52 +61,64 @@ interface CancelRequest {
 }
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga': '#C49A3C', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
+  'Yoga': '#c49a3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
   'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#A67E2A',
+  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#a67f2e',
 };
 const SERVICES  = Object.keys(CLASS_COLORS);
 const COACHES   = ['Rex', 'Jodi', 'Ephraim', 'Alec', 'Rachelle', 'Kate', 'Wolf'];
 const DURATIONS = [30, 45, 60, 75, 90];
 const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const WEEK_DATES  = ['Apr 7', 'Apr 8', 'Apr 9', 'Apr 10', 'Apr 11', 'Apr 12', 'Apr 13'];
-const HOURS       = Array.from({ length: 14 }, (_, i) => i + 7);
+const HOURS = SCHEDULE_HOURS;
 
 function fmtHour(h: number) {
   if (h === 12) return '12:00 PM';
   return h < 12 ? `${h}:00 AM` : `${h - 12}:00 PM`;
 }
 
+function jsDayToMonIndex(jsDay: number): number {
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
+function shiftMonth(year: number, month: number, delta: number) {
+  const d = new Date(year, month + delta, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function formatDayShort(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 const INITIAL_BLOCKS: ScheduleBlock[] = [
-  { id: 1,  dayIndex: 0, startHour: 8,  duration: 75, className: 'Yoga',            coach: 'Jodi',     capacity: 15, enrolled: 11, color: '#C49A3C', isOpen: true,  status: 'completed' },
+  { id: 1,  dayIndex: 0, startHour: 9,  duration: 75, className: 'Yoga',            coach: 'Jodi',     capacity: 15, enrolled: 11, color: '#c49a3c', isOpen: true,  status: 'completed' },
   { id: 2,  dayIndex: 0, startHour: 10, duration: 60, className: 'Mat Pilates',      coach: 'Kate',     capacity: 12, enrolled: 8,  color: '#9A7A8A', isOpen: true,  status: 'completed' },
   { id: 3,  dayIndex: 0, startHour: 18, duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 6,  color: '#3A4A5A', isOpen: true,  status: 'cancelled' },
-  { id: 4,  dayIndex: 1, startHour: 7,  duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 3,  color: '#3A4A5A', isOpen: true,  status: 'completed' },
+  { id: 4,  dayIndex: 1, startHour: 9,  duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 3,  color: '#3A4A5A', isOpen: true,  status: 'completed' },
   { id: 5,  dayIndex: 1, startHour: 9,  duration: 60, className: 'Animal Flow',      coach: 'Ephraim',  capacity: 12, enrolled: 10, color: '#6B8E6B', isOpen: true,  status: 'upcoming'  },
   { id: 6,  dayIndex: 1, startHour: 17, duration: 60, className: 'Kickboxing',       coach: 'Wolf',     capacity: 10, enrolled: 7,  color: '#7A3A4A', isOpen: false, status: 'upcoming'  },
   { id: 7,  dayIndex: 2, startHour: 9,  duration: 60, className: 'Mat Pilates',      coach: 'Kate',     capacity: 12, enrolled: 5,  color: '#9A7A8A', isOpen: true,  status: 'upcoming'  },
   { id: 8,  dayIndex: 2, startHour: 16, duration: 60, className: 'Circuit Training', coach: 'Rachelle', capacity: 15, enrolled: 12, color: '#B86A4A', isOpen: true,  status: 'upcoming'  },
-  { id: 9,  dayIndex: 3, startHour: 8,  duration: 75, className: 'Yoga',             coach: 'Jodi',     capacity: 15, enrolled: 9,  color: '#C49A3C', isOpen: true,  status: 'upcoming'  },
+  { id: 9,  dayIndex: 3, startHour: 9,  duration: 75, className: 'Yoga',             coach: 'Jodi',     capacity: 15, enrolled: 9,  color: '#c49a3c', isOpen: true,  status: 'upcoming'  },
   { id: 10, dayIndex: 4, startHour: 10, duration: 60, className: 'Groundworks',      coach: 'Alec',     capacity: 10, enrolled: 4,  color: '#8B6F5A', isOpen: true,  status: 'upcoming'  },
   { id: 11, dayIndex: 5, startHour: 9,  duration: 60, className: 'Capoeira',         coach: 'Alec',     capacity: 10, enrolled: 7,  color: '#A07050', isOpen: true,  status: 'upcoming'  },
-  { id: 12, dayIndex: 6, startHour: 10, duration: 75, className: 'Personal Coaching',coach: 'Rex',      capacity: 4,  enrolled: 2,  color: '#A67E2A', isOpen: true,  status: 'upcoming'  },
+  { id: 12, dayIndex: 6, startHour: 10, duration: 75, className: 'Personal Coaching',coach: 'Rex',      capacity: 4,  enrolled: 2,  color: '#a67f2e', isOpen: true,  status: 'upcoming'  },
 ];
 
-const INITIAL_BOOKING_REQS: BookingRequest[] = [
-  { id: 1, student: 'Alex Johnson',  email: 'alex.j@email.com',    class: 'Yoga',        date: 'Tue, Apr 14', time: '8:00 AM',  coach: 'Jodi',    amount: 360, method: 'Bank Transfer', ref: 'BPI-202604141', submittedAt: '2 hrs ago',  status: 'pending'  },
-  { id: 2, student: 'Ryan Bautista', email: 'ryan.b@email.com',    class: 'Animal Flow', date: 'Tue, Apr 14', time: '9:00 AM',  coach: 'Ephraim', amount: 360, method: 'Bank Transfer', ref: 'BDO-202604142', submittedAt: '3 hrs ago',  status: 'pending'  },
-  { id: 3, student: 'Camille Cruz',  email: 'camille.c@email.com', class: 'Kickboxing',  date: 'Wed, Apr 15', time: '5:00 PM',  coach: 'Wolf',    amount: 360, method: 'Cash',          ref: 'CASH-001',     submittedAt: '30 min ago', status: 'pending'  },
-  { id: 4, student: 'Lea Mendoza',   email: 'lea.m@email.com',     class: 'Mat Pilates', date: 'Thu, Apr 16', time: '9:30 AM',  coach: 'Kate',    amount: 360, method: 'Bank Transfer', ref: 'BPI-202604143', submittedAt: '5 hrs ago',  status: 'pending'  },
-  { id: 5, student: 'Jan Corpus',    email: 'jan.c@email.com',     class: 'Groundworks', date: 'Fri, Apr 17', time: '10:00 AM', coach: 'Alec',    amount: 360, method: 'Bank Transfer', ref: 'BDO-202604144', submittedAt: '1 day ago',  status: 'approved' },
+const INITIAL_SCHEDULE_REQS: ClassScheduleRequest[] = [
+  { id: 1, staff: 'Jodi Reyes',    email: 'jodi.reyes@balanse.com',    className: 'Morning Yoga Flow',     discipline: 'Yoga',             date: 'Tue, Apr 14', startTime: '9:00 AM',  endTime: '10:15 AM', classLimit: 15, submittedAt: '2 hrs ago',  status: 'pending',  dayIndex: 1, startHour: 9,  duration: 75, coach: 'Jodi'     },
+  { id: 2, staff: 'Ephraim Cruz',  email: 'ephraim.cruz@balanse.com',  className: 'Animal Flow Foundations', discipline: 'Animal Flow',   date: 'Tue, Apr 14', startTime: '9:00 AM',  endTime: '10:00 AM', classLimit: 12, submittedAt: '3 hrs ago',  status: 'pending',  dayIndex: 1, startHour: 9,  duration: 60, coach: 'Ephraim'  },
+  { id: 3, staff: 'Wolf Andrada',  email: 'wolf.andrada@balanse.com',  className: 'Evening Kickboxing',    discipline: 'Kickboxing',       date: 'Wed, Apr 15', startTime: '5:00 PM',  endTime: '6:00 PM',  classLimit: 10, submittedAt: '30 min ago', status: 'pending',  dayIndex: 2, startHour: 17, duration: 60, coach: 'Wolf'     },
+  { id: 4, staff: 'Kate Mercado',  email: 'kate.mercado@balanse.com',  className: 'Mat Pilates Core',      discipline: 'Mat Pilates',      date: 'Thu, Apr 16', startTime: '9:00 AM',  endTime: '10:00 AM', classLimit: 12, submittedAt: '5 hrs ago',  status: 'pending',  dayIndex: 3, startHour: 9,  duration: 60, coach: 'Kate'     },
+  { id: 5, staff: 'Alec Navarro',  email: 'alec.navarro@balanse.com',  className: 'Groundworks Intro',     discipline: 'Groundworks',      date: 'Fri, Apr 17', startTime: '10:00 AM', endTime: '11:00 AM', classLimit: 10, submittedAt: '1 day ago',  status: 'approved', dayIndex: 4, startHour: 10, duration: 60, coach: 'Alec'     },
 ];
 
 const INITIAL_CANCEL_REQS: CancelRequest[] = [
-  { id: 1, student: 'Sofia Reyes', email: 'sofia.r@email.com',   class: 'Yoga',             date: 'Tue, Apr 14', time: '8:00 AM',  coach: 'Jodi',     requestedAt: '1 hr ago',   hoursUntilClass: 18, status: 'pending'  },
-  { id: 2, student: 'Marco Lim',   email: 'marco.lim@email.com', class: 'Calisthenics',     date: 'Wed, Apr 16', time: '7:00 AM',  coach: 'Rex',      requestedAt: '30 min ago', hoursUntilClass: 42, status: 'pending'  },
+  { id: 1, student: 'Sofia Reyes', email: 'sofia.r@email.com',   class: 'Yoga',             date: 'Tue, Apr 14', time: '9:00 AM',  coach: 'Jodi',     requestedAt: '1 hr ago',   hoursUntilClass: 18, status: 'pending'  },
+  { id: 2, student: 'Marco Lim',   email: 'marco.lim@email.com', class: 'Calisthenics',     date: 'Wed, Apr 16', time: '9:00 AM',  coach: 'Rex',      requestedAt: '30 min ago', hoursUntilClass: 42, status: 'pending'  },
   { id: 3, student: 'Diego Tan',   email: 'diego.t@email.com',   class: 'Circuit Training', date: 'Mon, Apr 13', time: '4:00 PM',  coach: 'Rachelle', requestedAt: '3 hrs ago',  hoursUntilClass: 6,  status: 'approved' },
 ];
 
-const EMPTY_FORM = { className: 'Yoga', coach: 'Jodi', dayIndex: 0, startHour: 8, duration: 60, capacity: 12, isOpen: true, status: 'upcoming' as const };
+const EMPTY_FORM = { className: 'Yoga', coach: 'Jodi', dayIndex: 0, startHour: 9, duration: 60, capacity: 12, isOpen: true, status: 'upcoming' as const };
 
 // ── Component ──────────────────────────────────────────────────
 
@@ -91,16 +128,20 @@ export default function AdminSchedulePage() {
 
   const [activeTab, setActiveTab]     = useState<'calendar' | 'requests' | 'cancellations'>('calendar');
   const [blocks, setBlocks]           = useState<ScheduleBlock[]>(INITIAL_BLOCKS);
-  const [bookingReqs, setBookingReqs] = useState<BookingRequest[]>(INITIAL_BOOKING_REQS);
+  const [scheduleReqs, setScheduleReqs] = useState<ClassScheduleRequest[]>(INITIAL_SCHEDULE_REQS);
   const [cancelReqs, setCancelReqs]   = useState<CancelRequest[]>(INITIAL_CANCEL_REQS);
   const [weekOffset, setWeekOffset]   = useState(0);
+  const [calendarView, setCalendarView] = useState<'weekly' | 'monthly'>('weekly');
+  const [calMonth, setCalMonth]       = useState(getInitialCalendarMonth);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
   const [showModal, setShowModal]     = useState(false);
   const [editingBlock, setEditingBlock] = useState<ScheduleBlock | null>(null);
   const [form, setForm]               = useState(EMPTY_FORM);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [rejectBId, setRejectBId]     = useState<number | null>(null);
+  const [selectedReqId, setSelectedReqId] = useState<number | null>(null);
   const [rejectCId, setRejectCId]     = useState<number | null>(null);
   const [coachFilter, setCoachFilter] = useState<string>('All Coaches');
+  const [reqStatusFilter, setReqStatusFilter] = useState<'all' | ReqStatus>('all');
 
   useEffect(() => {
     if (!adminUser) navigate('/admin-login');
@@ -118,18 +159,81 @@ export default function AdminSchedulePage() {
 
   const hasConflict = showModal && detectConflict(form.dayIndex, form.startHour, form.coach, editingBlock?.id);
 
-  const blocksAt = (dayIndex: number, hour: number) => {
-    const filtered = coachFilter === 'All Coaches'
-      ? blocks
-      : blocks.filter(b => b.coach === coachFilter);
-    return filtered.filter(b => b.dayIndex === dayIndex && b.startHour === hour);
+  const today = getTodayLocal();
+  const todayKey = getTodayDateKey();
+  const weekStart = addDaysToDate(getMondayOfWeekContaining(today), weekOffset * 7);
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDaysToDate(weekStart, i));
+  const weekLabel = formatMonSunWeekRange(weekStart);
+  const monthLabel = `${MONTH_NAMES[calMonth.month]} ${calMonth.year}`;
+  const isOnToday = calendarView === 'weekly'
+    ? weekOffset === 0
+    : calMonth.year === today.getFullYear() && calMonth.month === today.getMonth();
+
+  const visibleBlocks = coachFilter === 'All Coaches'
+    ? blocks
+    : blocks.filter(b => b.coach === coachFilter);
+
+  const blocksAt = (dayIndex: number, hour: number) =>
+    visibleBlocks.filter(b => b.dayIndex === dayIndex && b.startHour === hour);
+
+  const blocksForDay = (dayIndex: number) =>
+    visibleBlocks.filter(b => b.dayIndex === dayIndex);
+
+  const monthEventsByDate = (() => {
+    const daysInMonth = new Date(calMonth.year, calMonth.month + 1, 0).getDate();
+    const result: Record<string, MonthGridEvent[]> = {};
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(calMonth.year, calMonth.month, d);
+      const dayBlocks = blocksForDay(jsDayToMonIndex(date.getDay()));
+      if (dayBlocks.length === 0) continue;
+      result[toDateKeyFromParts(calMonth.year, calMonth.month, d)] = dayBlocks.map(block => ({
+        id: `${block.id}-${d}`,
+        time: fmtHour(block.startHour),
+        title: block.className,
+        color: block.color,
+        muted: !block.isOpen || block.status === 'cancelled' || block.status === 'completed',
+      }));
+    }
+    return result;
+  })();
+
+  const selectedMonthDate = selectedMonthKey ? dateKeyToDate(selectedMonthKey) : null;
+  const selectedMonthDayIndex = selectedMonthDate ? jsDayToMonIndex(selectedMonthDate.getDay()) : null;
+  const selectedMonthBlocks = selectedMonthDayIndex == null ? [] : blocksForDay(selectedMonthDayIndex);
+
+  const goToday = () => {
+    setWeekOffset(0);
+    setCalMonth(getInitialCalendarMonth());
+    setSelectedMonthKey(todayKey);
   };
 
-  const weekLabel = weekOffset === 0
-    ? 'Week of Apr 7 – Apr 13, 2026'
-    : weekOffset === 1 ? 'Week of Apr 14 – Apr 20, 2026'
-    : weekOffset === -1 ? 'Week of Mar 31 – Apr 6, 2026'
-    : `Week offset: ${weekOffset > 0 ? '+' : ''}${weekOffset}`;
+  const goPrev = () => {
+    if (calendarView === 'weekly') setWeekOffset(w => w - 1);
+    else {
+      setCalMonth(m => shiftMonth(m.year, m.month, -1));
+      setSelectedMonthKey(null);
+    }
+  };
+
+  const goNext = () => {
+    if (calendarView === 'weekly') setWeekOffset(w => w + 1);
+    else {
+      setCalMonth(m => shiftMonth(m.year, m.month, 1));
+      setSelectedMonthKey(null);
+    }
+  };
+
+  const switchCalendarView = (view: 'weekly' | 'monthly') => {
+    if (view === 'monthly') {
+      setCalMonth({ year: weekStart.getFullYear(), month: weekStart.getMonth() });
+    } else if (selectedMonthKey) {
+      const date = dateKeyToDate(selectedMonthKey);
+      const monday = getMondayOfWeekContaining(date);
+      const todayMonday = getMondayOfWeekContaining(today);
+      setWeekOffset(Math.round((monday.getTime() - todayMonday.getTime()) / (7 * 86_400_000)));
+    }
+    setCalendarView(view);
+  };
 
   const openEdit = (block: ScheduleBlock) => {
     setForm({ className: block.className, coach: block.coach, dayIndex: block.dayIndex, startHour: block.startHour, duration: block.duration, capacity: block.capacity, isOpen: block.isOpen, status: block.status });
@@ -139,7 +243,7 @@ export default function AdminSchedulePage() {
 
   const handleSave = () => {
     if (hasConflict) return; // prevent save if conflict
-    const color = CLASS_COLORS[form.className] || '#C49A3C';
+    const color = CLASS_COLORS[form.className] || '#c49a3c';
     if (editingBlock) {
       setBlocks(prev => prev.map(b => b.id === editingBlock.id ? { ...b, ...form, color } : b));
     } else {
@@ -154,15 +258,54 @@ export default function AdminSchedulePage() {
     setShowModal(false);
   };
 
-  const approveBooking = (id: number) => setBookingReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
-  const rejectBooking  = (id: number) => { setBookingReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r)); setRejectBId(null); };
+  const requestBlockId = (reqId: number) => reqId + 10_000;
+
+  const addRequestToCalendar = (req: ClassScheduleRequest) => {
+    setBlocks(prev => {
+      const blockId = requestBlockId(req.id);
+      if (prev.some(b => b.id === blockId)) return prev;
+      return [...prev, {
+        id: blockId,
+        dayIndex: req.dayIndex,
+        startHour: req.startHour,
+        duration: req.duration,
+        className: req.className,
+        coach: req.coach,
+        capacity: req.classLimit,
+        enrolled: 0,
+        color: CLASS_COLORS[req.discipline] || '#c49a3c',
+        isOpen: true,
+        status: 'upcoming' as const,
+      }];
+    });
+  };
+
+  const removeRequestFromCalendar = (reqId: number) => {
+    const blockId = requestBlockId(reqId);
+    setBlocks(prev => prev.filter(b => b.id !== blockId));
+  };
+
+  const setRequestStatus = (id: number, status: ReqStatus) => {
+    const req = scheduleReqs.find(r => r.id === id);
+    if (!req) return;
+    setScheduleReqs(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    if (status === 'approved') addRequestToCalendar(req);
+    else removeRequestFromCalendar(id);
+  };
+
+  const selectedReq = scheduleReqs.find(r => r.id === selectedReqId) ?? null;
   const approveCancel  = (id: number) => setCancelReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
   const rejectCancel   = (id: number) => { setCancelReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r)); setRejectCId(null); };
 
-  const pendingB = bookingReqs.filter(r => r.status === 'pending').length;
+  const pendingB = scheduleReqs.filter(r => r.status === 'pending').length;
+  const approvedB = scheduleReqs.filter(r => r.status === 'approved').length;
+  const rejectedB = scheduleReqs.filter(r => r.status === 'rejected').length;
   const pendingC = cancelReqs.filter(r => r.status === 'pending').length;
+  const filteredScheduleReqs = reqStatusFilter === 'all'
+    ? scheduleReqs
+    : scheduleReqs.filter(r => r.status === reqStatusFilter);
 
-  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all";
+  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   const StatusBadge = ({ s }: { s: ReqStatus }) => (
@@ -174,14 +317,14 @@ export default function AdminSchedulePage() {
   );
 
   return (
-    <AdminSidebar>
+    <>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ���─ Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <CalendarDays size={14} className="text-[#C49A3C]" />
+              <CalendarDays size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Schedule</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -202,7 +345,7 @@ export default function AdminSchedulePage() {
         {/* ── Page Tabs ── */}
         <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit">
           {([
-            ['calendar', 'Weekly Calendar', null] as const,
+            ['calendar', 'Calendar', null] as const,
             ['requests', 'Booking Requests', pendingB] as const,
             ['cancellations', 'Cancellation Requests', pendingC] as const,
           ]).map(([id, label, count]) => (
@@ -222,62 +365,106 @@ export default function AdminSchedulePage() {
         {/* ══ CALENDAR TAB ══ */}
         {activeTab === 'calendar' && (
           <>
-            <div className="flex items-center gap-4 mb-5 flex-wrap">
-              <div className="flex items-center gap-4 bg-white border border-[#D4CDB5]/60 rounded-2xl px-5 py-3 shadow-sm w-fit">
-                <button onClick={() => setWeekOffset(w => w - 1)} className="w-8 h-8 rounded-xl flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] transition-all"><ChevronLeft size={16} /></button>
-                <span className="text-[#1E2A35] text-sm font-semibold px-2">{weekLabel}</span>
-                <button onClick={() => setWeekOffset(w => w + 1)} className="w-8 h-8 rounded-xl flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] transition-all"><ChevronRight size={16} /></button>
-                {weekOffset !== 0 && <button onClick={() => setWeekOffset(0)} className="text-[#C49A3C] text-xs font-bold hover:text-[#A67E2A] ml-1">Today</button>}
-              </div>
-              {/* Coach filter */}
-              <div className="flex items-center gap-2 bg-white border border-[#D4CDB5]/60 rounded-2xl px-4 py-2.5 shadow-sm">
-                <span className="text-[#8A7E6E] text-xs font-medium">Coach:</span>
-                <select
-                  value={coachFilter}
-                  onChange={e => setCoachFilter(e.target.value)}
-                  className="text-xs text-[#1E2A35] bg-transparent outline-none cursor-pointer font-semibold"
-                >
-                  <option value="All Coaches">All Coaches</option>
-                  {COACHES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Class-type legend */}
-            <div className="flex items-center gap-3 mb-3 flex-wrap">
-              {SERVICES.map(s => (
-                <div key={s} className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CLASS_COLORS[s] }} />
-                  <span className="text-[#8A7E6E] text-xs">{s}</span>
-                </div>
-              ))}
-            </div>
-            {/* Status legend */}
-            <div className="flex items-center gap-4 mb-5">
-              {[
-                { label: 'Upcoming',  bg: 'bg-white border border-[#D4CDB5]/60', dot: 'bg-[#6B8E6B]' },
-                { label: 'Completed', bg: 'bg-white border border-[#D4CDB5]/60', dot: 'bg-[#3A4A5A]' },
-                { label: 'Cancelled', bg: 'bg-white border border-[#D4CDB5]/60', dot: 'bg-red-400' },
-                { label: 'Closed',    bg: 'bg-white border border-[#D4CDB5]/60', dot: 'bg-[#D4CDB5]' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
-                  <span className="text-[#8A7E6E] text-xs">{s.label}</span>
-                </div>
-              ))}
-            </div>
-
             <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#D4CDB5]/40 flex-wrap">
+                <div className="flex items-center gap-0.5 bg-[#F8F3E8] rounded-lg p-0.5">
+                  {([['weekly', 'Weekly'], ['monthly', 'Monthly']] as const).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => switchCalendarView(id)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wide transition-all ${
+                        calendarView === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-center gap-1.5 flex-1 min-w-[220px]">
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label={calendarView === 'weekly' ? 'Previous week' : 'Previous month'}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] transition-all"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <span
+                    className="text-[#1E2A35] text-center min-w-[11rem]"
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
+                  >
+                    {calendarView === 'weekly' ? weekLabel : monthLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label={calendarView === 'weekly' ? 'Next week' : 'Next month'}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] transition-all"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                  {!isOnToday && (
+                    <button
+                      type="button"
+                      onClick={goToday}
+                      className="text-[#c49a3c] text-[11px] font-bold px-2 py-1 rounded-md hover:bg-[#c49a3c]/10 transition-colors"
+                    >
+                      Today
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative ml-auto">
+                  <select
+                    value={coachFilter}
+                    onChange={e => setCoachFilter(e.target.value)}
+                    aria-label="Filter by coach"
+                    className="appearance-none pl-2.5 pr-7 py-1 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-[11px] font-semibold outline-none cursor-pointer focus:ring-2 focus:ring-[#c49a3c]/20"
+                  >
+                    <option value="All Coaches">All Coaches</option>
+                    {COACHES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-x-3 gap-y-1.5 px-3 py-2 border-b border-[#D4CDB5]/30 flex-wrap bg-[#F8F3E8]/40">
+                {SERVICES.map(s => (
+                  <div key={s} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CLASS_COLORS[s] }} />
+                    <span className="text-[#8A7E6E] text-[10px]">{s}</span>
+                  </div>
+                ))}
+                <span className="w-px h-3 bg-[#D4CDB5]/80 mx-0.5" />
+                {[
+                  { label: 'Upcoming',  dot: 'bg-[#6B8E6B]' },
+                  { label: 'Completed', dot: 'bg-[#3A4A5A]' },
+                  { label: 'Cancelled', dot: 'bg-red-400' },
+                  { label: 'Closed',    dot: 'bg-[#D4CDB5]' },
+                ].map(s => (
+                  <div key={s.label} className="flex items-center gap-1">
+                    <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                    <span className="text-[#8A7E6E] text-[10px]">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+
+            {calendarView === 'weekly' && (
               <div className="overflow-x-auto">
                 <div style={{ minWidth: '900px' }}>
                   <div className="grid border-b border-[#D4CDB5]/50" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
-                    <div className="px-3 py-3 bg-[#F8F3E8]/60" />
-                    {WEEK_LABELS.map((day, i) => (
-                      <div key={day} className="px-3 py-3 text-center border-l border-[#D4CDB5]/40 bg-[#F8F3E8]/60">
-                        <p className="text-[#1E2A35] text-xs font-bold uppercase tracking-wider">{day}</p>
-                        <p className="text-[#B0A898] text-xs">{WEEK_DATES[i]}</p>
+                    <div className="px-3 py-2.5 bg-[#F8F3E8]/60" />
+                    {WEEK_LABELS.map((day, i) => {
+                      const isTodayCol = toDateKey(weekDates[i]) === todayKey;
+                      return (
+                      <div key={day} className={`px-3 py-2.5 text-center border-l border-[#D4CDB5]/40 ${isTodayCol ? 'bg-[#c49a3c]/10' : 'bg-[#F8F3E8]/60'}`}>
+                        <p className={`text-xs font-bold uppercase tracking-wider ${isTodayCol ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>{day}</p>
+                        <p className={`text-xs ${isTodayCol ? 'text-[#c49a3c] font-semibold' : 'text-[#B0A898]'}`}>{formatDayShort(weekDates[i])}</p>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   {HOURS.map(hour => (
                     <div key={hour} className="grid border-b border-[#D4CDB5]/25 last:border-b-0" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
@@ -327,7 +514,7 @@ export default function AdminSchedulePage() {
                             })}
                             <button
                               onClick={() => { setForm({ ...EMPTY_FORM, dayIndex, startHour: hour }); setEditingBlock(null); setShowModal(true); }}
-                              className="w-full flex items-center justify-center rounded-xl border border-dashed border-[#D4CDB5]/60 text-[#C0B8A8] hover:text-[#C49A3C] hover:border-[#C49A3C]/40 hover:bg-[#C49A3C]/05 transition-all opacity-0 group-hover:opacity-100"
+                              className="w-full flex items-center justify-center rounded-xl border border-dashed border-[#D4CDB5]/60 text-[#C0B8A8] hover:text-[#c49a3c] hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/05 transition-all opacity-0 group-hover:opacity-100"
                               style={{ height: cellBlocks.length > 0 ? '24px' : '40px' }}
                             >
                               <Plus size={12} />
@@ -339,57 +526,146 @@ export default function AdminSchedulePage() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {calendarView === 'monthly' && (
+              <MonthCalendarGrid
+                year={calMonth.year}
+                month={calMonth.month}
+                eventsByDate={monthEventsByDate}
+                todayKey={todayKey}
+                selectedDateKey={selectedMonthKey}
+                onSelectDate={setSelectedMonthKey}
+                className="rounded-none border-0 shadow-none"
+              />
+            )}
             </div>
-            <p className="text-[#B0A898] text-xs mt-4 text-right">{blocks.length} schedule blocks this week</p>
+
+            {calendarView === 'monthly' && selectedMonthDate && (
+                  <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden mt-4">
+                    <div className="px-5 py-4 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/60 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>
+                          {selectedMonthDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                        <p className="text-[#8A7E6E] text-xs mt-0.5">{selectedMonthBlocks.length} class{selectedMonthBlocks.length === 1 ? '' : 'es'} this day</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...EMPTY_FORM, dayIndex: selectedMonthDayIndex ?? 0 });
+                          setEditingBlock(null);
+                          setShowModal(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#1E2A35] text-white text-xs font-semibold hover:bg-[#263545] active:scale-95 transition-all"
+                      >
+                        <Plus size={13} /> Add Block
+                      </button>
+                    </div>
+                    {selectedMonthBlocks.length === 0 ? (
+                      <p className="px-5 py-8 text-center text-[#B0A898] text-sm">No classes scheduled for this weekday.</p>
+                    ) : (
+                      <div className="divide-y divide-[#D4CDB5]/30">
+                        {selectedMonthBlocks.map(block => (
+                          <button
+                            key={block.id}
+                            type="button"
+                            onClick={() => openEdit(block)}
+                            className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-[#F8F3E8]/70 transition-colors bg-transparent border-0"
+                          >
+                            <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: block.color }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[#1E2A35] text-sm font-semibold truncate">{block.className}</p>
+                              <p className="text-[#8A7E6E] text-xs">{fmtHour(block.startHour)} · {block.duration}m · Coach {block.coach}</p>
+                            </div>
+                            <span className="text-[#8A7E6E] text-xs">{block.enrolled}/{block.capacity}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+            )}
+
+            <p className="text-[#B0A898] text-xs mt-3 text-right">{visibleBlocks.length} schedule blocks {calendarView === 'weekly' ? 'this week' : 'this month'}</p>
           </>
         )}
 
         {/* ══ BOOKING REQUESTS TAB ══ */}
         {activeTab === 'requests' && (
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between bg-[#F8F3E8]/60">
-              <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Booking Requests</h2>
-              <span className="text-[#8A7E6E] text-xs">{bookingReqs.length} total · {pendingB} pending</span>
+            <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-[#F8F3E8]/60">
+              <div>
+                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Booking Requests</h2>
+                <p className="text-[#8A7E6E] text-xs mt-0.5">Class schedule requests submitted by staff · click a row to review</p>
+              </div>
+              <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-xl p-1 w-fit">
+                {([
+                  ['all', 'All', scheduleReqs.length],
+                  ['pending', 'Pending', pendingB],
+                  ['approved', 'Approved', approvedB],
+                  ['rejected', 'Rejected', rejectedB],
+                ] as const).map(([id, label, count]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setReqStatusFilter(id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      reqStatusFilter === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                    }`}
+                  >
+                    {label}
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      reqStatusFilter === id ? 'bg-white/20 text-white' : 'bg-[#EDE8D8] text-[#8A7E6E]'
+                    }`}>{count}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
-              {['Student', 'Class / Date', 'Method', 'Amount', 'Reference', 'Status', 'Actions'].map(h => (
-                <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-              ))}
-            </div>
-            <div className="divide-y divide-[#D4CDB5]/30">
-              {bookingReqs.map(req => (
-                <div key={req.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px]">
-                  <div className="min-w-0">
-                    <p className="text-[#1E2A35] text-sm font-semibold truncate">{req.student}</p>
-                    <p className="text-[#B0A898] text-xs truncate">{req.email}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[#1E2A35] text-sm font-medium truncate">{req.class}</p>
-                    <p className="text-[#9A8E7E] text-xs truncate">{req.date} · {req.time}</p>
-                  </div>
-                  <p className="text-[#5A5048] text-xs truncate">{req.method}</p>
-                  <p className="text-[#1E2A35] font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem' }}>₱{req.amount}</p>
-                  <p className="text-[#8A7E6E] text-xs font-mono truncate">{req.ref}</p>
-                  <StatusBadge s={req.status} />
-                  {/* Actions — fixed 150px column */}
-                  <div className="flex items-center gap-1 w-[150px]">
-                    {req.status === 'pending' && (
-                      rejectBId === req.id ? (
-                        <>
-                          <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Reject?</span>
-                          <button onClick={() => rejectBooking(req.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all">Yes</button>
-                          <button onClick={() => setRejectBId(null)} className="h-7 px-2.5 bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] text-xs rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all">No</button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => approveBooking(req.id)} className="h-7 px-2.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 active:scale-95 transition-all whitespace-nowrap">Approve</button>
-                          <button onClick={() => setRejectBId(req.id)} className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-bold rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap">Reject</button>
-                        </>
-                      )
-                    )}
-                  </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[800px]">
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
+                  {['Class Name', 'Discipline', 'Start Time', 'End Time', 'Class Limit', 'Status'].map(h => (
+                    <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
+                  ))}
                 </div>
-              ))}
+                {filteredScheduleReqs.length === 0 ? (
+                  <div className="px-6 py-14 text-center">
+                    <p className="text-[#1E2A35] text-sm font-semibold">No {reqStatusFilter === 'all' ? '' : `${reqStatusFilter} `}requests</p>
+                    <p className="text-[#B0A898] text-xs mt-1">
+                      {reqStatusFilter === 'all'
+                        ? 'Staff class schedule requests will appear here.'
+                        : `Switch filters to see requests that are not ${reqStatusFilter}.`}
+                    </p>
+                  </div>
+                ) : (
+                <div className="divide-y divide-[#D4CDB5]/30">
+                  {filteredScheduleReqs.map(req => (
+                    <button
+                      type="button"
+                      key={req.id}
+                      onClick={() => setSelectedReqId(req.id)}
+                      className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] w-full text-left cursor-pointer bg-transparent border-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[#1E2A35] text-sm font-semibold truncate">{req.className}</p>
+                        <p className="text-[#B0A898] text-xs truncate">Requested by {req.staff}</p>
+                      </div>
+                      <div className="min-w-0 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.discipline] || '#c49a3c' }} />
+                        <p className="text-[#1E2A35] text-sm truncate">{req.discipline}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[#1E2A35] text-sm font-medium truncate">{req.startTime}</p>
+                        <p className="text-[#9A8E7E] text-xs truncate">{req.date}</p>
+                      </div>
+                      <p className="text-[#1E2A35] text-sm truncate">{req.endTime}</p>
+                      <p className="text-[#1E2A35] text-sm">{req.classLimit} spots</p>
+                      <StatusBadge s={req.status} />
+                    </button>
+                  ))}
+                </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -446,6 +722,145 @@ export default function AdminSchedulePage() {
         )}
       </div>
 
+      {/* ── Booking Request Review Modal ── */}
+      {selectedReq && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSelectedReqId(null); }}
+        >
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-[460px] max-h-[90vh] overflow-y-auto">
+            <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">Class schedule request</p>
+                <h3 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+                  {selectedReq.className}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedReqId(null)}
+                className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-7 py-6 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[#8A7E6E] text-xs">Requested by {selectedReq.staff} · {selectedReq.submittedAt}</p>
+                <StatusBadge s={selectedReq.status} />
+              </div>
+
+              {selectedReq.status === 'approved' && (
+                <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
+                  <Check size={15} className="text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-green-700 text-xs leading-relaxed">This class is approved and added to the weekly schedule. You can undo this decision below.</p>
+                </div>
+              )}
+              {selectedReq.status === 'rejected' && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                  <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-red-700 text-xs leading-relaxed">This request was rejected and will not appear on the schedule. You can undo this decision below.</p>
+                </div>
+              )}
+              {selectedReq.status === 'pending' && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                  <Clock size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-amber-700 text-xs leading-relaxed">Approve to add this class to the schedule, or reject to decline the staff request.</p>
+                </div>
+              )}
+
+              <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 overflow-hidden">
+                <div className="h-1.5" style={{ backgroundColor: CLASS_COLORS[selectedReq.discipline] || '#c49a3c' }} />
+                <div className="p-4 flex flex-col gap-3">
+                  {[
+                    ['Class Name', selectedReq.className],
+                    ['Discipline', selectedReq.discipline],
+                    ['Start Time', `${selectedReq.date} · ${selectedReq.startTime}`],
+                    ['End Time', selectedReq.endTime],
+                    ['Class Limit', `${selectedReq.classLimit} spots`],
+                    ['Coach', selectedReq.coach],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between gap-3">
+                      <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">{label}</span>
+                      <span className="text-[#1E2A35] text-sm font-semibold text-right">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-7 pb-7 flex flex-col gap-2">
+              {selectedReq.status === 'pending' && (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(selectedReq.id, 'rejected')}
+                    className="flex-1 py-3 rounded-full bg-red-50 text-red-600 border border-red-200 text-sm font-semibold hover:bg-red-100 active:scale-[0.97] transition-all"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(selectedReq.id, 'approved')}
+                    className="flex-1 py-3 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 active:scale-[0.97] transition-all shadow-sm"
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                  >
+                    Approve
+                  </button>
+                </div>
+              )}
+              {selectedReq.status === 'approved' && (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(selectedReq.id, 'pending')}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 text-[#1E2A35] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
+                  >
+                    <Undo2 size={14} /> Undo Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(selectedReq.id, 'rejected')}
+                    className="flex-1 py-3 rounded-full bg-red-50 text-red-600 border border-red-200 text-sm font-semibold hover:bg-red-100 active:scale-[0.97] transition-all"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+              {selectedReq.status === 'rejected' && (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(selectedReq.id, 'pending')}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 text-[#1E2A35] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
+                  >
+                    <Undo2 size={14} /> Undo Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(selectedReq.id, 'approved')}
+                    className="flex-1 py-3 rounded-full bg-green-600 text-white text-sm font-semibold hover:bg-green-700 active:scale-[0.97] transition-all shadow-sm"
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                  >
+                    Approve
+                  </button>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedReqId(null)}
+                className="w-full py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Add / Edit Modal ── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }} onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
@@ -496,7 +911,7 @@ export default function AdminSchedulePage() {
                   <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Day</label>
                   <div className="relative">
                     <select value={form.dayIndex} onChange={e => setForm(f => ({ ...f, dayIndex: Number(e.target.value) }))} className={selectClass}>
-                      {WEEK_LABELS.map((d, i) => <option key={d} value={i}>{d} {WEEK_DATES[i]}</option>)}
+                      {WEEK_LABELS.map((d, i) => <option key={d} value={i}>{d} {formatDayShort(weekDates[i])}</option>)}
                     </select>
                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
                   </div>
@@ -554,7 +969,7 @@ export default function AdminSchedulePage() {
                       className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-medium ${
                         form.status === opt.value
                           ? 'bg-[#1E2A35] border-[#1E2A35] text-white'
-                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#C49A3C]/40'
+                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#c49a3c]/40'
                       }`}
                     >
                       <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${form.status === opt.value ? 'border-white bg-white' : 'border-[#B0A898]'}`}>
@@ -602,6 +1017,6 @@ export default function AdminSchedulePage() {
           </div>
         </div>
       )}
-    </AdminSidebar>
+    </>
   );
 }

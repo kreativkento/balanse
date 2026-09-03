@@ -15,9 +15,11 @@ import {
   fetchAccountWithProfileByAuthUserId,
   fetchOrRepairAccountWithProfileByAuthUserId,
   isRoleMatch,
+  updateOwnProfileImages,
   updateProfileByAuthUserId,
 } from '../../lib/profile-service';
 import type { AccountWithClientProfile } from '../../lib/database.types';
+import { loadOwnProfileImageUrls, mergeProfileImageUrls } from '../../lib/storage-service';
 
 export interface UserProfile {
   firstName: string;
@@ -36,6 +38,8 @@ export interface UserProfile {
   termsAccepted: boolean;
   shareAvailability: boolean;
   profileComplete: boolean;
+  photo: string;
+  coverImage: string;
 }
 
 export interface User {
@@ -78,6 +82,8 @@ const defaultProfile = (): UserProfile => ({
   termsAccepted: false,
   shareAvailability: false,
   profileComplete: false,
+  photo: '',
+  coverImage: '',
 });
 
 function mapToUser(data: AccountWithClientProfile): User {
@@ -89,6 +95,15 @@ function mapToUser(data: AccountWithClientProfile): User {
   };
 }
 
+async function mapToUserWithBucket(data: AccountWithClientProfile): Promise<User> {
+  const mapped = mapToUser(data);
+  const bucket = await loadOwnProfileImageUrls();
+  return {
+    ...mapped,
+    profile: mergeProfileImageUrls(mapped.profile, bucket),
+  };
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -97,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hydrateUserSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && data.account.role === 'user' && isRoleMatch(data.account, 'user')) {
-      setUser(mapToUser(data as AccountWithClientProfile));
+      setUser(await mapToUserWithBucket(data as AccountWithClientProfile));
       return;
     }
     setUser(null);
@@ -151,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('user') };
     }
 
-    setUser(mapToUser(accountData as AccountWithClientProfile));
+    setUser(await mapToUserWithBucket(accountData as AccountWithClientProfile));
     return { success: true };
   };
 
@@ -227,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       const refreshedAccount = await fetchAccountWithProfileByAuthUserId(loginData.user.id);
-      setUser(mapToUser((refreshedAccount ?? repairedAccount) as AccountWithClientProfile));
+      setUser(await mapToUserWithBucket((refreshedAccount ?? repairedAccount) as AccountWithClientProfile));
       return { success: true };
     }
 
@@ -246,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: wrongRoleMessage('user') };
       }
 
-      setUser(mapToUser(accountData as AccountWithClientProfile));
+      setUser(await mapToUserWithBucket(accountData as AccountWithClientProfile));
       return { success: true };
     }
 
@@ -255,13 +270,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const persistProfile = async (update: Partial<UserProfile>) => {
-    const dbUpdate = userProfileToDbUpdate(update);
-    if (Object.keys(dbUpdate).length === 0) return;
-
     const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
-      await updateProfileByAuthUserId(authUser.id, dbUpdate);
+    if (!authUser) return;
+
+    if (update.photo || update.coverImage) {
+      await updateOwnProfileImages(authUser.id, {
+        photo: update.photo,
+        coverImage: update.coverImage,
+      });
     }
+
+    const dbUpdate = userProfileToDbUpdate({ ...update, photo: undefined, coverImage: undefined });
+    if (Object.keys(dbUpdate).length === 0) return;
+    await updateProfileByAuthUserId(authUser.id, dbUpdate);
   };
 
   const completeProfile = (data: Partial<UserProfile>) => {
@@ -274,7 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const derivedName = buildFullName(fn, mi, ln) || prev.name;
       const updated: UserProfile = { ...merged, name: data.name || derivedName };
 
-      void persistProfile(updated);
+      void persistProfile({ ...data, name: updated.name, profileComplete: true });
       return { ...prev, name: updated.name, profile: updated };
     });
   };
@@ -283,7 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((prev) => {
       if (!prev) return prev;
       const updated: UserProfile = { ...prev.profile, ...data };
-      void persistProfile(updated);
+      void persistProfile(data);
       return { ...prev, name: data.name || prev.name, profile: updated };
     });
   };

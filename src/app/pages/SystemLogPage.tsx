@@ -154,7 +154,7 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-8">
           <div className="inline-flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3">
-            <Icon size={11} className="text-[#C49A3C]" />
+            <Icon size={11} className="text-[#c49a3c]" />
             <span className="text-[#1E2A35] text-xs font-bold uppercase tracking-widest">System Logs</span>
           </div>
           <h1

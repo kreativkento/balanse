@@ -51,7 +51,7 @@ export function DisciplineCardsGrid({
               {showBookAction && onBook && (
                 <button
                   onClick={onBook}
-                  className="mt-4 w-full flex items-center justify-center gap-2 bg-[#C49A3C] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#A67E2A]"
+                  className="mt-4 w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
                 >
                   Book Now <ChevronRight size={16} />
                 </button>

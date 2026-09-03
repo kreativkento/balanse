@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Images, Plus, Pencil, Trash2, X, Check, Search, Tag, Upload } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { AdminSidebar } from '../components/layout/AdminSidebar';
 import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -56,7 +55,7 @@ function PhotoCard({
 
   const CAT_COLORS: Record<Category, string> = {
     Studio:    'bg-[#EDE8D8] text-[#5A5048]',
-    Classes:   'bg-[#C49A3C]/12 text-[#A67E2A]',
+    Classes:   'bg-[#c49a3c]/12 text-[#a67f2e]',
     Events:    'bg-[#3A4A5A]/10 text-[#3A4A5A]',
     Community: 'bg-[#8A9E7A]/15 text-[#5A6E4A]',
   };
@@ -107,7 +106,7 @@ function PhotoCard({
         <div className="flex items-center justify-between text-xs text-[#B0A898]">
           <span>{photo.uploadedAt}</span>
           {photo.taggedStudents.length > 0 && (
-            <span className="flex items-center gap-1 text-[#C49A3C]">
+            <span className="flex items-center gap-1 text-[#c49a3c]">
               <Tag size={10} /> {photo.taggedStudents.length}
             </span>
           )}
@@ -157,7 +156,7 @@ function PhotoModal({
     onSave(form);
   };
 
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
   const SEL = INP + ' appearance-none cursor-pointer';
 
   return (
@@ -221,8 +220,8 @@ function PhotoModal({
                   onClick={() => toggleStudent(s)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                     form.taggedStudents.includes(s)
-                      ? 'bg-[#C49A3C] text-white border-[#C49A3C]'
-                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#C49A3C]/40 hover:text-[#1E2A35]'
+                      ? 'bg-[#c49a3c] text-white border-[#c49a3c]'
+                      : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-[#c49a3c]/40 hover:text-[#1E2A35]'
                   }`}
                 >
                   {s.split(' ')[0]}
@@ -230,7 +229,7 @@ function PhotoModal({
               ))}
             </div>
             {form.taggedStudents.length > 0 && (
-              <p className="text-[#C49A3C] text-xs mt-1.5">{form.taggedStudents.length} student{form.taggedStudents.length !== 1 ? 's' : ''} tagged</p>
+              <p className="text-[#c49a3c] text-xs mt-1.5">{form.taggedStudents.length} student{form.taggedStudents.length !== 1 ? 's' : ''} tagged</p>
             )}
           </div>
 
@@ -296,7 +295,7 @@ export default function AdminGalleryPage() {
   const handleDelete = (id: number) => setPhotos(prev => prev.filter(p => p.id !== id));
 
   return (
-    <AdminSidebar>
+    <>
       {showModal && (
         <PhotoModal
           photo={editingPhoto ? { url: editingPhoto.url, caption: editingPhoto.caption, category: editingPhoto.category, taggedStudents: editingPhoto.taggedStudents, tall: editingPhoto.tall } : null}
@@ -311,7 +310,7 @@ export default function AdminGalleryPage() {
         <div className="flex items-center justify-between mb-7">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Images size={14} className="text-[#C49A3C]" />
+              <Images size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Gallery</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -347,7 +346,7 @@ export default function AdminGalleryPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search caption or tagged student…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
           <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} photo{filtered.length !== 1 ? 's' : ''}</span>
@@ -357,7 +356,7 @@ export default function AdminGalleryPage() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm">
-              <Images size={26} className="text-[#C49A3C]/50" />
+              <Images size={26} className="text-[#c49a3c]/50" />
             </div>
             <h3 className="text-[#1E2A35] mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>No Photos Found</h3>
             <p className="text-[#8A7E6E] text-sm max-w-xs">Try adjusting your filters or upload a new photo.</p>
@@ -375,7 +374,7 @@ export default function AdminGalleryPage() {
             {/* Upload placeholder card */}
             <button
               onClick={openUpload}
-              className="flex flex-col items-center justify-center h-44 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#C49A3C]/40 hover:text-[#C49A3C] hover:bg-[#C49A3C]/04 transition-all group"
+              className="flex flex-col items-center justify-center h-44 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#c49a3c]/40 hover:text-[#c49a3c] hover:bg-[#c49a3c]/04 transition-all group"
             >
               <Plus size={24} className={`mb-2 ${ICON_HOVER_GROW}`} />
               <span className="text-xs font-medium">Upload Photo</span>
@@ -383,6 +382,6 @@ export default function AdminGalleryPage() {
           </div>
         )}
       </div>
-    </AdminSidebar>
+    </>
   );
 }

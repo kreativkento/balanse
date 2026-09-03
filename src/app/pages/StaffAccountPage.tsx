@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { AccountImagesCard } from '../components/ProfileImages';
 
 export default function StaffAccountPage() {
   const navigate = useNavigate();
-  const { staffUser } = useStaffAuth();
+  const { staffUser, staffProfile, updateStaffProfile } = useStaffAuth();
 
   const [currentPw,  setCurrentPw]  = useState('');
   const [newPw,      setNewPw]      = useState('');
@@ -30,7 +31,7 @@ export default function StaffAccountPage() {
     setTimeout(() => setSuccess(false), 4000);
   };
 
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
@@ -54,27 +55,21 @@ export default function StaffAccountPage() {
 
         <div className="py-6 pb-10 flex flex-col gap-5">
 
-          {/* Staff Profile Card */}
-          <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4">Your Account</p>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#1E2A35]/08 border border-[#1E2A35]/15 flex items-center justify-center shrink-0">
-                <span className="text-[#1E2A35] font-bold text-lg">{staffUser.name.split(' ').map(n => n[0]).join('').slice(0,2)}</span>
-              </div>
-              <div>
-                <p className="text-[#1E2A35] font-semibold">{staffUser.name}</p>
-                <p className="text-[#8A7E6E] text-sm">{staffUser.email}</p>
-                <span className={`mt-1 inline-block text-xs font-bold px-2.5 py-0.5 rounded-full ${staffUser.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#C49A3C]/12 text-[#A67E2A]'}`}>
-                  {staffUser.role}
-                </span>
-              </div>
-            </div>
-          </div>
+          <AccountImagesCard
+            name={staffProfile?.displayName || staffUser.name}
+            email={staffUser.email}
+            roleLabel={staffUser.role}
+            photoUrl={staffProfile?.photo || ''}
+            coverUrl={staffProfile?.coverImage || ''}
+            initials={staffUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            onPhotoUploaded={(url) => updateStaffProfile({ photo: url })}
+            onCoverUploaded={(url) => updateStaffProfile({ coverImage: url })}
+          />
 
           {/* Change Password */}
           <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center gap-2 bg-[#F8F3E8]/60">
-              <KeyRound size={15} className="text-[#C49A3C]" />
+              <KeyRound size={15} className="text-[#c49a3c]" />
               <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}>Change Password</h2>
             </div>
 

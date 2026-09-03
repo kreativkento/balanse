@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoImg from 'figma:asset/bbdd3c4813a82e401f4feb97932ab9a28f6161ee.png';
+import { ProfileAvatar } from '../ProfileImages';
 
 const NAV_LINKS = [
   { label: 'Dashboard',  path: '/admin-dashboard', icon: LayoutDashboard },
@@ -61,7 +62,7 @@ export function AdminTopBar() {
             BALANSÉ
           </span>
           <div className="flex items-center gap-1 bg-[#1E2A35] rounded-full px-2 py-0.5 ml-0.5">
-            <Crown size={9} className="text-[#C49A3C]" />
+            <Crown size={9} className="text-[#c49a3c]" />
             <span className="text-white text-[0.58rem] font-bold uppercase tracking-widest">Admin</span>
           </div>
         </Link>
@@ -126,15 +127,21 @@ export function AdminTopBar() {
 
         {/* ── Right: User + Logout ── */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#1E2A35] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-xs">{initials}</span>
+          <Link to="/admin-account" className="flex items-center gap-2 hover:opacity-90 transition-opacity" title="Edit profile images">
+            <div className="w-8 h-8 bg-[#1E2A35] rounded-full flex items-center justify-center overflow-hidden">
+              <ProfileAvatar
+                src={adminUser?.photo}
+                initials={initials}
+                alt=""
+                className="h-full w-full"
+                initialsClassName="text-white font-bold text-xs"
+              />
             </div>
             <div className="hidden lg:block">
               <p className="text-[#1E2A35] text-xs font-semibold leading-none">{adminUser?.name}</p>
               <p className="text-[#B0A898] text-[0.65rem] mt-0.5">Admin</p>
             </div>
-          </div>
+          </Link>
 
           {!confirmLogout ? (
             <button

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Newspaper, Tag, Calendar, ChevronRight, Search, X } from 'lucide-react';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 
-// ── Mock news data (in production this comes from the admin panel) ──
+// ── Mock bulletin data (in production this comes from the admin panel) ──
 
-interface NewsPost {
+interface BulletinPost {
   id: number;
   title: string;
   category: 'Event' | 'Promo' | 'Announcement' | 'Update';
@@ -17,7 +18,7 @@ interface NewsPost {
   pinned?: boolean;
 }
 
-const NEWS: NewsPost[] = [
+const BULLETIN_POSTS: BulletinPost[] = [
   {
     id: 1,
     title: 'Summer Grand Open Mat — Free Community Session!',
@@ -25,8 +26,8 @@ const NEWS: NewsPost[] = [
     excerpt: 'Join us this June 21 for a free open mat event celebrating the summer solstice. All fitness levels welcome.',
     body: `Celebrate summer with BALANSÉ! On June 21, we're opening our studio doors for a free Community Open Mat session from 8:00 AM to 11:00 AM. Expect a fun-filled morning of mixed movement classes, partner drills, and a light refreshment break. Bring a friend and experience BALANSÉ together.`,
     date: 'Jun 5, 2026',
-    imageColor: '#C49A3C',
-    badgeColor: 'bg-[#C49A3C]/12 text-[#A67E2A]',
+    imageColor: '#c49a3c',
+    badgeColor: 'bg-[#c49a3c]/12 text-[#a67f2e]',
     badgeText: 'Event',
     pinned: true,
   },
@@ -92,7 +93,7 @@ const NEWS: NewsPost[] = [
 const CATEGORIES = ['All', 'Event', 'Promo', 'Announcement', 'Update'] as const;
 type Category = typeof CATEGORIES[number];
 
-function NewsDetailModal({ post, onClose }: { post: NewsPost; onClose: () => void }) {
+function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -123,49 +124,50 @@ function NewsDetailModal({ post, onClose }: { post: NewsPost; onClose: () => voi
   );
 }
 
-export default function NewsPage() {
+export default function BulletinPage() {
   const [activeCategory, setActiveCategory] = useState<Category>('All');
   const [search, setSearch] = useState('');
-  const [selectedPost, setSelectedPost] = useState<NewsPost | null>(null);
+  const [selectedPost, setSelectedPost] = useState<BulletinPost | null>(null);
 
-  const filtered = NEWS.filter(n => {
+  const filtered = BULLETIN_POSTS.filter((n) => {
     const matchCat = activeCategory === 'All' || n.category === activeCategory;
-    const matchSearch = n.title.toLowerCase().includes(search.toLowerCase()) || n.excerpt.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      n.title.toLowerCase().includes(search.toLowerCase()) ||
+      n.excerpt.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const pinned = filtered.filter(n => n.pinned);
-  const regular = filtered.filter(n => !n.pinned);
+  const pinned = filtered.filter((n) => n.pinned);
+  const regular = filtered.filter((n) => !n.pinned);
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
-      {selectedPost && <NewsDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />}
+      {selectedPost && <BulletinDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />}
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-10">
-
-        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <Newspaper size={16} className="text-[#C49A3C]" />
-            <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Latest from BALANSÉ</span>
-          </div>
-          <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '0.04em' }}>
-            News &amp; Updates
+          <PublicBreadcrumb parent="Our Community" current="Bulletin" parentTo="/bulletin" />
+          <h1
+            className="text-[#1E2A35] leading-tight"
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '0.04em' }}
+          >
+            Bulletin
           </h1>
-          <p className="text-[#8A7E6E] text-sm mt-1 max-w-xl">Stay updated on upcoming events, special promos, and studio announcements.</p>
+          <p className="text-[#8A7E6E] text-sm mt-1 max-w-xl">
+            Stay updated on upcoming events, special promos, and studio announcements.
+          </p>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-8">
           <div className="flex gap-2 flex-wrap">
-            {CATEGORIES.map(cat => (
+            {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
                   activeCategory === cat
                     ? 'bg-[#1E2A35] text-white border-[#1E2A35]'
-                    : 'bg-white text-[#5A5048] border-[#D4CDB5]/60 hover:border-[#C49A3C]/40'
+                    : 'bg-white text-[#5A5048] border-[#D4CDB5]/60 hover:border-[#c49a3c]/40'
                 }`}
               >
                 {cat}
@@ -177,34 +179,34 @@ export default function NewsPage() {
             <input
               type="text"
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search news..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-full border border-[#D4CDB5]/60 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/50 transition-all placeholder-[#C0B8A8]"
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search bulletin..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-full border border-[#D4CDB5]/60 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/20 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
         </div>
 
-        {/* Pinned posts */}
         {pinned.length > 0 && (
           <div className="mb-8">
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4 flex items-center gap-1.5">
               <Tag size={11} /> Featured
             </p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {pinned.map(post => (
-                <NewsCard key={post.id} post={post} onClick={() => setSelectedPost(post)} featured />
+              {pinned.map((post) => (
+                <BulletinCard key={post.id} post={post} onClick={() => setSelectedPost(post)} featured />
               ))}
             </div>
           </div>
         )}
 
-        {/* Regular posts */}
         {regular.length > 0 && (
           <div>
-            {pinned.length > 0 && <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4">All Posts</p>}
+            {pinned.length > 0 && (
+              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4">All Posts</p>
+            )}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {regular.map(post => (
-                <NewsCard key={post.id} post={post} onClick={() => setSelectedPost(post)} />
+              {regular.map((post) => (
+                <BulletinCard key={post.id} post={post} onClick={() => setSelectedPost(post)} />
               ))}
             </div>
           </div>
@@ -212,8 +214,8 @@ export default function NewsPage() {
 
         {filtered.length === 0 && (
           <div className="text-center py-16">
-            <Newspaper size={32} className="text-[#C49A3C]/40 mx-auto mb-3" />
-            <p className="text-[#9A8E7E]">No news found matching your filters.</p>
+            <Newspaper size={32} className="text-[#c49a3c]/40 mx-auto mb-3" />
+            <p className="text-[#9A8E7E]">No bulletin posts found matching your filters.</p>
           </div>
         )}
       </div>
@@ -221,20 +223,35 @@ export default function NewsPage() {
   );
 }
 
-function NewsCard({ post, onClick, featured }: { post: NewsPost; onClick: () => void; featured?: boolean }) {
+function BulletinCard({
+  post,
+  onClick,
+  featured,
+}: {
+  post: BulletinPost;
+  onClick: () => void;
+  featured?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#C49A3C]/30 active:scale-[0.98] group ${CARD_HOVER_GROW} ${featured ? 'ring-1 ring-[#C49A3C]/20' : ''}`}
+      className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#c49a3c]/30 active:scale-[0.98] group ${CARD_HOVER_GROW} ${featured ? 'ring-1 ring-[#c49a3c]/20' : ''}`}
     >
       <div className="p-5">
         <div className="flex items-center justify-between mb-3">
           <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${post.badgeColor}`}>{post.badgeText}</span>
-          <span className="text-[#B0A898] text-xs flex items-center gap-1"><Calendar size={10} /> {post.date}</span>
+          <span className="text-[#B0A898] text-xs flex items-center gap-1">
+            <Calendar size={10} /> {post.date}
+          </span>
         </div>
-        <h3 className="text-[#1E2A35] leading-snug mb-2" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.04em' }}>{post.title}</h3>
+        <h3
+          className="text-[#1E2A35] leading-snug mb-2"
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.04em' }}
+        >
+          {post.title}
+        </h3>
         <p className="text-[#8A7E6E] text-xs leading-relaxed line-clamp-3">{post.excerpt}</p>
-        <div className="flex items-center gap-1 mt-3 text-[#C49A3C] text-xs font-semibold group-hover:gap-2 transition-all">
+        <div className="flex items-center gap-1 mt-3 text-[#c49a3c] text-xs font-semibold group-hover:gap-2 transition-all">
           Read more <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>

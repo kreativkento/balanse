@@ -1,19 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ArrowLeft, User, Award, Lock, Eye, EyeOff,
-  Check, AlertTriangle, Save, Camera, ShieldCheck,
+  Check, AlertTriangle, Save, ShieldCheck,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { NATIONALITIES } from '../data/nationalities';
+import { ProfileImageHero } from '../components/ProfileImages';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES  (mirrors ProfilePage exactly)
 // ─────────────────────────────────────────────
 
 const INPUT =
-  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all';
+  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
 const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
@@ -55,7 +56,6 @@ const ALL_CLASSES = [
 export default function StaffProfilePage() {
   const navigate = useNavigate();
   const { staffUser, staffProfile, updateStaffProfile, staffLogout } = useStaffAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<TabId>('info');
 
@@ -64,7 +64,7 @@ export default function StaffProfilePage() {
   const [phone, setPhone]             = useState('');
   const [nationality, setNationality] = useState(staffProfile?.nationality || '');
   const [photo, setPhoto]             = useState(staffProfile?.photo || '');
-  const [photoPreview, setPhotoPreview] = useState(staffProfile?.photo || '');
+  const [coverImage, setCoverImage]   = useState(staffProfile?.coverImage || '');
   const [infoSaved, setInfoSaved]     = useState(false);
 
   // ── Credentials ──
@@ -96,7 +96,7 @@ export default function StaffProfilePage() {
     setDisplayName(staffProfile.displayName || staffUser?.name || '');
     setNationality(staffProfile.nationality || '');
     setPhoto(staffProfile.photo || '');
-    setPhotoPreview(staffProfile.photo || '');
+    setCoverImage(staffProfile.coverImage || '');
     setBio(staffProfile.bio || '');
     setExperience(staffProfile.experience || '');
     setClasses(staffProfile.classes || []);
@@ -107,22 +107,11 @@ export default function StaffProfilePage() {
   const initials = (staffProfile?.displayName || staffUser.name)
     .split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const url = ev.target?.result as string;
-      setPhoto(url);
-      setPhotoPreview(url);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const saveInfo = () => {
     updateStaffProfile({
       displayName: displayName.trim() || staffUser.name,
       photo,
+      coverImage,
       nationality: nationality.trim(),
     });
     setInfoSaved(true);
@@ -171,28 +160,23 @@ export default function StaffProfilePage() {
           </div>
         </div>
 
-        {/* ── Avatar + Identity ── */}
-        <div className="py-6 flex items-center gap-4 border-b border-[#D4CDB5]/50">
-          {/* Clickable photo avatar */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title="Click to change photo"
-            className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#C49A3C]/40 bg-[#C49A3C]/15 flex items-center justify-center shrink-0 group hover:border-[#C49A3C]/70 transition-all"
-          >
-            {photoPreview ? (
-              <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" onError={() => setPhotoPreview('')} />
-            ) : (
-              <span className="text-[#A67E2A] font-black text-xl">{initials}</span>
-            )}
-            <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-              <Camera size={14} className="text-white" />
-              <span className="text-white text-[9px] font-bold tracking-wide">EDIT</span>
-            </div>
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-
-          <div>
+        {/* ── Cover + Avatar ── */}
+        <div className="mt-6 mb-2 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+          <ProfileImageHero
+            photoUrl={photo}
+            coverUrl={coverImage}
+            initials={initials}
+            editable
+            onPhotoUploaded={(url) => {
+              setPhoto(url);
+              updateStaffProfile({ photo: url });
+            }}
+            onCoverUploaded={(url) => {
+              setCoverImage(url);
+              updateStaffProfile({ coverImage: url });
+            }}
+          />
+          <div className="px-6 pb-5 pt-14 md:px-8 md:pt-16">
             <h2
               className="text-[#1E2A35] leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}
@@ -200,7 +184,7 @@ export default function StaffProfilePage() {
               {staffProfile?.displayName || staffUser.name}
             </h2>
             <p className="text-[#8A7E6E] text-sm">{staffUser.email}</p>
-            <span className="inline-flex items-center gap-1.5 bg-[#C49A3C]/10 text-[#A67E2A] text-xs font-bold px-2.5 py-1 rounded-full border border-[#C49A3C]/25 mt-1.5">
+            <span className="inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
               <ShieldCheck size={10} /> {staffUser.role}
             </span>
           </div>
@@ -216,7 +200,7 @@ export default function StaffProfilePage() {
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px ${
                   active
-                    ? 'border-[#C49A3C] text-[#C49A3C]'
+                    ? 'border-[#c49a3c] text-[#c49a3c]'
                     : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35] hover:border-[#D4CDB5]'
                 }`}
               >
@@ -289,7 +273,7 @@ export default function StaffProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   infoSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#C49A3C] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#A67E2A]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
@@ -356,7 +340,7 @@ export default function StaffProfilePage() {
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                         classes.includes(cls)
                           ? 'bg-[#1E2A35] text-white border-[#1E2A35]'
-                          : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/70 hover:border-[#C49A3C]/40'
+                          : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/70 hover:border-[#c49a3c]/40'
                       }`}
                     >
                       {cls}
@@ -370,7 +354,7 @@ export default function StaffProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   credSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#C49A3C] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#A67E2A]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >

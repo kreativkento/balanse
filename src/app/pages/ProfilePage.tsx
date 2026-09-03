@@ -6,13 +6,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { ProfileImageHero } from '../components/ProfileImages';
 
 // ─────────────────────────────────────────────
 // SHARED STYLES
 // ─────────────────────────────────────────────
 
 const INPUT =
-  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#C49A3C]/25 focus:border-[#C49A3C]/50 transition-all';
+  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
 const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
@@ -47,7 +48,7 @@ type TabId = typeof TABS[number]['id'];
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
 
   const [tab, setTab] = useState<TabId>('personal');
 
@@ -129,12 +130,17 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Avatar + Name ── */}
-        <div className="py-6 flex items-center gap-4 border-b border-[#D4CDB5]/50">
-          <div className="w-16 h-16 bg-[#C49A3C]/15 border-2 border-[#C49A3C]/40 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-[#A67E2A] font-black text-xl">{initials}</span>
-          </div>
-          <div>
+        {/* ── Cover + Avatar ── */}
+        <div className="mt-6 mb-2 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+          <ProfileImageHero
+            photoUrl={user?.profile.photo || ''}
+            coverUrl={user?.profile.coverImage || ''}
+            initials={initials}
+            editable
+            onPhotoUploaded={(url) => updateProfile({ photo: url })}
+            onCoverUploaded={(url) => updateProfile({ coverImage: url })}
+          />
+          <div className="px-6 pb-5 pt-14 md:px-8 md:pt-16">
             <h2
               className="text-[#1E2A35] leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}
@@ -142,7 +148,7 @@ export default function ProfilePage() {
               {user?.name || 'Member'}
             </h2>
             <p className="text-[#8A7E6E] text-sm">{user?.email}</p>
-            <span className="inline-flex items-center gap-1.5 bg-[#C49A3C]/10 text-[#A67E2A] text-xs font-bold px-2.5 py-1 rounded-full border border-[#C49A3C]/25 mt-1.5">
+            <span className="inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
               <Shield size={10} /> Gold Membership · Active
             </span>
           </div>
@@ -158,7 +164,7 @@ export default function ProfilePage() {
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px ${
                   active
-                    ? 'border-[#C49A3C] text-[#C49A3C]'
+                    ? 'border-[#c49a3c] text-[#c49a3c]'
                     : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35] hover:border-[#D4CDB5]'
                 }`}
               >
@@ -253,7 +259,7 @@ export default function ProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   personalSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#C49A3C] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#A67E2A]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
@@ -267,8 +273,8 @@ export default function ProfilePage() {
           {/* ══ MEDICAL HISTORY ══ */}
           {tab === 'medical' && (
             <div className="flex flex-col gap-4">
-              <div className="bg-[#C49A3C]/06 border border-[#C49A3C]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
-                <Shield size={15} className="text-[#C49A3C] mt-0.5 shrink-0" />
+              <div className="bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
+                <Shield size={15} className="text-[#c49a3c] mt-0.5 shrink-0" />
                 <p className="text-[#7A6A52] text-xs leading-relaxed">
                   This information is strictly confidential and shared only with your assigned coaches
                   to ensure your safety and wellbeing during every session.
@@ -326,8 +332,8 @@ export default function ProfilePage() {
                   <div
                     className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
                       consent
-                        ? 'bg-[#C49A3C] border-[#C49A3C]'
-                        : 'border-[#D4CDB5] group-hover:border-[#C49A3C]/60'
+                        ? 'bg-[#c49a3c] border-[#c49a3c]'
+                        : 'border-[#D4CDB5] group-hover:border-[#c49a3c]/60'
                     }`}
                   >
                     {consent && <Check size={12} className="text-white" strokeWidth={3} />}
@@ -345,7 +351,7 @@ export default function ProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   medSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#C49A3C] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#A67E2A]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
