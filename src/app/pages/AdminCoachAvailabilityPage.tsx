@@ -79,7 +79,7 @@ function buildCoachMockData(): Coach[] {
     ],
   },
   {
-    id: 6, name: 'Kate Mercado', initials: 'KT', color: '#745b3c', role: 'Mat Pilates',
+    id: 6, name: 'Kate Mercado', initials: 'KT', color: '#c49a3c', role: 'Mat Pilates',
     availability: [
       { id: 601, date: d(1), dayOff: false, note: '', periods: [{ id: 6011, start: '09:30', end: '12:00' }] },
       { id: 602, date: d(4), dayOff: false, note: '', periods: [{ id: 6021, start: '09:30', end: '11:30' }] },
@@ -204,7 +204,7 @@ export function AdminCoachAvailabilityPanel() {
                 const isActive = c.id === selectedCoachId;
                 return (
                   <button key={c.id} onClick={() => setSelectedCoachId(c.id)}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl border text-left transition-all ${isActive ? 'bg-[#1E2A35] border-[#1E2A35] shadow-sm' : 'bg-white border-[#D4CDB5]/60 hover:border-[#745b3c]/40 hover:bg-[#FDFAF5]'}`}>
+                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl border text-left transition-all ${isActive ? 'bg-[#1E2A35] border-[#1E2A35] shadow-sm' : 'bg-white border-[#D4CDB5]/60 hover:border-[#c49a3c]/40 hover:bg-[#FDFAF5]'}`}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + (isActive ? '40' : '25') }}>
                       <span className="text-xs font-bold" style={{ color: isActive ? '#fff' : c.color }}>{c.initials}</span>
                     </div>
@@ -264,8 +264,8 @@ export function AdminCoachAvailabilityPanel() {
                     return (
                       <button key={key}
                         onClick={() => entry && setViewingEntry(entry)}
-                        className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${entry ? 'hover:bg-[#F0EBE0]' : 'cursor-default'} ${isToday ? 'ring-1 ring-[#745b3c]/40' : ''}`}>
-                        <span className={`text-xs leading-none mb-0.5 ${isToday ? 'text-[#745b3c] font-bold' : 'text-[#1E2A35]'}`}>{day}</span>
+                        className={`relative flex flex-col items-center justify-center rounded-xl py-1.5 mx-0.5 transition-all ${entry ? 'hover:bg-[#F0EBE0]' : 'cursor-default'} ${isToday ? 'ring-1 ring-[#c49a3c]/40' : ''}`}>
+                        <span className={`text-xs leading-none mb-0.5 ${isToday ? 'text-[#c49a3c] font-bold' : 'text-[#1E2A35]'}`}>{day}</span>
                         {entry ? (
                           <span className={`w-1.5 h-1.5 rounded-full ${!entry.dayOff ? 'bg-green-500' : 'bg-red-400'}`} />
                         ) : (
@@ -291,7 +291,7 @@ export function AdminCoachAvailabilityPanel() {
                 {[
                   { label: 'Available Days',  value: availableCount,   color: 'text-green-600', bg: 'bg-green-50',       border: 'border-green-200'     },
                   { label: 'Days Off',         value: unavailableCount, color: 'text-red-600',   bg: 'bg-red-50',         border: 'border-red-200'       },
-                  { label: 'Time Periods',     value: periodCount,      color: 'text-[#745b3c]', bg: 'bg-[#745b3c]/10',  border: 'border-[#745b3c]/30'  },
+                  { label: 'Time Periods',     value: periodCount,      color: 'text-[#c49a3c]', bg: 'bg-[#c49a3c]/10',  border: 'border-[#c49a3c]/30'  },
                 ].map(s => (
                   <div key={s.label} className={`bg-white rounded-2xl border ${s.border} px-4 py-3 shadow-sm`}>
                     <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">{s.label}</p>

@@ -19,7 +19,7 @@ export default function DevAiSetupPage() {
       <div className="max-w-4xl mx-auto px-6 py-10">
         <div className="mb-8">
           <div className="inline-flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3">
-            <Bot size={11} className="text-[#745b3c]" />
+            <Bot size={11} className="text-[#c49a3c]" />
             <span className="text-[#1E2A35] text-xs font-bold uppercase tracking-widest">AI Setup</span>
           </div>
           <h1

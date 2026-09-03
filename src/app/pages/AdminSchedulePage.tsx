@@ -61,9 +61,9 @@ interface CancelRequest {
 }
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga': '#745b3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
+  'Yoga': '#c49a3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
   'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#5e4a30',
+  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#a67f2e',
 };
 const SERVICES  = Object.keys(CLASS_COLORS);
 const COACHES   = ['Rex', 'Jodi', 'Ephraim', 'Alec', 'Rachelle', 'Kate', 'Wolf'];
@@ -90,7 +90,7 @@ function formatDayShort(date: Date): string {
 }
 
 const INITIAL_BLOCKS: ScheduleBlock[] = [
-  { id: 1,  dayIndex: 0, startHour: 9,  duration: 75, className: 'Yoga',            coach: 'Jodi',     capacity: 15, enrolled: 11, color: '#745b3c', isOpen: true,  status: 'completed' },
+  { id: 1,  dayIndex: 0, startHour: 9,  duration: 75, className: 'Yoga',            coach: 'Jodi',     capacity: 15, enrolled: 11, color: '#c49a3c', isOpen: true,  status: 'completed' },
   { id: 2,  dayIndex: 0, startHour: 10, duration: 60, className: 'Mat Pilates',      coach: 'Kate',     capacity: 12, enrolled: 8,  color: '#9A7A8A', isOpen: true,  status: 'completed' },
   { id: 3,  dayIndex: 0, startHour: 18, duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 6,  color: '#3A4A5A', isOpen: true,  status: 'cancelled' },
   { id: 4,  dayIndex: 1, startHour: 9,  duration: 60, className: 'Calisthenics',     coach: 'Rex',      capacity: 12, enrolled: 3,  color: '#3A4A5A', isOpen: true,  status: 'completed' },
@@ -98,10 +98,10 @@ const INITIAL_BLOCKS: ScheduleBlock[] = [
   { id: 6,  dayIndex: 1, startHour: 17, duration: 60, className: 'Kickboxing',       coach: 'Wolf',     capacity: 10, enrolled: 7,  color: '#7A3A4A', isOpen: false, status: 'upcoming'  },
   { id: 7,  dayIndex: 2, startHour: 9,  duration: 60, className: 'Mat Pilates',      coach: 'Kate',     capacity: 12, enrolled: 5,  color: '#9A7A8A', isOpen: true,  status: 'upcoming'  },
   { id: 8,  dayIndex: 2, startHour: 16, duration: 60, className: 'Circuit Training', coach: 'Rachelle', capacity: 15, enrolled: 12, color: '#B86A4A', isOpen: true,  status: 'upcoming'  },
-  { id: 9,  dayIndex: 3, startHour: 9,  duration: 75, className: 'Yoga',             coach: 'Jodi',     capacity: 15, enrolled: 9,  color: '#745b3c', isOpen: true,  status: 'upcoming'  },
+  { id: 9,  dayIndex: 3, startHour: 9,  duration: 75, className: 'Yoga',             coach: 'Jodi',     capacity: 15, enrolled: 9,  color: '#c49a3c', isOpen: true,  status: 'upcoming'  },
   { id: 10, dayIndex: 4, startHour: 10, duration: 60, className: 'Groundworks',      coach: 'Alec',     capacity: 10, enrolled: 4,  color: '#8B6F5A', isOpen: true,  status: 'upcoming'  },
   { id: 11, dayIndex: 5, startHour: 9,  duration: 60, className: 'Capoeira',         coach: 'Alec',     capacity: 10, enrolled: 7,  color: '#A07050', isOpen: true,  status: 'upcoming'  },
-  { id: 12, dayIndex: 6, startHour: 10, duration: 75, className: 'Personal Coaching',coach: 'Rex',      capacity: 4,  enrolled: 2,  color: '#5e4a30', isOpen: true,  status: 'upcoming'  },
+  { id: 12, dayIndex: 6, startHour: 10, duration: 75, className: 'Personal Coaching',coach: 'Rex',      capacity: 4,  enrolled: 2,  color: '#a67f2e', isOpen: true,  status: 'upcoming'  },
 ];
 
 const INITIAL_SCHEDULE_REQS: ClassScheduleRequest[] = [
@@ -243,7 +243,7 @@ export default function AdminSchedulePage() {
 
   const handleSave = () => {
     if (hasConflict) return; // prevent save if conflict
-    const color = CLASS_COLORS[form.className] || '#745b3c';
+    const color = CLASS_COLORS[form.className] || '#c49a3c';
     if (editingBlock) {
       setBlocks(prev => prev.map(b => b.id === editingBlock.id ? { ...b, ...form, color } : b));
     } else {
@@ -273,7 +273,7 @@ export default function AdminSchedulePage() {
         coach: req.coach,
         capacity: req.classLimit,
         enrolled: 0,
-        color: CLASS_COLORS[req.discipline] || '#745b3c',
+        color: CLASS_COLORS[req.discipline] || '#c49a3c',
         isOpen: true,
         status: 'upcoming' as const,
       }];
@@ -305,7 +305,7 @@ export default function AdminSchedulePage() {
     ? scheduleReqs
     : scheduleReqs.filter(r => r.status === reqStatusFilter);
 
-  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all";
+  const inputClass  = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   const StatusBadge = ({ s }: { s: ReqStatus }) => (
@@ -324,7 +324,7 @@ export default function AdminSchedulePage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <CalendarDays size={14} className="text-[#745b3c]" />
+              <CalendarDays size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Schedule</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -409,7 +409,7 @@ export default function AdminSchedulePage() {
                     <button
                       type="button"
                       onClick={goToday}
-                      className="text-[#745b3c] text-[11px] font-bold px-2 py-1 rounded-md hover:bg-[#745b3c]/10 transition-colors"
+                      className="text-[#c49a3c] text-[11px] font-bold px-2 py-1 rounded-md hover:bg-[#c49a3c]/10 transition-colors"
                     >
                       Today
                     </button>
@@ -421,7 +421,7 @@ export default function AdminSchedulePage() {
                     value={coachFilter}
                     onChange={e => setCoachFilter(e.target.value)}
                     aria-label="Filter by coach"
-                    className="appearance-none pl-2.5 pr-7 py-1 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-[11px] font-semibold outline-none cursor-pointer focus:ring-2 focus:ring-[#745b3c]/20"
+                    className="appearance-none pl-2.5 pr-7 py-1 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-[11px] font-semibold outline-none cursor-pointer focus:ring-2 focus:ring-[#c49a3c]/20"
                   >
                     <option value="All Coaches">All Coaches</option>
                     {COACHES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -459,9 +459,9 @@ export default function AdminSchedulePage() {
                     {WEEK_LABELS.map((day, i) => {
                       const isTodayCol = toDateKey(weekDates[i]) === todayKey;
                       return (
-                      <div key={day} className={`px-3 py-2.5 text-center border-l border-[#D4CDB5]/40 ${isTodayCol ? 'bg-[#745b3c]/10' : 'bg-[#F8F3E8]/60'}`}>
-                        <p className={`text-xs font-bold uppercase tracking-wider ${isTodayCol ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}>{day}</p>
-                        <p className={`text-xs ${isTodayCol ? 'text-[#745b3c] font-semibold' : 'text-[#B0A898]'}`}>{formatDayShort(weekDates[i])}</p>
+                      <div key={day} className={`px-3 py-2.5 text-center border-l border-[#D4CDB5]/40 ${isTodayCol ? 'bg-[#c49a3c]/10' : 'bg-[#F8F3E8]/60'}`}>
+                        <p className={`text-xs font-bold uppercase tracking-wider ${isTodayCol ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>{day}</p>
+                        <p className={`text-xs ${isTodayCol ? 'text-[#c49a3c] font-semibold' : 'text-[#B0A898]'}`}>{formatDayShort(weekDates[i])}</p>
                       </div>
                       );
                     })}
@@ -514,7 +514,7 @@ export default function AdminSchedulePage() {
                             })}
                             <button
                               onClick={() => { setForm({ ...EMPTY_FORM, dayIndex, startHour: hour }); setEditingBlock(null); setShowModal(true); }}
-                              className="w-full flex items-center justify-center rounded-xl border border-dashed border-[#D4CDB5]/60 text-[#C0B8A8] hover:text-[#745b3c] hover:border-[#745b3c]/40 hover:bg-[#745b3c]/05 transition-all opacity-0 group-hover:opacity-100"
+                              className="w-full flex items-center justify-center rounded-xl border border-dashed border-[#D4CDB5]/60 text-[#C0B8A8] hover:text-[#c49a3c] hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/05 transition-all opacity-0 group-hover:opacity-100"
                               style={{ height: cellBlocks.length > 0 ? '24px' : '40px' }}
                             >
                               <Plus size={12} />
@@ -651,7 +651,7 @@ export default function AdminSchedulePage() {
                         <p className="text-[#B0A898] text-xs truncate">Requested by {req.staff}</p>
                       </div>
                       <div className="min-w-0 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.discipline] || '#745b3c' }} />
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.discipline] || '#c49a3c' }} />
                         <p className="text-[#1E2A35] text-sm truncate">{req.discipline}</p>
                       </div>
                       <div className="min-w-0">
@@ -773,7 +773,7 @@ export default function AdminSchedulePage() {
               )}
 
               <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 overflow-hidden">
-                <div className="h-1.5" style={{ backgroundColor: CLASS_COLORS[selectedReq.discipline] || '#745b3c' }} />
+                <div className="h-1.5" style={{ backgroundColor: CLASS_COLORS[selectedReq.discipline] || '#c49a3c' }} />
                 <div className="p-4 flex flex-col gap-3">
                   {[
                     ['Class Name', selectedReq.className],
@@ -969,7 +969,7 @@ export default function AdminSchedulePage() {
                       className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-medium ${
                         form.status === opt.value
                           ? 'bg-[#1E2A35] border-[#1E2A35] text-white'
-                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#745b3c]/40'
+                          : 'bg-[#F8F3E8] border-[#D4CDB5]/70 text-[#5A5048] hover:border-[#c49a3c]/40'
                       }`}
                     >
                       <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${form.status === opt.value ? 'border-white bg-white' : 'border-[#B0A898]'}`}>

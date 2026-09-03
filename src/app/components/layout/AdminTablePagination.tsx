@@ -112,8 +112,8 @@ export function AdminTablePagination({
             onClick={() => onPageChange(n)}
             className={`min-w-9 h-9 px-2.5 rounded-full text-xs font-semibold transition-all ${
               n === page
-                ? 'bg-[#745b3c] text-white'
-                : 'bg-white border border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#745b3c]/40'
+                ? 'bg-[#c49a3c] text-white'
+                : 'bg-white border border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#c49a3c]/40'
             }`}
           >
             {n}

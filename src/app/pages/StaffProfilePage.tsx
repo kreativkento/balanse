@@ -14,7 +14,7 @@ import { ProfileImageHero } from '../components/ProfileImages';
 // ─────────────────────────────────────────────
 
 const INPUT =
-  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all';
+  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
 const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
@@ -184,7 +184,7 @@ export default function StaffProfilePage() {
               {staffProfile?.displayName || staffUser.name}
             </h2>
             <p className="text-[#8A7E6E] text-sm">{staffUser.email}</p>
-            <span className="inline-flex items-center gap-1.5 bg-[#745b3c]/10 text-[#5e4a30] text-xs font-bold px-2.5 py-1 rounded-full border border-[#745b3c]/25 mt-1.5">
+            <span className="inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
               <ShieldCheck size={10} /> {staffUser.role}
             </span>
           </div>
@@ -200,7 +200,7 @@ export default function StaffProfilePage() {
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px ${
                   active
-                    ? 'border-[#745b3c] text-[#745b3c]'
+                    ? 'border-[#c49a3c] text-[#c49a3c]'
                     : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35] hover:border-[#D4CDB5]'
                 }`}
               >
@@ -273,7 +273,7 @@ export default function StaffProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   infoSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#745b3c] shadow-[0_4px_16px_rgba(116,91,60,0.3)] hover:bg-[#5e4a30]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
@@ -340,7 +340,7 @@ export default function StaffProfilePage() {
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                         classes.includes(cls)
                           ? 'bg-[#1E2A35] text-white border-[#1E2A35]'
-                          : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/70 hover:border-[#745b3c]/40'
+                          : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/70 hover:border-[#c49a3c]/40'
                       }`}
                     >
                       {cls}
@@ -354,7 +354,7 @@ export default function StaffProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   credSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#745b3c] shadow-[0_4px_16px_rgba(116,91,60,0.3)] hover:bg-[#5e4a30]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >

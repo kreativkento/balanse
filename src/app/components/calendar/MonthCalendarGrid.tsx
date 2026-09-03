@@ -73,12 +73,12 @@ export function MonthCalendarGrid({
               type="button"
               onClick={() => onSelectDate(key)}
               className={`min-h-[104px] flex flex-col items-stretch text-left px-1.5 py-1.5 border-r border-b border-[#D4CDB5]/20 transition-colors last:border-r-0 ${
-                isSelected ? 'bg-[#745b3c]/10' : 'hover:bg-[#F5F2E8]'
+                isSelected ? 'bg-[#c49a3c]/10' : 'hover:bg-[#F5F2E8]'
               }`}
             >
               <span
                 className={`self-start w-6 h-6 flex items-center justify-center rounded-full text-xs mb-1 shrink-0 ${
-                  isToday ? 'bg-[#745b3c] text-white' : isSelected ? 'text-[#745b3c] font-bold' : 'text-[#1E2A35]'
+                  isToday ? 'bg-[#c49a3c] text-white' : isSelected ? 'text-[#c49a3c] font-bold' : 'text-[#1E2A35]'
                 }`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.02em' }}
               >

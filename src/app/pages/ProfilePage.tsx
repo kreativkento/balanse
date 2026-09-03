@@ -13,7 +13,7 @@ import { ProfileImageHero } from '../components/ProfileImages';
 // ─────────────────────────────────────────────
 
 const INPUT =
-  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all';
+  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all';
 const TEXTAREA = INPUT + ' resize-none';
 const CARD = `bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`;
 const SECTION_TITLE: React.CSSProperties = {
@@ -148,7 +148,7 @@ export default function ProfilePage() {
               {user?.name || 'Member'}
             </h2>
             <p className="text-[#8A7E6E] text-sm">{user?.email}</p>
-            <span className="inline-flex items-center gap-1.5 bg-[#745b3c]/10 text-[#5e4a30] text-xs font-bold px-2.5 py-1 rounded-full border border-[#745b3c]/25 mt-1.5">
+            <span className="inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
               <Shield size={10} /> Gold Membership · Active
             </span>
           </div>
@@ -164,7 +164,7 @@ export default function ProfilePage() {
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px ${
                   active
-                    ? 'border-[#745b3c] text-[#745b3c]'
+                    ? 'border-[#c49a3c] text-[#c49a3c]'
                     : 'border-transparent text-[#8A7E6E] hover:text-[#1E2A35] hover:border-[#D4CDB5]'
                 }`}
               >
@@ -259,7 +259,7 @@ export default function ProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   personalSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#745b3c] shadow-[0_4px_16px_rgba(116,91,60,0.3)] hover:bg-[#5e4a30]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >
@@ -273,8 +273,8 @@ export default function ProfilePage() {
           {/* ══ MEDICAL HISTORY ══ */}
           {tab === 'medical' && (
             <div className="flex flex-col gap-4">
-              <div className="bg-[#745b3c]/06 border border-[#745b3c]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
-                <Shield size={15} className="text-[#745b3c] mt-0.5 shrink-0" />
+              <div className="bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
+                <Shield size={15} className="text-[#c49a3c] mt-0.5 shrink-0" />
                 <p className="text-[#7A6A52] text-xs leading-relaxed">
                   This information is strictly confidential and shared only with your assigned coaches
                   to ensure your safety and wellbeing during every session.
@@ -332,8 +332,8 @@ export default function ProfilePage() {
                   <div
                     className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
                       consent
-                        ? 'bg-[#745b3c] border-[#745b3c]'
-                        : 'border-[#D4CDB5] group-hover:border-[#745b3c]/60'
+                        ? 'bg-[#c49a3c] border-[#c49a3c]'
+                        : 'border-[#D4CDB5] group-hover:border-[#c49a3c]/60'
                     }`}
                   >
                     {consent && <Check size={12} className="text-white" strokeWidth={3} />}
@@ -351,7 +351,7 @@ export default function ProfilePage() {
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-4 transition-all active:scale-[0.97] ${
                   medSaved
                     ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                    : 'bg-[#745b3c] shadow-[0_4px_16px_rgba(116,91,60,0.3)] hover:bg-[#5e4a30]'
+                    : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
                 } text-white`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
               >

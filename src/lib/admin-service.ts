@@ -580,7 +580,7 @@ export interface PublicCoachProfile {
 }
 
 const COACH_COLORS = [
-  '#3A4A5A', '#745b3c', '#6B8E6B', '#8B6F5A', '#B86A4A', '#9A7A8A', '#7A3A4A', '#A07050',
+  '#3A4A5A', '#c49a3c', '#6B8E6B', '#8B6F5A', '#B86A4A', '#9A7A8A', '#7A3A4A', '#A07050',
 ];
 
 function initialsFromName(name: string): string {

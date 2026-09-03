@@ -14,7 +14,7 @@ export function PublicBreadcrumb({ parent, current, parentTo, tone = 'default' }
   const parentClass =
     tone === 'onDark'
       ? 'text-white/70 text-xs uppercase tracking-widest hover:text-white transition-colors'
-      : 'text-[#8A7E6E] text-xs uppercase tracking-widest hover:text-[#745b3c] transition-colors';
+      : 'text-[#8A7E6E] text-xs uppercase tracking-widest hover:text-[#c49a3c] transition-colors';
   const parentPlainClass =
     tone === 'onDark'
       ? 'text-white/70 text-xs uppercase tracking-widest'
@@ -23,7 +23,7 @@ export function PublicBreadcrumb({ parent, current, parentTo, tone = 'default' }
   const currentClass =
     tone === 'onDark'
       ? 'text-[#E8D5A8] text-xs uppercase tracking-widest font-semibold'
-      : 'text-[#745b3c] text-xs uppercase tracking-widest font-semibold';
+      : 'text-[#c49a3c] text-xs uppercase tracking-widest font-semibold';
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 mb-2 flex-wrap">

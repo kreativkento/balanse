@@ -55,8 +55,8 @@ export default function AdminLoginPage() {
       >
         {/* Decorative elements */}
         <div className="absolute top-[-90px] right-[-90px] w-80 h-80 rounded-full border border-white/04" />
-        <div className="absolute top-[-45px] right-[-45px] w-52 h-52 rounded-full border border-[#745b3c]/08" />
-        <div className="absolute bottom-[-70px] left-[-70px] w-72 h-72 rounded-full border border-[#745b3c]/08" />
+        <div className="absolute top-[-45px] right-[-45px] w-52 h-52 rounded-full border border-[#c49a3c]/08" />
+        <div className="absolute bottom-[-70px] left-[-70px] w-72 h-72 rounded-full border border-[#c49a3c]/08" />
         <div className="absolute bottom-[120px] right-[-30px] w-36 h-36 rounded-full border border-white/04" />
 
         {/* Logo */}
@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
               type="button"
               onClick={() => navigate('/staff-login')}
               aria-label="Back to staff login"
-              className="shrink-0 flex items-center justify-center text-[#745b3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors"
+              className="shrink-0 flex items-center justify-center text-[#c49a3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors"
             >
               <ArrowLeft size={22} strokeWidth={2.25} />
             </button>
@@ -76,9 +76,9 @@ export default function AdminLoginPage() {
           </div>
 
           {/* Admin badge */}
-          <div className="flex items-center gap-2 bg-[#745b3c]/15 border border-[#745b3c]/35 rounded-full px-4 py-1.5 mb-7">
-            <Crown size={13} className="text-[#745b3c]" />
-            <span className="text-[#745b3c] text-xs font-bold uppercase tracking-widest">Admin Portal</span>
+          <div className="flex items-center gap-2 bg-[#c49a3c]/15 border border-[#c49a3c]/35 rounded-full px-4 py-1.5 mb-7">
+            <Crown size={13} className="text-[#c49a3c]" />
+            <span className="text-[#c49a3c] text-xs font-bold uppercase tracking-widest">Admin Portal</span>
           </div>
 
           <h1
@@ -100,8 +100,8 @@ export default function AdminLoginPage() {
               'Review bookings and payments',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#745b3c]/20 border border-[#745b3c]/40 flex items-center justify-center shrink-0">
-                  <ChevronRight size={10} className="text-[#745b3c]" />
+                <div className="w-5 h-5 rounded-full bg-[#c49a3c]/20 border border-[#c49a3c]/40 flex items-center justify-center shrink-0">
+                  <ChevronRight size={10} className="text-[#c49a3c]" />
                 </div>
                 <span className="text-white/50 text-sm">{item}</span>
               </div>
@@ -132,7 +132,7 @@ export default function AdminLoginPage() {
 
           <div className="mb-8">
             <div className="flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3 w-fit">
-              <Crown size={11} className="text-[#745b3c]" />
+              <Crown size={11} className="text-[#c49a3c]" />
               <span className="text-[#1E2A35] text-xs font-bold uppercase tracking-widest">Admin Access</span>
             </div>
             <h2
@@ -156,7 +156,7 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="admin@yourdomain.com"
-                  className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+                  className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
                 />
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+                  className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
                 />
                 <button
                   type="button"
@@ -213,7 +213,7 @@ export default function AdminLoginPage() {
           {/* Back to staff */}
           <p className="text-center text-[#B0A898] text-xs mt-6">
             Not an admin?{' '}
-            <Link to="/staff-login" className="text-[#8A7E6E] hover:text-[#745b3c] transition-colors font-medium">
+            <Link to="/staff-login" className="text-[#8A7E6E] hover:text-[#c49a3c] transition-colors font-medium">
               Back to Staff Login
             </Link>
           </p>

@@ -71,7 +71,7 @@ export function AdminDisciplineCardsGrid({
               key={discipline.id}
               type="button"
               onClick={() => onSelect(discipline)}
-              className={`relative overflow-hidden rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col items-center justify-center text-center px-4 py-6 md:py-8 min-h-[10.5rem] md:min-h-[12rem] ${CARD_HOVER_GROW} hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50`}
+              className={`relative overflow-hidden rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col items-center justify-center text-center px-4 py-6 md:py-8 min-h-[10.5rem] md:min-h-[12rem] ${CARD_HOVER_GROW} hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50`}
             >
               <img
                 src={discipline.imageUrl}
@@ -107,7 +107,7 @@ export function AdminDisciplineCardsGrid({
               key={discipline.id}
               type="button"
               onClick={() => onSelect(discipline)}
-              className={`rounded-3xl overflow-hidden bg-white border border-[#D4CDB5]/60 shadow-sm flex flex-col text-left ${CARD_HOVER_GROW} hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50`}
+              className={`rounded-3xl overflow-hidden bg-white border border-[#D4CDB5]/60 shadow-sm flex flex-col text-left ${CARD_HOVER_GROW} hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50`}
             >
               <div className="relative overflow-hidden shrink-0 h-44 md:h-48">
                 <img
@@ -145,7 +145,7 @@ export function AdminDisciplineCardsGrid({
                 <p className="text-[#8A7E6E] leading-relaxed flex-1 text-sm line-clamp-3">
                   {discipline.description || 'No description yet.'}
                 </p>
-                <p className="text-[#745b3c] font-semibold flex items-center gap-1 text-xs mt-4">
+                <p className="text-[#c49a3c] font-semibold flex items-center gap-1 text-xs mt-4">
                   See more <ChevronRight size={14} />
                 </p>
               </div>
@@ -247,7 +247,7 @@ export function DisciplineDensityToggle({
         title="Compact cards"
         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
           density === 'compact'
-            ? 'bg-[#745b3c] text-white'
+            ? 'bg-[#c49a3c] text-white'
             : 'text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#F8F3E8]'
         }`}
       >
@@ -261,7 +261,7 @@ export function DisciplineDensityToggle({
         title="Large cards"
         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
           density === 'large'
-            ? 'bg-[#745b3c] text-white'
+            ? 'bg-[#c49a3c] text-white'
             : 'text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#F8F3E8]'
         }`}
       >

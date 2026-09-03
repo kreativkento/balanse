@@ -200,10 +200,10 @@ export default function ServicesPage() {
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Treatments</p>
               <div className="flex flex-col gap-2">
                 {RECOVERY_TIERS.map((tier, i) => (
-                  <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${i === 3 ? 'bg-[#745b3c]/08 border border-[#745b3c]/25' : 'bg-[#F8F3E8] border border-[#D4CDB5]/40'}`}>
+                  <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${i === 3 ? 'bg-[#c49a3c]/08 border border-[#c49a3c]/25' : 'bg-[#F8F3E8] border border-[#D4CDB5]/40'}`}>
                     <p className={`text-sm leading-snug pr-2 ${i === 3 ? 'text-[#1E2A35]' : 'text-[#5A5048]'}`}>{tier.label}</p>
                     <span
-                      className={`leading-none shrink-0 ${i === 3 ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}
+                      className={`leading-none shrink-0 ${i === 3 ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
                       style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.02em' }}
                     >
                       {tier.price}

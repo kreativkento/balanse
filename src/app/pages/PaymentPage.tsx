@@ -24,8 +24,8 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
             <div className="flex flex-col items-center">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                  isDone   ? 'bg-[#745b3c] text-white' :
-                  isActive ? 'bg-[#745b3c] text-white shadow-[0_0_0_3px_rgba(116,91,60,0.2)]' :
+                  isDone   ? 'bg-[#c49a3c] text-white' :
+                  isActive ? 'bg-[#c49a3c] text-white shadow-[0_0_0_3px_rgba(196,154,60,0.2)]' :
                              'bg-[#EDE8D8] text-[#9A8E7E]'
                 }`}
                 style={{ fontSize: '0.7rem', fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
@@ -33,14 +33,14 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
                 {isDone ? <Check size={13} strokeWidth={3} /> : num}
               </div>
               <span
-                className={`text-[10px] mt-1 whitespace-nowrap ${isActive ? 'text-[#745b3c]' : 'text-[#B0A898]'}`}
+                className={`text-[10px] mt-1 whitespace-nowrap ${isActive ? 'text-[#c49a3c]' : 'text-[#B0A898]'}`}
                 style={{ letterSpacing: '0.05em' }}
               >
                 {label}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`w-14 h-px mx-1.5 mb-4 transition-colors ${isDone ? 'bg-[#745b3c]' : 'bg-[#D4CDB5]'}`} />
+              <div className={`w-14 h-px mx-1.5 mb-4 transition-colors ${isDone ? 'bg-[#c49a3c]' : 'bg-[#D4CDB5]'}`} />
             )}
           </div>
         );
@@ -54,7 +54,7 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
 // ─────────────────────────────────────────────
 
 const CLASS_COLORS: Record<string, string> = {
-  'Yoga':             '#745b3c',
+  'Yoga':             '#c49a3c',
   'Calisthenics':     '#3A4A5A',
   'Animal Flow':      '#6B8E6B',
   'Groundworks':      '#8B6F5A',
@@ -62,7 +62,7 @@ const CLASS_COLORS: Record<string, string> = {
   'Mat Pilates':      '#9A7A8A',
   'Kickboxing':       '#7A3A4A',
   'Capoeira':         '#A07050',
-  'Personal Coaching':'#5e4a30',
+  'Personal Coaching':'#a67f2e',
 };
 
 /** Decorative placeholder QR for bank transfer (not scannable). */
@@ -132,7 +132,7 @@ export default function PaymentPage() {
 
   if (!booking) return null;
 
-  const classColor = CLASS_COLORS[booking.className] || '#745b3c';
+  const classColor = CLASS_COLORS[booking.className] || '#c49a3c';
 
   const handleFileChange = (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -288,19 +288,19 @@ export default function PaymentPage() {
                     onClick={() => setPaymentMethod(id)}
                     className={`flex flex-col items-center gap-2 rounded-2xl border-2 py-4 px-3 transition-all ${
                       paymentMethod === id
-                        ? 'border-[#745b3c] bg-[#745b3c]/06'
-                        : 'border-[#D4CDB5]/60 bg-[#F8F3E8] hover:border-[#745b3c]/40'
+                        ? 'border-[#c49a3c] bg-[#c49a3c]/06'
+                        : 'border-[#D4CDB5]/60 bg-[#F8F3E8] hover:border-[#c49a3c]/40'
                     }`}
                   >
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: bg }}>
                       <Icon size={18} className="text-white" />
                     </div>
                     <div>
-                      <p className={`text-sm font-bold ${paymentMethod === id ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}>{label}</p>
+                      <p className={`text-sm font-bold ${paymentMethod === id ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>{label}</p>
                       <p className="text-[#9A8E7E] text-xs">{sub}</p>
                     </div>
                     {paymentMethod === id && (
-                      <div className="w-5 h-5 rounded-full bg-[#745b3c] flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-[#c49a3c] flex items-center justify-center">
                         <Check size={11} className="text-white" strokeWidth={3} />
                       </div>
                     )}
@@ -331,11 +331,11 @@ export default function PaymentPage() {
                     <DummyBankQR />
                     <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-2 min-w-0">
                       <div className="flex items-center gap-2 text-[#8A7E6E]">
-                        <QrCode size={14} className="text-[#745b3c] shrink-0" />
+                        <QrCode size={14} className="text-[#c49a3c] shrink-0" />
                         <span className="text-xs uppercase tracking-widest">BPI · BALANSÉ Studio</span>
                       </div>
                       <p
-                        className="text-[#745b3c] leading-none"
+                        className="text-[#c49a3c] leading-none"
                         style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem', letterSpacing: '0.02em' }}
                       >
                         ₱{booking?.priceNum ?? 360}.00
@@ -366,14 +366,14 @@ export default function PaymentPage() {
                       </div>
                       <div className="col-span-2">
                         <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Amount</p>
-                        <p className="text-[#745b3c]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.02em' }}>
+                        <p className="text-[#c49a3c]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.02em' }}>
                           ₱{booking?.priceNum ?? 360}.00
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 mt-3 bg-[#745b3c]/06 border border-[#745b3c]/20 rounded-xl px-3.5 py-2.5">
-                    <Info size={12} className="text-[#745b3c] mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-2 mt-3 bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-xl px-3.5 py-2.5">
+                    <Info size={12} className="text-[#c49a3c] mt-0.5 shrink-0" />
                     <p className="text-[#7A6A52] text-xs leading-relaxed">
                       Use your full name as the payment note. Screenshot your confirmation and upload it below.
                     </p>
@@ -400,12 +400,12 @@ export default function PaymentPage() {
                     onClick={() => fileInputRef.current?.click()}
                     className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-10 cursor-pointer transition-all ${
                       dragOver
-                        ? 'border-[#745b3c] bg-[#745b3c]/06'
+                        ? 'border-[#c49a3c] bg-[#c49a3c]/06'
                         : uploadedFile
                           ? 'border-[#8A9E7A]/60 bg-[#8A9E7A]/05'
                           : errors.file
                             ? 'border-red-300 bg-red-50/40'
-                            : 'border-[#D4CDB5]/70 bg-[#F8F3E8]/50 hover:border-[#745b3c]/40 hover:bg-[#745b3c]/04'
+                            : 'border-[#D4CDB5]/70 bg-[#F8F3E8]/50 hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/04'
                     }`}
                   >
                     <input
@@ -467,7 +467,7 @@ export default function PaymentPage() {
                     value={reference}
                     onChange={e => setReference(e.target.value)}
                     placeholder="e.g. GCash-2026041234567"
-                    className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#F8F3E8] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/30 focus:border-[#745b3c]/50 transition-all"
+                    className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#F8F3E8] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/30 focus:border-[#c49a3c]/50 transition-all"
                   />
                 </div>
 
@@ -480,7 +480,7 @@ export default function PaymentPage() {
                     onChange={e => setNotes(e.target.value)}
                     rows={3}
                     placeholder="Any additional message for our team..."
-                    className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#F8F3E8] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#745b3c]/30 focus:border-[#745b3c]/50 transition-all resize-none"
+                    className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#F8F3E8] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/30 focus:border-[#c49a3c]/50 transition-all resize-none"
                   />
                 </div>
               </div>
@@ -490,7 +490,7 @@ export default function PaymentPage() {
             <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-start gap-2 min-w-0">
-                  <Receipt size={17} className="text-[#745b3c] shrink-0 mt-0.5" />
+                  <Receipt size={17} className="text-[#c49a3c] shrink-0 mt-0.5" />
                   <div>
                     <p
                       className="text-[#1E2A35]"
@@ -508,7 +508,7 @@ export default function PaymentPage() {
                   type="button"
                   onClick={() => setRequestReceipt(v => !v)}
                   aria-label="Request physical receipt"
-                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${requestReceipt ? 'bg-[#745b3c]' : 'bg-[#D4CDB5]'}`}
+                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${requestReceipt ? 'bg-[#c49a3c]' : 'bg-[#D4CDB5]'}`}
                 >
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${requestReceipt ? 'left-6' : 'left-1'}`} />
                 </button>
@@ -519,7 +519,7 @@ export default function PaymentPage() {
             <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 ${CARD_HOVER_GROW}`}>
               <button
                 onClick={handleSubmit}
-                className="w-full flex items-center justify-center gap-2 bg-[#745b3c] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(116,91,60,0.35)] hover:bg-[#5e4a30] active:scale-[0.97] transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(196,154,60,0.35)] hover:bg-[#a67f2e] active:scale-[0.97] transition-all"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.1em' }}
               >
                 Submit for Verification <ChevronRight size={18} />

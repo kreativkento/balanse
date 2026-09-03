@@ -6,7 +6,7 @@ import { StaffAuthProvider } from './context/StaffAuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { DevAuthProvider } from './context/DevAuthContext';
 
-const PAGES_WITH_CTA = ['/', '/gallery', '/pricing', '/services', '/classes', '/disciplines'];
+const PAGES_WITH_CTA = ['/', '/studio', '/studio/guidelines', '/pricing', '/services', '/classes', '/disciplines'];
 
 // Standalone portals — hide the public NavBar
 const PORTAL_PREFIXES = [

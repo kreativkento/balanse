@@ -90,12 +90,12 @@ export function WeekCalendarGrid({
                   type="button"
                   onClick={onDayHeaderClick ? () => onDayHeaderClick(date, dayIdx) : undefined}
                   className={`w-full h-14 flex flex-col items-center justify-center border-b border-[#D4CDB5]/40 transition-colors ${
-                    isSelected ? 'bg-[#745b3c]/14' : isToday ? 'bg-[#745b3c]/8' : ''
-                  } ${onDayHeaderClick ? 'hover:bg-[#745b3c]/10 cursor-pointer' : 'cursor-default'}`}
+                    isSelected ? 'bg-[#c49a3c]/14' : isToday ? 'bg-[#c49a3c]/8' : ''
+                  } ${onDayHeaderClick ? 'hover:bg-[#c49a3c]/10 cursor-pointer' : 'cursor-default'}`}
                 >
                   <span className="text-[10px] text-[#9A8E7E] tracking-wide">{dayLabels[dayIdx]}</span>
                   <span
-                    className={isToday || isSelected ? 'text-[#745b3c]' : 'text-[#1E2A35]'}
+                    className={isToday || isSelected ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}
                     style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.03em' }}
                   >
                     {date.getDate()}

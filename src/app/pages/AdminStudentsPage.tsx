@@ -16,7 +16,7 @@ import {
 } from '../../lib/admin-service';
 import { ProfileAvatar } from '../components/ProfileImages';
 
-const ACCENT = '#745b3c';
+const ACCENT = '#c49a3c';
 
 const EMPTY_FORM = {
   name: '',
@@ -97,7 +97,7 @@ function ClientProfileModal({
               type="button"
               onClick={onClose}
               aria-label="Close profile"
-              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
+              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50"
             >
               <X size={16} />
             </button>
@@ -113,7 +113,7 @@ function ClientProfileModal({
               initials={initials}
               alt=""
               className="h-full w-full"
-              initialsClassName="flex h-full w-full items-center justify-center text-[#5e4a30]"
+              initialsClassName="flex h-full w-full items-center justify-center text-[#a67f2e]"
             />
           </div>
         </div>
@@ -165,19 +165,19 @@ function ClientProfileModal({
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Contact</p>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                  <Mail size={13} className="text-[#745b3c] shrink-0" />
+                  <Mail size={13} className="text-[#c49a3c] shrink-0" />
                   <span className="truncate">{student.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                  <Phone size={13} className="text-[#745b3c] shrink-0" />
+                  <Phone size={13} className="text-[#c49a3c] shrink-0" />
                   <span>{student.phone || 'Not provided'}</span>
                 </div>
                 <div className="flex items-start gap-2 text-sm text-[#5A5048]">
-                  <MapPin size={13} className="text-[#745b3c] shrink-0 mt-0.5" />
+                  <MapPin size={13} className="text-[#c49a3c] shrink-0 mt-0.5" />
                   <span>{student.address || 'Not provided'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                  <Globe size={13} className="text-[#745b3c] shrink-0" />
+                  <Globe size={13} className="text-[#c49a3c] shrink-0" />
                   <span>{student.nationality || 'Not provided'}</span>
                 </div>
               </div>
@@ -202,7 +202,7 @@ function ClientProfileModal({
                   `Weight: ${student.weight || '—'}`,
                 ].map((line) => (
                   <div key={line} className="flex items-center gap-2 text-xs text-[#5A5048]">
-                    <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
+                    <div className="w-1 h-1 rounded-full bg-[#c49a3c] shrink-0" />
                     {line}
                   </div>
                 ))}
@@ -215,7 +215,7 @@ function ClientProfileModal({
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Activity</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { icon: <Activity size={13} className="text-[#745b3c]" />, label: 'Classes', value: bookingsLoading ? '…' : String(bookings.length) },
+                  { icon: <Activity size={13} className="text-[#c49a3c]" />, label: 'Classes', value: bookingsLoading ? '…' : String(bookings.length) },
                   { icon: <CalendarDays size={13} className="text-[#8A9E7A]" />, label: 'Health form', value: student.healthDeclarationSigned ? 'Yes' : 'No' },
                 ].map((metric) => (
                   <div
@@ -390,7 +390,7 @@ export default function AdminStudentsPage() {
   };
 
   const inputClass =
-    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]";
+    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]";
 
   const PROFILE_FILTERS = ['All', 'Complete', 'Incomplete'] as const;
 
@@ -401,7 +401,7 @@ export default function AdminStudentsPage() {
         <div className="flex items-center justify-between mb-7 shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Users size={14} className="text-[#745b3c]" />
+              <Users size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Clients</span>
             </div>
             <h1
@@ -421,7 +421,7 @@ export default function AdminStudentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, or phone…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -429,7 +429,7 @@ export default function AdminStudentsPage() {
               <button
                 key={f}
                 onClick={() => setFilterProfile(f)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${filterProfile === f ? 'bg-[#1E2A35] text-white' : 'bg-white border border-[#D4CDB5]/60 text-[#8A7E6E] hover:border-[#745b3c]/40 hover:text-[#1E2A35]'}`}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${filterProfile === f ? 'bg-[#1E2A35] text-white' : 'bg-white border border-[#D4CDB5]/60 text-[#8A7E6E] hover:border-[#c49a3c]/40 hover:text-[#1E2A35]'}`}
               >
                 {f}
               </button>
@@ -466,13 +466,13 @@ export default function AdminStudentsPage() {
                   className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center shrink-0 overflow-hidden">
                       <ProfileAvatar
                         src={student.photo}
                         initials={clientInitials(student.name)}
                         alt=""
                         className="h-full w-full"
-                        initialsClassName="text-[#5e4a30] text-xs font-bold"
+                        initialsClassName="text-[#a67f2e] text-xs font-bold"
                       />
                     </div>
                     <span className="text-[#1E2A35] text-sm font-semibold truncate">{student.name}</span>

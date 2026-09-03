@@ -42,7 +42,7 @@ export function ProfileImageHero({
   photoUrl,
   coverUrl,
   initials,
-  accent = '#745b3c',
+  accent = '#c49a3c',
   editable = false,
   onPhotoUploaded,
   onCoverUploaded,
@@ -169,7 +169,7 @@ export function ProfileImageHero({
         disabled={!editable || uploading !== null}
         aria-label={editable ? 'Change profile photo' : 'Profile photo'}
         className={`absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg ${
-          editable ? 'group cursor-pointer hover:brightness-95 hover:ring-2 hover:ring-[#745b3c]/40 active:scale-[0.98]' : 'cursor-default'
+          editable ? 'group cursor-pointer hover:brightness-95 hover:ring-2 hover:ring-[#c49a3c]/40 active:scale-[0.98]' : 'cursor-default'
         }`}
         style={{ backgroundColor: `${accent}18` }}
       >
@@ -237,7 +237,7 @@ export function AccountImagesCard({
   photoUrl,
   coverUrl,
   initials,
-  accent = '#745b3c',
+  accent = '#c49a3c',
   onPhotoUploaded,
   onCoverUploaded,
 }: {
@@ -270,7 +270,7 @@ export function AccountImagesCard({
           {name}
         </h2>
         <p className="text-[#8A7E6E] text-sm">{email}</p>
-        <span className="mt-1.5 inline-flex items-center rounded-full border border-[#745b3c]/25 bg-[#745b3c]/10 px-2.5 py-1 text-xs font-bold text-[#5e4a30]">
+        <span className="mt-1.5 inline-flex items-center rounded-full border border-[#c49a3c]/25 bg-[#c49a3c]/10 px-2.5 py-1 text-xs font-bold text-[#a67f2e]">
           {roleLabel}
         </span>
         <p className="mt-3 text-[#B0A898] text-xs leading-relaxed">

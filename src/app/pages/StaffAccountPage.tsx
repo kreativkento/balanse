@@ -31,7 +31,7 @@ export default function StaffAccountPage() {
     setTimeout(() => setSuccess(false), 4000);
   };
 
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
@@ -69,7 +69,7 @@ export default function StaffAccountPage() {
           {/* Change Password */}
           <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex items-center gap-2 bg-[#F8F3E8]/60">
-              <KeyRound size={15} className="text-[#745b3c]" />
+              <KeyRound size={15} className="text-[#c49a3c]" />
               <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}>Change Password</h2>
             </div>
 

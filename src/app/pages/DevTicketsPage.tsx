@@ -34,11 +34,11 @@ const PRIORITY_OPTIONS: { value: TicketPriority; label: string }[] = [
 const STATUS_OPTIONS: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
 
 const INP =
-  "w-full px-3 py-2.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all";
+  "w-full px-3 py-2.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all";
 
 const PRIORITY_STYLE: Record<TicketPriority, string> = {
   low: 'bg-[#EDE8D8] text-[#5A5048]',
-  medium: 'bg-[#745b3c]/15 text-[#5e4a30]',
+  medium: 'bg-[#c49a3c]/15 text-[#a67f2e]',
   high: 'bg-orange-100 text-orange-700',
   critical: 'bg-red-100 text-red-700',
 };
@@ -181,7 +181,7 @@ export default function DevTicketsPage() {
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3">
-              <Ticket size={11} className="text-[#745b3c]" />
+              <Ticket size={11} className="text-[#c49a3c]" />
               <span className="text-[#1E2A35] text-xs font-bold uppercase tracking-widest">Tickets</span>
             </div>
             <h1
@@ -226,7 +226,7 @@ export default function DevTicketsPage() {
               <button
                 type="button"
                 onClick={() => { resetForm(); setShowCreate(true); }}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#5e4a30] hover:text-[#1E2A35] transition-colors"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#a67f2e] hover:text-[#1E2A35] transition-colors"
               >
                 <Plus size={14} /> Create first ticket
               </button>
@@ -254,7 +254,7 @@ export default function DevTicketsPage() {
                           {ticket.type}
                         </span>
                         <span className={`text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                          ticket.level === 2 ? 'bg-[#745b3c]/20 text-[#5e4a30]' : 'bg-[#EDE8D8] text-[#5A5048]'
+                          ticket.level === 2 ? 'bg-[#c49a3c]/20 text-[#a67f2e]' : 'bg-[#EDE8D8] text-[#5A5048]'
                         }`}>
                           {levelLabel(ticket.level)}
                         </span>
@@ -272,7 +272,7 @@ export default function DevTicketsPage() {
                       <select
                         value={ticket.status}
                         onChange={(e) => handleStatusChange(ticket.id, e.target.value as TicketStatus)}
-                        className="px-3 py-2 rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-xs outline-none focus:ring-2 focus:ring-[#745b3c]/25"
+                        className="px-3 py-2 rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-xs outline-none focus:ring-2 focus:ring-[#c49a3c]/25"
                       >
                         {STATUS_OPTIONS.map((s) => (
                           <option key={s} value={s}>{s.replace('_', ' ')}</option>
@@ -370,7 +370,7 @@ export default function DevTicketsPage() {
               <div>
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Image (optional)</label>
                 <div className="flex flex-col gap-2">
-                  <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-[#D4CDB5] bg-[#F8F3E8] text-[#8A7E6E] text-sm cursor-pointer hover:border-[#745b3c]/50 hover:text-[#1E2A35] transition-colors">
+                  <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-[#D4CDB5] bg-[#F8F3E8] text-[#8A7E6E] text-sm cursor-pointer hover:border-[#c49a3c]/50 hover:text-[#1E2A35] transition-colors">
                     <ImagePlus size={16} />
                     Choose image
                     <input

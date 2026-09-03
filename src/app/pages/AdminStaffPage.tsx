@@ -49,7 +49,7 @@ const STAFF_TYPE_OPTIONS: { value: StaffUserRole; label: string }[] = [
 ];
 
 const STAFF_ACCENT: Record<StaffMember['role'], string> = {
-  Coach: '#745b3c',
+  Coach: '#c49a3c',
   Administrator: '#3A4A5A',
   Admin: '#1E2A35',
   Dev: '#6D28D9',
@@ -151,12 +151,12 @@ function DisciplineMultiSelect({
                 onClick={() => onToggle(discipline.id)}
                 className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                   selected
-                    ? 'bg-[#745b3c]/12 text-[#1E2A35]'
+                    ? 'bg-[#c49a3c]/12 text-[#1E2A35]'
                     : 'hover:bg-[#F8F3E8] text-[#5A5048]'
                 }`}
               >
                 <span className="text-sm font-semibold truncate">{discipline.name}</span>
-                {selected && <Check size={14} className="text-[#745b3c] shrink-0" strokeWidth={2.5} />}
+                {selected && <Check size={14} className="text-[#c49a3c] shrink-0" strokeWidth={2.5} />}
               </button>
             );
           })}
@@ -203,7 +203,7 @@ function StaffPhotoModal({ member, onClose }: { member: StaffMember; onClose: ()
           type="button"
           onClick={onClose}
           aria-label="Close photo"
-          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#8A7E6E] shadow-md transition-all hover:bg-[#F8F3E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
+          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#8A7E6E] shadow-md transition-all hover:bg-[#F8F3E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50"
         >
           <X size={16} />
         </button>
@@ -278,7 +278,7 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                 type="button"
                 onClick={onClose}
                 aria-label="Close profile"
-                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
+                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50"
               >
                 <X size={16} />
               </button>
@@ -289,7 +289,7 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
               type="button"
               onClick={() => setPhotoOpen(true)}
               aria-label={`View photo of ${member.name}`}
-              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#745b3c]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c] active:scale-[0.98] cursor-pointer"
+              className="absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg transition-all hover:brightness-95 hover:ring-2 hover:ring-[#c49a3c]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c] active:scale-[0.98] cursor-pointer"
             >
               {member.photo && !imgError ? (
                 <img
@@ -339,7 +339,7 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                   )}
                   {member.nationality.trim() && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
-                      <Globe size={11} className="text-[#745b3c]" />
+                      <Globe size={11} className="text-[#c49a3c]" />
                       {member.nationality}
                     </span>
                   )}
@@ -383,15 +383,15 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Contact</p>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Mail size={13} className="text-[#745b3c] shrink-0" />
+                    <Mail size={13} className="text-[#c49a3c] shrink-0" />
                     <span className="truncate">{member.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Phone size={13} className="text-[#745b3c] shrink-0" />
+                    <Phone size={13} className="text-[#c49a3c] shrink-0" />
                     <span>{member.phone.trim() || 'No phone on file'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Globe size={13} className="text-[#745b3c] shrink-0" />
+                    <Globe size={13} className="text-[#c49a3c] shrink-0" />
                     <span>{member.nationality.trim() || 'No nationality on file'}</span>
                   </div>
                 </div>
@@ -421,16 +421,16 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Account</p>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                    <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
+                    <div className="w-1 h-1 rounded-full bg-[#c49a3c] shrink-0" />
                     Staff type: {member.role}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                    <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
+                    <div className="w-1 h-1 rounded-full bg-[#c49a3c] shrink-0" />
                     Status: {member.status}
                   </div>
                   {member.experience && member.experience !== 'Administrator' && (
                     <div className="flex items-center gap-2 text-xs text-[#5A5048]">
-                      <div className="w-1 h-1 rounded-full bg-[#745b3c] shrink-0" />
+                      <div className="w-1 h-1 rounded-full bg-[#c49a3c] shrink-0" />
                       Experience: {member.experience}
                     </div>
                   )}
@@ -667,7 +667,7 @@ export default function AdminStaffPage() {
     setDeleteId(null);
   };
 
-  const inputClass = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]";
+  const inputClass = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   return (
@@ -679,7 +679,7 @@ export default function AdminStaffPage() {
         <div className="flex items-center justify-between mb-6 shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <UserCheck size={14} className="text-[#745b3c]" />
+              <UserCheck size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Staffing</span>
             </div>
             <h1
@@ -726,7 +726,7 @@ export default function AdminStaffPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by name, email, or discipline…"
-                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
+                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
                 />
               </div>
               <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm h-[42px] shrink-0">
@@ -790,7 +790,7 @@ export default function AdminStaffPage() {
                           setSelectedMember(member);
                         }
                       }}
-                      className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#745b3c]/30 transition-all cursor-pointer"
+                      className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#c49a3c]/30 transition-all cursor-pointer"
                     >
                       <div className="relative h-28 overflow-hidden" style={{ backgroundColor: `${accent}15` }}>
                         {member.coverImage ? (
@@ -950,7 +950,7 @@ export default function AdminStaffPage() {
                           member.role === 'Admin' || member.role === 'Front Desk' || member.role === 'Marketing'
                             ? 'bg-[#1E2A35]/10 text-[#1E2A35] border border-[#1E2A35]/15' :
                           member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' :
-                          'bg-[#745b3c]/12 text-[#5e4a30]'
+                          'bg-[#c49a3c]/12 text-[#a67f2e]'
                         }`}>{member.role}</span>
                         <span className="text-[#5A5048] text-sm truncate">{member.specialty}</span>
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{member.status}</span>
@@ -1013,7 +1013,7 @@ export default function AdminStaffPage() {
             {logTab === 'passwords' && (
               <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                 <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center gap-2">
-                  <KeyRound size={14} className="text-[#745b3c]" />
+                  <KeyRound size={14} className="text-[#c49a3c]" />
                   <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Password Change Log</h2>
                 </div>
                 <div className="grid grid-cols-[2fr_2.2fr_1.5fr_1.5fr] gap-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
@@ -1038,7 +1038,7 @@ export default function AdminStaffPage() {
             {logTab === 'deactivations' && (
               <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
                 <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center gap-2">
-                  <ShieldOff size={14} className="text-[#745b3c]" />
+                  <ShieldOff size={14} className="text-[#c49a3c]" />
                   <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Account Deactivation Log</h2>
                 </div>
                 <div className="grid grid-cols-[2fr_2.2fr_1fr_1.5fr_2fr] gap-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">

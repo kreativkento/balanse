@@ -169,7 +169,7 @@ export default function AdminClassesPage() {
         <div className="flex items-start justify-between gap-4 mb-8">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <CalendarDays size={14} className="text-[#745b3c]" />
+              <CalendarDays size={14} className="text-[#c49a3c]" />
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Class Management</p>
             </div>
             <h1
@@ -207,13 +207,13 @@ export default function AdminClassesPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name, discipline, or coach…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | ClassStatus)}
-            className="sm:w-44 px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25"
+            className="sm:w-44 px-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25"
           >
             <option value="all">All statuses</option>
             <option value="draft">Draft</option>
@@ -302,7 +302,7 @@ export default function AdminClassesPage() {
                       </td>
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center gap-1.5 text-sm text-[#1E2A35]">
-                          <Users size={14} className="text-[#745b3c]" />
+                          <Users size={14} className="text-[#c49a3c]" />
                           {event.enrolledCount}/{event.classLimit}
                         </span>
                       </td>

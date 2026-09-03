@@ -2,25 +2,30 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Menu, X, LogOut, LayoutDashboard,
-  Home, Images, CreditCard, Layers, ShieldCheck, Newspaper, Users, ChevronDown, CalendarDays, Sparkles,
+  Home, Images, CreditCard, Layers, ShieldCheck, Newspaper, Users, ChevronDown, CalendarDays, Sparkles, ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStaffAuth } from '../../context/StaffAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
 
 const ratesLinks = [
-  { label: 'Pricing', path: '/pricing', icon: <CreditCard size={18} /> },
+  { label: 'Pricing and Plans', path: '/pricing', icon: <CreditCard size={18} /> },
   { label: 'Services', path: '/services', icon: <Sparkles size={18} /> },
 ];
 
 const communityLinks = [
   { label: 'Bulletin', path: '/bulletin', icon: <Newspaper size={18} /> },
-  { label: 'Coaches', path: '/coaches', icon: <Users size={18} /> },
+  { label: 'Events', path: '/events', icon: <CalendarDays size={18} /> },
 ];
 
 const classesLinks = [
   { label: 'Class Schedules', path: '/classes', icon: <CalendarDays size={18} /> },
   { label: 'Disciplines', path: '/disciplines', icon: <Layers size={18} /> },
+];
+
+const studioLinks = [
+  { label: 'Amenities', path: '/studio', icon: <Images size={18} /> },
+  { label: 'Guidelines', path: '/studio/guidelines', icon: <ClipboardList size={18} /> },
 ];
 
 function DesktopDropdown({
@@ -40,7 +45,7 @@ function DesktopDropdown({
         type="button"
         className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
           groupActive
-            ? 'bg-[#745b3c]/10 text-[#745b3c]'
+            ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
             : 'text-[#5A5048] group-hover:text-[#1E2A35] group-hover:bg-[#EDE8D8]'
         }`}
         aria-haspopup="true"
@@ -56,7 +61,7 @@ function DesktopDropdown({
               to={link.path}
               className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
                 isActive(link.path)
-                  ? 'bg-[#745b3c]/10 text-[#745b3c]'
+                  ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
                   : 'text-[#5A5048] hover:text-[#1E2A35] hover:bg-[#EDE8D8]'
               }`}
             >
@@ -96,7 +101,7 @@ function MobileAccordion({
         onClick={onToggle}
         className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors min-h-[52px] w-full text-left ${
           groupActive
-            ? 'bg-[#745b3c]/10 text-[#745b3c]'
+            ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
             : 'text-[#1E2A35] hover:bg-[#EDE8D8]'
         }`}
       >
@@ -118,7 +123,7 @@ function MobileAccordion({
               onClick={onNavigate}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors min-h-[48px] ${
                 isActive(link.path)
-                  ? 'bg-[#745b3c]/10 text-[#745b3c]'
+                  ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
                   : 'text-[#1E2A35] hover:bg-[#EDE8D8]'
               }`}
             >
@@ -137,6 +142,7 @@ export function NavBar() {
   const [communityOpen, setCommunityOpen] = useState(false);
   const [classesOpen, setClassesOpen] = useState(false);
   const [ratesOpen, setRatesOpen] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
@@ -156,17 +162,17 @@ export function NavBar() {
 
   const navLinks = [
     { label: 'About Us', path: '/', icon: <Home size={18} /> },
-    { label: 'Our Studio', path: '/gallery', icon: <Images size={18} /> },
   ];
 
   const isActive = (path: string) =>
-    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+    path === '/' ? location.pathname === '/' : location.pathname === path;
 
   const closeMenu = () => {
     setMenuOpen(false);
     setCommunityOpen(false);
     setClassesOpen(false);
     setRatesOpen(false);
+    setStudioOpen(false);
   };
 
   return (
@@ -185,7 +191,7 @@ export function NavBar() {
                 to={link.path}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   isActive(link.path)
-                    ? 'bg-[#745b3c]/10 text-[#745b3c]'
+                    ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
                     : 'text-[#5A5048] hover:text-[#1E2A35] hover:bg-[#EDE8D8]'
                 }`}
               >
@@ -193,6 +199,7 @@ export function NavBar() {
               </Link>
             ))}
 
+            <DesktopDropdown label="Our Studio" links={studioLinks} isActive={isActive} />
             <DesktopDropdown label="Our Rates" links={ratesLinks} isActive={isActive} />
             <DesktopDropdown label="Our Classes" links={classesLinks} isActive={isActive} />
             <DesktopDropdown label="Our Community" links={communityLinks} isActive={isActive} />
@@ -224,7 +231,7 @@ export function NavBar() {
               <>
                 <Link
                   to="/dashboard"
-                  className="flex items-center gap-2 px-4 py-2 bg-[#745b3c]/10 text-[#745b3c] rounded-xl text-sm font-semibold hover:bg-[#745b3c]/20 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#c49a3c]/10 text-[#c49a3c] rounded-xl text-sm font-semibold hover:bg-[#c49a3c]/20 transition-colors"
                 >
                   <LayoutDashboard size={15} />
                   Dashboard
@@ -240,7 +247,7 @@ export function NavBar() {
             ) : (
               <Link
                 to="/auth"
-                className="px-5 py-2.5 bg-[#745b3c] text-white rounded-full text-sm font-bold shadow-[0_4px_16px_rgba(116,91,60,0.35)] hover:bg-[#5e4a30] transition-colors active:scale-95"
+                className="px-5 py-2.5 bg-[#c49a3c] text-white rounded-full text-sm font-bold shadow-[0_4px_16px_rgba(196,154,60,0.35)] hover:bg-[#a67f2e] transition-colors active:scale-95"
               >
                 Login / Sign Up
               </Link>
@@ -297,7 +304,7 @@ export function NavBar() {
               onClick={closeMenu}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors min-h-[52px] ${
                 isActive(link.path)
-                  ? 'bg-[#745b3c]/10 text-[#745b3c]'
+                  ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
                   : 'text-[#1E2A35] hover:bg-[#EDE8D8]'
               }`}
             >
@@ -305,6 +312,16 @@ export function NavBar() {
               {link.label}
             </Link>
           ))}
+
+          <MobileAccordion
+            label="Our Studio"
+            icon={<Images size={18} />}
+            links={studioLinks}
+            open={studioOpen}
+            onToggle={() => setStudioOpen((v) => !v)}
+            isActive={isActive}
+            onNavigate={closeMenu}
+          />
 
           <MobileAccordion
             label="Our Rates"
@@ -361,7 +378,7 @@ export function NavBar() {
               <Link
                 to="/dashboard"
                 onClick={closeMenu}
-                className="flex items-center gap-3 px-4 py-3 text-[#745b3c] hover:bg-[#EDE8D8] rounded-xl text-base font-medium transition-colors min-h-[52px]"
+                className="flex items-center gap-3 px-4 py-3 text-[#c49a3c] hover:bg-[#EDE8D8] rounded-xl text-base font-medium transition-colors min-h-[52px]"
               >
                 <LayoutDashboard size={18} />
                 Dashboard
@@ -378,7 +395,7 @@ export function NavBar() {
             <Link
               to="/auth"
               onClick={closeMenu}
-              className="flex items-center justify-center px-4 py-4 bg-[#745b3c] text-white rounded-2xl font-bold transition-all hover:bg-[#5e4a30] active:scale-95 min-h-[56px] shadow-[0_4px_20px_rgba(116,91,60,0.3)]"
+              className="flex items-center justify-center px-4 py-4 bg-[#c49a3c] text-white rounded-2xl font-bold transition-all hover:bg-[#a67f2e] active:scale-95 min-h-[56px] shadow-[0_4px_20px_rgba(196,154,60,0.3)]"
             >
               Login / Sign Up
             </Link>

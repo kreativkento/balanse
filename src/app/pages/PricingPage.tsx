@@ -71,18 +71,18 @@ function MembershipDetailsModal({
       >
         <div
           className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3 shrink-0"
-          style={isGold ? { background: 'linear-gradient(135deg, rgba(116,91,60,0.10) 0%, rgba(248,243,232,0.40) 100%)' } : undefined}
+          style={isGold ? { background: 'linear-gradient(135deg, rgba(196,154,60,0.10) 0%, rgba(248,243,232,0.40) 100%)' } : undefined}
         >
           <div className="min-w-0">
             <div className="flex items-start gap-2 flex-wrap mb-1">
               <h3
-                className={`leading-none ${isGold ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}
+                className={`leading-none ${isGold ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.5rem, 4vw, 1.8rem)', letterSpacing: '0.05em' }}
               >
                 {isGold ? 'Gold Membership' : 'Silver Membership'}
               </h3>
               {isGold ? (
-                <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#745b3c] text-white px-2.5 py-1 rounded-full">
+                <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#c49a3c] text-white px-2.5 py-1 rounded-full">
                   <Star size={9} fill="currentColor" /> Popular
                 </span>
               ) : (
@@ -117,7 +117,7 @@ function MembershipDetailsModal({
                   key={i}
                   className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 ${
                     isGold && i === 1
-                      ? 'bg-[#745b3c]/10 border border-[#745b3c]/25'
+                      ? 'bg-[#c49a3c]/10 border border-[#c49a3c]/25'
                       : 'bg-[#F8F3E8] border border-[#D4CDB5]/40'
                   }`}
                 >
@@ -132,7 +132,7 @@ function MembershipDetailsModal({
                     )}
                   </div>
                   <span
-                    className={`leading-none shrink-0 ${isGold && i === 1 ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}
+                    className={`leading-none shrink-0 ${isGold && i === 1 ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
                     style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.02em' }}
                   >
                     {tier.price}
@@ -148,7 +148,7 @@ function MembershipDetailsModal({
               {inclusions.map((item) => (
                 <div key={item} className="flex items-start gap-2.5">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                    isGold ? 'bg-[#745b3c]' : 'bg-[#EDE8D8] border border-[#D4CDB5]'
+                    isGold ? 'bg-[#c49a3c]' : 'bg-[#EDE8D8] border border-[#D4CDB5]'
                   }`}>
                     <Check size={11} className={isGold ? 'text-white' : 'text-[#8A7E6E]'} strokeWidth={3} />
                   </div>
@@ -281,16 +281,16 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 md:items-start">
 
           {/* GOLD */}
-          <div className={`rounded-3xl bg-white border border-[#745b3c]/50 shadow-[0_4px_32px_rgba(116,91,60,0.13)] overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-lg`}>
-            <div className="px-5 md:px-6 pt-6 pb-5 flex-1" style={{ background: 'linear-gradient(135deg, rgba(116,91,60,0.10) 0%, rgba(248,243,232,0.40) 100%)' }}>
+          <div className={`rounded-3xl bg-white border border-[#c49a3c]/50 shadow-[0_4px_32px_rgba(196,154,60,0.13)] overflow-hidden flex flex-col ${CARD_HOVER_GROW} hover:shadow-lg`}>
+            <div className="px-5 md:px-6 pt-6 pb-5 flex-1" style={{ background: 'linear-gradient(135deg, rgba(196,154,60,0.10) 0%, rgba(248,243,232,0.40) 100%)' }}>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h2
-                  className="text-[#745b3c] leading-none"
+                  className="text-[#c49a3c] leading-none"
                   style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.05em' }}
                 >
                   Gold Membership
                 </h2>
-                <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#745b3c] text-white px-2.5 py-1 rounded-full">
+                <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#c49a3c] text-white px-2.5 py-1 rounded-full">
                   <Star size={9} fill="currentColor" /> Popular
                 </span>
               </div>
@@ -319,7 +319,7 @@ export default function PricingPage() {
               <button
                 type="button"
                 onClick={handleAction}
-                className="flex-1 py-3 rounded-full bg-[#745b3c] text-white hover:bg-[#5e4a30] active:scale-[0.97] transition-all shadow-[0_4px_20px_rgba(116,91,60,0.35)]"
+                className="flex-1 py-3 rounded-full bg-[#c49a3c] text-white hover:bg-[#a67f2e] active:scale-[0.97] transition-all shadow-[0_4px_20px_rgba(196,154,60,0.35)]"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
               >
                 Book Now

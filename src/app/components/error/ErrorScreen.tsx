@@ -51,8 +51,8 @@ export function ErrorScreen({
   return (
     <div className="h-full min-h-[28rem] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-8 md:p-10 text-center">
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-[#745b3c]/10 border border-[#745b3c]/25 flex items-center justify-center mb-5">
-          <Icon size={28} className="text-[#745b3c]" />
+        <div className="mx-auto w-16 h-16 rounded-2xl bg-[#c49a3c]/10 border border-[#c49a3c]/25 flex items-center justify-center mb-5">
+          <Icon size={28} className="text-[#c49a3c]" />
         </div>
         <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">{code}</p>
         <h1

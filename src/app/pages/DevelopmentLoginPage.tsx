@@ -57,7 +57,7 @@ export default function DevelopmentLoginPage() {
         <div className="mb-8 text-center">
           <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-[60px] w-auto object-contain mx-auto mb-6" />
           <div className="inline-flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3">
-            <Code2 size={11} className="text-[#745b3c]" />
+            <Code2 size={11} className="text-[#c49a3c]" />
             <span className="text-[#1E2A35] text-xs font-bold uppercase tracking-widest">Development</span>
           </div>
           <h1
@@ -80,7 +80,7 @@ export default function DevelopmentLoginPage() {
                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 placeholder="dev@yourdomain.com"
                 autoComplete="username"
-                className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+                className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
               />
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function DevelopmentLoginPage() {
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+                className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
               />
               <button
                 type="button"

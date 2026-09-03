@@ -56,7 +56,7 @@ export default function StaffLoginPage() {
         {/* Decorative circles */}
         <div className="absolute top-[-80px] right-[-80px] w-72 h-72 rounded-full border border-white/05" />
         <div className="absolute top-[-40px] right-[-40px] w-48 h-48 rounded-full border border-white/08" />
-        <div className="absolute bottom-[-60px] left-[-60px] w-64 h-64 rounded-full border border-[#745b3c]/10" />
+        <div className="absolute bottom-[-60px] left-[-60px] w-64 h-64 rounded-full border border-[#c49a3c]/10" />
 
         {/* Logo */}
         <div className="flex flex-col items-start">
@@ -65,7 +65,7 @@ export default function StaffLoginPage() {
               type="button"
               onClick={() => navigate('/')}
               aria-label="Back to site"
-              className="shrink-0 flex items-center justify-center text-[#745b3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors"
+              className="shrink-0 flex items-center justify-center text-[#c49a3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors"
             >
               <ArrowLeft size={22} strokeWidth={2.25} />
             </button>
@@ -75,9 +75,9 @@ export default function StaffLoginPage() {
           </div>
 
           {/* Staff badge */}
-          <div className="flex items-center gap-2 bg-[#745b3c]/15 border border-[#745b3c]/30 rounded-full px-4 py-1.5 mb-6">
-            <ShieldCheck size={13} className="text-[#745b3c]" />
-            <span className="text-[#745b3c] text-xs font-bold uppercase tracking-widest">Staff Access</span>
+          <div className="flex items-center gap-2 bg-[#c49a3c]/15 border border-[#c49a3c]/30 rounded-full px-4 py-1.5 mb-6">
+            <ShieldCheck size={13} className="text-[#c49a3c]" />
+            <span className="text-[#c49a3c] text-xs font-bold uppercase tracking-widest">Staff Access</span>
           </div>
 
           <h1
@@ -113,9 +113,9 @@ export default function StaffLoginPage() {
           </div>
 
           <div className="mb-8">
-            <div className="flex items-center gap-1.5 bg-[#745b3c]/10 border border-[#745b3c]/25 rounded-full px-3 py-1 mb-3 w-fit">
-              <ShieldCheck size={11} className="text-[#745b3c]" />
-              <span className="text-[#5e4a30] text-xs font-bold uppercase tracking-widest">Staff Portal</span>
+            <div className="flex items-center gap-1.5 bg-[#c49a3c]/10 border border-[#c49a3c]/25 rounded-full px-3 py-1 mb-3 w-fit">
+              <ShieldCheck size={11} className="text-[#c49a3c]" />
+              <span className="text-[#a67f2e] text-xs font-bold uppercase tracking-widest">Staff Portal</span>
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-1"
@@ -138,7 +138,7 @@ export default function StaffLoginPage() {
                   value={email}
                   onChange={e => { setEmail(e.target.value); setError(''); }}
                   placeholder="your@balanse.com"
-                  className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+                  className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
                 />
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function StaffLoginPage() {
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+                  className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] placeholder-[#C0B8A8] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
                 />
                 <button
                   type="button"
@@ -167,7 +167,7 @@ export default function StaffLoginPage() {
 
             {/* Forgot password */}
             <div className="text-right -mt-1">
-              <button type="button" className="text-[#745b3c] text-xs hover:text-[#5e4a30] transition-colors">
+              <button type="button" className="text-[#c49a3c] text-xs hover:text-[#a67f2e] transition-colors">
                 Forgot Password?
               </button>
             </div>
@@ -202,7 +202,7 @@ export default function StaffLoginPage() {
           {/* Back to student site */}
           <p className="text-center text-[#B0A898] text-xs mt-6">
             Not staff?{' '}
-            <Link to="/" className="text-[#8A7E6E] hover:text-[#745b3c] transition-colors font-medium">
+            <Link to="/" className="text-[#8A7E6E] hover:text-[#c49a3c] transition-colors font-medium">
               Return to student site
             </Link>
           </p>
@@ -214,7 +214,7 @@ export default function StaffLoginPage() {
               onClick={() => navigate('/admin-login')}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm hover:border-[#1E2A35]/30 hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
             >
-              <Crown size={14} className="text-[#745b3c]" />
+              <Crown size={14} className="text-[#c49a3c]" />
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.88rem' }}>
                 Log in as Admin
               </span>

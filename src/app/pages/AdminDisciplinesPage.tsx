@@ -55,11 +55,11 @@ function AddDisciplineTrigger({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-3xl border-2 border-dashed border-[#D4CDB5] bg-white/50 hover:bg-[#F8F3E8] hover:border-[#745b3c]/50 transition-all px-4 flex flex-col items-center justify-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] ${
+      className={`w-full rounded-3xl border-2 border-dashed border-[#D4CDB5] bg-white/50 hover:bg-[#F8F3E8] hover:border-[#c49a3c]/50 transition-all px-4 flex flex-col items-center justify-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] ${
         isCompact ? 'min-h-[10.5rem] md:min-h-[12rem] py-6' : 'min-h-[17.5rem] py-10'
       }`}
     >
-      <div className={`rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#745b3c] ${isCompact ? 'w-10 h-10' : 'w-12 h-12'}`}>
+      <div className={`rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#c49a3c] ${isCompact ? 'w-10 h-10' : 'w-12 h-12'}`}>
         <Plus size={isCompact ? 18 : 22} />
       </div>
       <span
@@ -235,7 +235,7 @@ export default function AdminDisciplinesPage() {
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <Layers size={18} className="text-[#745b3c]" />
+              <Layers size={18} className="text-[#c49a3c]" />
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Class Catalog</p>
             </div>
             <h1
@@ -260,7 +260,7 @@ export default function AdminDisciplinesPage() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search disciplines…"
-                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]"
+                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
                 />
               </div>
               <AddDisciplineTrigger onClick={openCreateModal} variant="button" />

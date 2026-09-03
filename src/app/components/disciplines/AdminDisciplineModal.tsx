@@ -324,7 +324,7 @@ export function AdminDisciplineModal({
               <button
                 type="button"
                 onClick={handleStartEdit}
-                className="w-9 h-9 rounded-full bg-[#745b3c] border border-[#5e4a30] flex items-center justify-center text-white hover:bg-[#5e4a30] transition-colors shadow-md"
+                className="w-9 h-9 rounded-full bg-[#c49a3c] border border-[#a67f2e] flex items-center justify-center text-white hover:bg-[#a67f2e] transition-colors shadow-md"
                 aria-label="Edit discipline"
               >
                 <Pencil size={18} />
@@ -376,7 +376,7 @@ export function AdminDisciplineModal({
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Discipline name"
-                    className="w-full px-3 py-2 rounded-xl bg-white/95 border border-[#D4CDB5]/70 text-[#1E2A35] text-lg font-semibold outline-none focus:ring-2 focus:ring-[#745b3c]/30"
+                    className="w-full px-3 py-2 rounded-xl bg-white/95 border border-[#D4CDB5]/70 text-[#1E2A35] text-lg font-semibold outline-none focus:ring-2 focus:ring-[#c49a3c]/30"
                     style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}
                   />
                 ) : (
@@ -403,7 +403,7 @@ export function AdminDisciplineModal({
                 onChange={(event) => setDescription(event.target.value)}
                 rows={6}
                 placeholder="Describe this discipline…"
-                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 resize-y min-h-[140px]"
+                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 resize-y min-h-[140px]"
               />
             ) : (
               <p className="text-[#5A5048] text-sm leading-relaxed whitespace-pre-wrap">
@@ -414,7 +414,7 @@ export function AdminDisciplineModal({
 
           <div>
             <div className="flex items-center gap-2 mb-2.5">
-              <Users size={13} className="text-[#745b3c]" />
+              <Users size={13} className="text-[#c49a3c]" />
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Coaches</p>
             </div>
             {isCreateMode ? (
@@ -471,7 +471,7 @@ export function AdminDisciplineModal({
               <button
                 type="button"
                 onClick={onEnroll}
-                className="w-full flex items-center justify-center gap-2 bg-[#745b3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(116,91,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#5e4a30]"
+                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
               >
                 Enroll
@@ -508,7 +508,7 @@ export function AdminDisciplineModal({
           )}
 
           {!readOnly && showConfirm && (
-            <div className="rounded-2xl border border-[#745b3c]/30 bg-[#745b3c]/08 px-4 py-4">
+            <div className="rounded-2xl border border-[#c49a3c]/30 bg-[#c49a3c]/08 px-4 py-4">
               <p className="text-[#1E2A35] text-sm font-semibold mb-1">
                 {isCreateMode ? 'Add this discipline?' : 'Save changes?'}
               </p>
@@ -530,7 +530,7 @@ export function AdminDisciplineModal({
                   type="button"
                   onClick={handleConfirmSave}
                   disabled={saving}
-                  className="flex-1 py-2.5 rounded-full bg-[#745b3c] text-white text-sm font-bold hover:bg-[#5e4a30] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 rounded-full bg-[#c49a3c] text-white text-sm font-bold hover:bg-[#a67f2e] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
                   <Check size={14} />
                   {saving ? 'Saving…' : isCreateMode ? 'Confirm Add' : 'Confirm Save'}

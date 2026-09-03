@@ -56,7 +56,7 @@ function PolicyField({
           max={max}
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-20 text-center px-3 py-2 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm font-semibold outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all"
+          className="w-20 text-center px-3 py-2 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm font-semibold outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all"
         />
         {unit && !unit.startsWith('₱') && <span className="text-[#8A7E6E] text-sm">{unit}</span>}
       </div>
@@ -102,7 +102,7 @@ export default function AdminPoliciesPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <ShieldCheck size={14} className="text-[#745b3c]" />
+              <ShieldCheck size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Policy Settings</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>

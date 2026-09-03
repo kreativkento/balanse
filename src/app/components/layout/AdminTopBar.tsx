@@ -62,7 +62,7 @@ export function AdminTopBar() {
             BALANSÉ
           </span>
           <div className="flex items-center gap-1 bg-[#1E2A35] rounded-full px-2 py-0.5 ml-0.5">
-            <Crown size={9} className="text-[#745b3c]" />
+            <Crown size={9} className="text-[#c49a3c]" />
             <span className="text-white text-[0.58rem] font-bold uppercase tracking-widest">Admin</span>
           </div>
         </Link>

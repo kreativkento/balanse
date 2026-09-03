@@ -175,8 +175,8 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
             <div className="bg-[#F8F3E8] rounded-2xl p-4 border border-[#D4CDB5]/40">
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">Student</p>
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center">
-                  <span className="text-[#5e4a30] text-xs font-bold">{payment.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center">
+                  <span className="text-[#a67f2e] text-xs font-bold">{payment.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
                 </div>
                 <div>
                   <p className="text-[#1E2A35] text-sm font-semibold">{payment.student}</p>
@@ -311,8 +311,8 @@ function HistoryPaymentModal({ payment, onClose, onReissue, onPrint }: {
             <div className="bg-[#F8F3E8] rounded-2xl p-4 border border-[#D4CDB5]/40">
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">Student</p>
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center">
-                  <span className="text-[#5e4a30] text-xs font-bold">{payment.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center">
+                  <span className="text-[#a67f2e] text-xs font-bold">{payment.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
                 </div>
                 <div>
                   <p className="text-[#1E2A35] text-sm font-semibold">{payment.student}</p>
@@ -357,7 +357,7 @@ function HistoryPaymentModal({ payment, onClose, onReissue, onPrint }: {
           <div className="px-7 pb-7 flex gap-2">
             <button
               onClick={onReissue}
-              className="flex-1 py-2.5 rounded-full bg-[#745b3c]/10 text-[#5e4a30] border border-[#745b3c]/30 text-sm font-bold hover:bg-[#745b3c]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 rounded-full bg-[#c49a3c]/10 text-[#a67f2e] border border-[#c49a3c]/30 text-sm font-bold hover:bg-[#c49a3c]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
             >
               <Receipt size={13} /> Re-issue Receipt
             </button>
@@ -428,12 +428,12 @@ function ChannelManagerModal({ uploads, onClose, onUpload }: {
                 return (
                   <div key={method}
                     onClick={() => setSelected(method)}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 cursor-pointer transition-all ${selected === method ? 'border-[#745b3c]/60 bg-[#745b3c]/06' : 'border-[#D4CDB5]/60 bg-[#F8F3E8] hover:border-[#745b3c]/30'}`}>
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 cursor-pointer transition-all ${selected === method ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : 'border-[#D4CDB5]/60 bg-[#F8F3E8] hover:border-[#c49a3c]/30'}`}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '20' }}>
                       <Layers size={15} style={{ color }} />
                     </div>
                     <div className="flex-1">
-                      <p className={`text-sm font-semibold ${selected === method ? 'text-[#745b3c]' : 'text-[#1E2A35]'}`}>{method}</p>
+                      <p className={`text-sm font-semibold ${selected === method ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}>{method}</p>
                       <p className="text-[#9A8E7E] text-xs">{existing ? `✓ ${existing.filename}` : desc}</p>
                     </div>
                     {existing && <span className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">Active</span>}
@@ -444,9 +444,9 @@ function ChannelManagerModal({ uploads, onClose, onUpload }: {
           </div>
           <div
             onClick={() => fileRef.current?.click()}
-            className="border-2 border-dashed border-[#D4CDB5]/70 rounded-2xl p-6 text-center cursor-pointer hover:border-[#745b3c]/50 hover:bg-[#745b3c]/03 transition-all group">
-            <Upload size={20} className="mx-auto text-[#B0A898] group-hover:text-[#745b3c] transition-colors mb-2" />
-            <p className="text-[#5A5048] text-sm font-semibold">Upload file for <span className="text-[#745b3c]">{selected}</span></p>
+            className="border-2 border-dashed border-[#D4CDB5]/70 rounded-2xl p-6 text-center cursor-pointer hover:border-[#c49a3c]/50 hover:bg-[#c49a3c]/03 transition-all group">
+            <Upload size={20} className="mx-auto text-[#B0A898] group-hover:text-[#c49a3c] transition-colors mb-2" />
+            <p className="text-[#5A5048] text-sm font-semibold">Upload file for <span className="text-[#c49a3c]">{selected}</span></p>
             <p className="text-[#B0A898] text-xs mt-1">PNG, JPG, or PDF, max 2MB</p>
           </div>
           <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFile} />
@@ -518,7 +518,7 @@ export default function AdminPaymentsPage() {
     });
   };
 
-  const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
 
   const currentMetrics = METRICS[metricPeriod];
 
@@ -566,7 +566,7 @@ export default function AdminPaymentsPage() {
         <div className="flex items-center justify-between mb-7 flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <CreditCard size={14} className="text-[#745b3c]" />
+              <CreditCard size={14} className="text-[#c49a3c]" />
               <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Payments</span>
             </div>
             <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
@@ -589,7 +589,7 @@ export default function AdminPaymentsPage() {
             { label: 'Pending Review',  value: String(pending.length),                                    icon: <AlertCircle size={17} className="text-amber-500" />,    bg: 'bg-amber-50',         border: 'border-amber-200'       },
             { label: 'Approved',        value: String(history.filter(p => p.status === 'approved').length), icon: <Check size={17} className="text-green-600" />,          bg: 'bg-green-50',         border: 'border-green-200'       },
             { label: 'Rejected',        value: String(history.filter(p => p.status === 'rejected').length), icon: <X size={17} className="text-red-500" />,               bg: 'bg-red-50',           border: 'border-red-200'         },
-            { label: 'E-Receipts Sent', value: String(history.filter(p => p.emailSent).length),            icon: <Mail size={17} className="text-[#745b3c]" />,           bg: 'bg-[#745b3c]/10',    border: 'border-[#745b3c]/30'   },
+            { label: 'E-Receipts Sent', value: String(history.filter(p => p.emailSent).length),            icon: <Mail size={17} className="text-[#c49a3c]" />,           bg: 'bg-[#c49a3c]/10',    border: 'border-[#c49a3c]/30'   },
           ].map(s => (
             <div key={s.label} className={`bg-white rounded-2xl border shadow-sm px-4 py-4 flex items-center gap-3 ${s.border}`}>
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>{s.icon}</div>
@@ -605,7 +605,7 @@ export default function AdminPaymentsPage() {
         <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden mb-7">
           <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
-              <BarChart3 size={15} className="text-[#745b3c]" />
+              <BarChart3 size={15} className="text-[#c49a3c]" />
               <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Payment Metrics</h2>
             </div>
             <div className="flex gap-1 bg-[#EDE8D8] rounded-xl p-1">
@@ -625,7 +625,7 @@ export default function AdminPaymentsPage() {
               { label: 'Avg per Session', value: `₱${Math.round(currentMetrics.revenue / currentMetrics.sessions).toLocaleString()}`, desc: 'Per paid session' },
             ].map(item => (
               <div key={item.label} className={`rounded-2xl p-4 border ${item.accent ? 'bg-[#1E2A35] border-[#1E2A35]' : 'bg-[#F8F3E8] border-[#D4CDB5]/50'}`}>
-                <p className={`text-xs uppercase tracking-widest mb-1.5 ${item.accent ? 'text-[#745b3c]/80' : 'text-[#8A7E6E]'}`}>{item.label}</p>
+                <p className={`text-xs uppercase tracking-widest mb-1.5 ${item.accent ? 'text-[#c49a3c]/80' : 'text-[#8A7E6E]'}`}>{item.label}</p>
                 <p className={`leading-none mb-1 ${item.accent ? 'text-white' : item.color ?? 'text-[#1E2A35]'}`}
                   style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>{item.value}</p>
                 <p className={`text-xs ${item.accent ? 'text-white/50' : 'text-[#9A8E7E]'}`}>{item.desc}</p>
@@ -634,7 +634,7 @@ export default function AdminPaymentsPage() {
           </div>
           <div className="px-6 pb-5">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={13} className="text-[#745b3c]" />
+              <TrendingUp size={13} className="text-[#c49a3c]" />
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">Revenue Breakdown by Method</p>
             </div>
             <div className="flex flex-col gap-2">
@@ -700,11 +700,11 @@ export default function AdminPaymentsPage() {
                       className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.5fr)] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/70 transition-colors min-h-[64px] cursor-pointer group"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0">
-                          <span className="text-[#5e4a30] text-xs font-bold">{p.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                        <div className="w-8 h-8 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center shrink-0">
+                          <span className="text-[#a67f2e] text-xs font-bold">{p.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#745b3c] transition-colors">{p.student}</p>
+                          <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#c49a3c] transition-colors">{p.student}</p>
                           <p className="text-[#B0A898] text-xs truncate">{p.email}</p>
                         </div>
                       </div>
@@ -719,7 +719,7 @@ export default function AdminPaymentsPage() {
                       <p className="text-[#1E2A35] font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}>₱{p.amount.toLocaleString()}</p>
                       <div className="flex items-center justify-between min-w-0">
                         <p className="text-[#8A7E6E] text-xs font-mono truncate">{p.ref}</p>
-                        <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#745b3c] transition-colors" />
+                        <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#c49a3c] transition-colors" />
                       </div>
                     </div>
                   ))}
@@ -744,11 +744,11 @@ export default function AdminPaymentsPage() {
                       className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.5fr)_80px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/70 transition-colors min-h-[64px] cursor-pointer group"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0">
-                          <span className="text-[#5e4a30] text-xs font-bold">{p.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                        <div className="w-8 h-8 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center shrink-0">
+                          <span className="text-[#a67f2e] text-xs font-bold">{p.student.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#745b3c] transition-colors">{p.student}</p>
+                          <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#c49a3c] transition-colors">{p.student}</p>
                           <p className="text-[#B0A898] text-xs truncate">{p.email}</p>
                         </div>
                       </div>
@@ -763,7 +763,7 @@ export default function AdminPaymentsPage() {
                       <p className="text-[#1E2A35] font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}>₱{p.amount.toLocaleString()}</p>
                       <div className="flex items-center justify-between min-w-0">
                         <p className="text-[#8A7E6E] text-xs font-mono truncate">{p.ref}</p>
-                        <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#745b3c] transition-colors" />
+                        <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#c49a3c] transition-colors" />
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize w-fit ${
                         p.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'

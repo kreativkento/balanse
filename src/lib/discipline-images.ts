@@ -15,7 +15,7 @@ const LOGO_EXT_BY_MIME: Record<string, string> = {
 
 const SWATCH_SIZE = 256;
 const SWATCH_COLORS = [
-  '#745b3c',
+  '#c49a3c',
   '#1E2A35',
   '#6B8E6B',
   '#B86A4A',

@@ -93,8 +93,8 @@ export default function DisciplinesPage() {
             className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-sm p-6"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="w-12 h-12 rounded-2xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center mb-4">
-              <LogIn size={20} className="text-[#745b3c]" />
+            <div className="w-12 h-12 rounded-2xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center mb-4">
+              <LogIn size={20} className="text-[#c49a3c]" />
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-2"
@@ -158,7 +158,7 @@ export default function DisciplinesPage() {
       <div className="flex-1 min-h-0 max-w-6xl mx-auto w-full px-4 md:px-8 py-3 md:py-4 flex flex-col">
         {disciplinesLoading && (
           <div className="flex-1 flex items-center justify-center gap-2 text-[#8A7E6E]">
-            <Loader2 size={18} className="animate-spin text-[#745b3c]" />
+            <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
             <span className="text-sm">Loading disciplines…</span>
           </div>
         )}
@@ -219,8 +219,8 @@ export default function DisciplinesPage() {
                     onClick={() => setPage(n)}
                     className={`min-w-9 h-9 px-2.5 rounded-full text-xs font-semibold transition-all ${
                       n === currentPage
-                        ? 'bg-[#745b3c] text-white'
-                        : 'bg-white border border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#745b3c]/40'
+                        ? 'bg-[#c49a3c] text-white'
+                        : 'bg-white border border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#c49a3c]/40'
                     }`}
                   >
                     {n}

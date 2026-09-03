@@ -101,7 +101,7 @@ export function DisciplineImagePicker({
               aria-label={`Upload ${folderLabel} to disciplines_images/${folderLabel}`}
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
-              className="aspect-square overflow-hidden rounded-lg border border-dashed border-[#745b3c]/50 bg-[#745b3c]/08 text-[#5e4a30] transition-all hover:border-[#745b3c] hover:bg-[#745b3c]/12 disabled:opacity-60"
+              className="aspect-square overflow-hidden rounded-lg border border-dashed border-[#c49a3c]/50 bg-[#c49a3c]/08 text-[#a67f2e] transition-all hover:border-[#c49a3c] hover:bg-[#c49a3c]/12 disabled:opacity-60"
             >
               {uploading ? (
                 <Loader2 size={16} className="mx-auto animate-spin" />
@@ -127,13 +127,13 @@ export function DisciplineImagePicker({
                   }}
                   className={`relative aspect-square overflow-hidden rounded-lg border transition-all ${
                     selected
-                      ? 'border-[#745b3c] ring-2 ring-[#745b3c]/40'
-                      : 'border-[#D4CDB5]/70 hover:border-[#745b3c]/50'
+                      ? 'border-[#c49a3c] ring-2 ring-[#c49a3c]/40'
+                      : 'border-[#D4CDB5]/70 hover:border-[#c49a3c]/50'
                   }`}
                 >
                   <img src={image.url} alt="" className="h-full w-full object-cover" />
                   {selected && (
-                    <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#745b3c] text-white">
+                    <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#c49a3c] text-white">
                       <Check size={10} strokeWidth={3} />
                     </span>
                   )}

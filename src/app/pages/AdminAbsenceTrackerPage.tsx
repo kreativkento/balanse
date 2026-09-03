@@ -47,19 +47,19 @@ const CLASS_TEMPLATES: ClassTemplate[] = [
   { dayOffset: 0,  coach: 'Jodi',     coachInitials: 'JO', coachColor: '#E8A87C', class: 'Yoga',         time: '8:00 AM',  students: 10, capacity: 12, status: 'present', note: '' },
   { dayOffset: 0,  coach: 'Rex',      coachInitials: 'RX', coachColor: '#5A8A7A', class: 'Calisthenics', time: '7:00 AM',  students: 8,  capacity: 10, status: 'present', note: '' },
   { dayOffset: 0,  coach: 'Ephraim',  coachInitials: 'EP', coachColor: '#7A7EBC', class: 'Animal Flow',  time: '9:00 AM',  students: 6,  capacity: 10, status: 'absent',  note: 'Called in sick morning of class' },
-  { dayOffset: 0,  coach: 'Kate',     coachInitials: 'KT', coachColor: '#745b3c', class: 'Mat Pilates',  time: '9:30 AM',  students: 12, capacity: 12, status: 'present', note: '' },
+  { dayOffset: 0,  coach: 'Kate',     coachInitials: 'KT', coachColor: '#c49a3c', class: 'Mat Pilates',  time: '9:30 AM',  students: 12, capacity: 12, status: 'present', note: '' },
   { dayOffset: 0,  coach: 'Wolf',     coachInitials: 'WF', coachColor: '#3A4A5A', class: 'Kickboxing',   time: '5:00 PM',  students: 9,  capacity: 12, status: 'present', note: '' },
   { dayOffset: 0,  coach: 'Alec',     coachInitials: 'AL', coachColor: '#A8806A', class: 'Groundworks',  time: '11:00 AM', students: 7,  capacity: 10, status: 'present', note: '' },
   { dayOffset: 1,  coach: 'Jodi',     coachInitials: 'JO', coachColor: '#E8A87C', class: 'Yoga',         time: '8:00 AM',  students: 11, capacity: 12, status: 'present', note: '' },
   { dayOffset: 1,  coach: 'Rex',      coachInitials: 'RX', coachColor: '#5A8A7A', class: 'Calisthenics', time: '7:00 AM',  students: 8,  capacity: 10, status: 'present', note: '' },
-  { dayOffset: 2,  coach: 'Kate',     coachInitials: 'KT', coachColor: '#745b3c', class: 'Mat Pilates',  time: '9:30 AM',  students: 10, capacity: 12, status: 'present', note: '' },
+  { dayOffset: 2,  coach: 'Kate',     coachInitials: 'KT', coachColor: '#c49a3c', class: 'Mat Pilates',  time: '9:30 AM',  students: 10, capacity: 12, status: 'present', note: '' },
   { dayOffset: 2,  coach: 'Ephraim',  coachInitials: 'EP', coachColor: '#7A7EBC', class: 'Animal Flow',  time: '9:00 AM',  students: 7,  capacity: 10, status: 'present', note: '' },
   { dayOffset: 3,  coach: 'Wolf',     coachInitials: 'WF', coachColor: '#3A4A5A', class: 'Kickboxing',   time: '5:00 PM',  students: 9,  capacity: 12, status: 'present', note: '' },
   { dayOffset: 3,  coach: 'Rachelle', coachInitials: 'RC', coachColor: '#B07A9E', class: 'Stretching',   time: '6:00 PM',  students: 8,  capacity: 12, status: 'present', note: '' },
   { dayOffset: -7, coach: 'Jodi',     coachInitials: 'JO', coachColor: '#E8A87C', class: 'Yoga',         time: '8:00 AM',  students: 12, capacity: 12, status: 'absent',  note: 'Emergency leave – classes covered by Rachelle' },
   { dayOffset: -3, coach: 'Rex',      coachInitials: 'RX', coachColor: '#5A8A7A', class: 'Calisthenics', time: '7:00 AM',  students: 9,  capacity: 10, status: 'present', note: '' },
   { dayOffset: -14, coach: 'Alec',    coachInitials: 'AL', coachColor: '#A8806A', class: 'Groundworks',  time: '11:00 AM', students: 6,  capacity: 10, status: 'absent',  note: 'Transport issue – notified admin' },
-  { dayOffset: -18, coach: 'Kate',    coachInitials: 'KT', coachColor: '#745b3c', class: 'Mat Pilates',  time: '9:30 AM',  students: 11, capacity: 12, status: 'present', note: '' },
+  { dayOffset: -18, coach: 'Kate',    coachInitials: 'KT', coachColor: '#c49a3c', class: 'Mat Pilates',  time: '9:30 AM',  students: 11, capacity: 12, status: 'present', note: '' },
   { dayOffset: -21, coach: 'Wolf',    coachInitials: 'WF', coachColor: '#3A4A5A', class: 'Kickboxing',   time: '5:00 PM',  students: 8,  capacity: 12, status: 'absent',  note: 'Family emergency' },
   { dayOffset: -25, coach: 'Ephraim', coachInitials: 'EP', coachColor: '#7A7EBC', class: 'Animal Flow',  time: '9:00 AM',  students: 5,  capacity: 10, status: 'present', note: '' },
 ];
@@ -152,7 +152,7 @@ function AbsenceModal({ item, onClose, onSave }: {
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               placeholder="e.g. Called in sick, family emergency…"
-              className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all resize-none placeholder-[#C0B8A8]"
+              className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all resize-none placeholder-[#C0B8A8]"
             />
           </div>
         </div>
@@ -179,7 +179,7 @@ function CoachAbsenceSummary({ classes, period }: { classes: ScheduledClass[]; p
     <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden mb-7">
       <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <ClipboardList size={15} className="text-[#745b3c]" />
+          <ClipboardList size={15} className="text-[#c49a3c]" />
           <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Coach Attendance Summary</h2>
         </div>
         <span className="text-[#9A8E7E] text-xs">{periodLabel(period)}</span>
@@ -255,7 +255,7 @@ export function AdminAbsenceTrackerPanel() {
     ));
   };
 
-  const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all placeholder-[#C0B8A8]';
+  const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
     <>

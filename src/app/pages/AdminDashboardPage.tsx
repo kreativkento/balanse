@@ -35,7 +35,7 @@ const METHOD_SPLITS: Record<MetricPeriod, { method: string; pct: number; color: 
 };
 
 const RECENT_ACTIVITY = [
-  { label: 'Booking request',    detail: 'Alex Johnson — Yoga · Apr 28',                      time: '2 min ago',  dot: '#745b3c',  type: 'booking'  },
+  { label: 'Booking request',    detail: 'Alex Johnson — Yoga · Apr 28',                      time: '2 min ago',  dot: '#c49a3c',  type: 'booking'  },
   { label: 'Payment submitted',  detail: 'Ryan Bautista · Animal Flow · GCash ref GC-001',    time: '15 min ago', dot: '#6B8E6B',  type: 'payment'  },
   { label: 'Cancellation',       detail: 'Sofia Reyes · Yoga Apr 14 · 28 hrs notice',         time: '45 min ago', dot: '#B86A4A',  type: 'cancel'   },
   { label: 'Staff update',       detail: 'Alec Bautista password reset by Super Admin',        time: '1 hr ago',   dot: '#3A4A5A',  type: 'staff'    },
@@ -72,7 +72,7 @@ export default function AdminDashboardPage() {
   const splits = METHOD_SPLITS[period];
   const avgSession = Math.round(m.revenue / m.sessions);
 
-  const INP = 'w-full px-3 py-2.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#745b3c]/25 focus:border-[#745b3c]/50 transition-all';
+  const INP = 'w-full px-3 py-2.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all';
 
   return (
       <div className="max-w-6xl mx-auto px-6 py-10">
@@ -86,8 +86,8 @@ export default function AdminDashboardPage() {
             </h1>
           </div>
           <div className="shrink-0 flex items-center gap-3 rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-[#745b3c]/12 border border-[#745b3c]/25 flex items-center justify-center shrink-0">
-              <CalendarDays size={18} className="text-[#745b3c]" />
+            <div className="w-10 h-10 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center shrink-0">
+              <CalendarDays size={18} className="text-[#c49a3c]" />
             </div>
             <div className="text-right sm:text-left">
               <p className="text-[#B0A898] text-[10px] uppercase tracking-widest leading-none mb-1">Today</p>
@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
         {/* ── Overview Stats ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
           {([
-            { label: 'Active Members',    value: '200', sub: '+3 this week',     accent: '#745b3c', trend: 'up'   },
+            { label: 'Active Members',    value: '200', sub: '+3 this week',     accent: '#c49a3c', trend: 'up'   },
             { label: 'Total Staff',       value: '8',   sub: '7 coaches active', accent: '#1E2A35', trend: null   },
             { label: 'Pending Payments',  value: '4',   sub: '₱1,440 pending',   accent: '#E07B39', trend: null   },
             { label: 'Classes This Week', value: '12',  sub: '↑ from 9 last wk', accent: '#6B8E6B', trend: 'up'   },
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
                   </button>
                 ))}
               </div>
-              <Link to="/admin-payments" className="text-[#745b3c] text-xs font-semibold hover:text-[#5e4a30] transition-colors">
+              <Link to="/admin-payments" className="text-[#c49a3c] text-xs font-semibold hover:text-[#a67f2e] transition-colors">
                 View all →
               </Link>
             </div>
@@ -236,10 +236,10 @@ export default function AdminDashboardPage() {
                   {[
                     { label: "Today's Classes",  value: '3',    color: '#1E2A35' },
                     { label: 'Students Today',   value: '26',   color: '#1E2A35' },
-                    { label: 'Gold Members',     value: '82',   color: '#745b3c' },
+                    { label: 'Gold Members',     value: '82',   color: '#c49a3c' },
                     { label: 'Silver Members',   value: '74',   color: '#8A7E6E' },
                     { label: 'Credits Remaining',value: '236',  color: '#E07B39' },
-                    { label: 'Top Class',        value: 'Yoga', color: '#745b3c' },
+                    { label: 'Top Class',        value: 'Yoga', color: '#c49a3c' },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="flex items-center justify-between">
                       <span className="text-[#5A5048] text-sm">{label}</span>
@@ -269,7 +269,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}>Featured Section</h2>
                 {!editing && (
-                  <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-[#745b3c] text-xs font-semibold hover:text-[#5e4a30] transition-colors">
+                  <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-[#c49a3c] text-xs font-semibold hover:text-[#a67f2e] transition-colors">
                     <Pencil size={11} /> Edit
                   </button>
                 )}
@@ -278,8 +278,8 @@ export default function AdminDashboardPage() {
                 {!editing ? (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Star size={12} className="text-[#745b3c] fill-[#745b3c]" />
-                      <span className="text-[#745b3c] text-xs font-bold uppercase tracking-widest">Class of the Month</span>
+                      <Star size={12} className="text-[#c49a3c] fill-[#c49a3c]" />
+                      <span className="text-[#c49a3c] text-xs font-bold uppercase tracking-widest">Class of the Month</span>
                     </div>
                     <p className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.04em' }}>{featuredClass}</p>
                     <p className="text-[#9A8E7E] text-xs mt-0.5">with Coach {featuredCoach}</p>

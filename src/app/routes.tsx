@@ -2,7 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { Root } from './Root';
 import { RouteErrorBoundary } from './components/error/RouteErrorBoundary';
 import HomePage from './pages/HomePage';
-import GalleryPage from './pages/GalleryPage';
+import StudioPage from './pages/StudioPage';
+import GuidelinesPage from './pages/GuidelinesPage';
 import PricingPage from './pages/PricingPage';
 import ServicesPage from './pages/ServicesPage';
 import ClassesPage from './pages/ClassesPage';
@@ -42,6 +43,7 @@ import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
 import StaffProfilePage from './pages/StaffProfilePage';
 import BulletinPage from './pages/BulletinPage';
 import CoachesPage from './pages/CoachesPage';
+import EventsPage from './pages/EventsPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import StudentPaymentHistoryPage from './pages/StudentPaymentHistoryPage';
 import DevelopmentLoginPage from './pages/DevelopmentLoginPage';
@@ -67,7 +69,9 @@ export const router = createBrowserRouter([
         errorElement: <RouteErrorBoundary />,
         children: [
           { index: true, Component: HomePage },
-          { path: 'gallery', Component: GalleryPage },
+          { path: 'studio', Component: StudioPage },
+          { path: 'studio/guidelines', Component: GuidelinesPage },
+          { path: 'gallery', element: <Navigate to="/studio" replace /> },
           { path: 'pricing', Component: PricingPage },
           { path: 'services', Component: ServicesPage },
           { path: 'classes', Component: ClassesPage },
@@ -75,6 +79,7 @@ export const router = createBrowserRouter([
           { path: 'bulletin', Component: BulletinPage },
           { path: 'news', element: <Navigate to="/bulletin" replace /> },
           { path: 'coaches', Component: CoachesPage },
+          { path: 'events', Component: EventsPage },
           { path: 'auth', Component: LoginChoicePage },
           { path: 'login', Component: LoginPage },
           { path: 'signup', Component: SignupPage },

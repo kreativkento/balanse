@@ -86,7 +86,7 @@ function AdminSidebarNav({
         <Link to="/admin-dashboard" className="flex items-center gap-2 group" onClick={onNavClick}>
           <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
           <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-            <Crown size={8} className="text-[#745b3c]" />
+            <Crown size={8} className="text-[#c49a3c]" />
             <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
           </div>
         </Link>
@@ -125,7 +125,7 @@ function AdminSidebarNav({
                           : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
                       }`}
                     >
-                      <Icon size={16} className={active ? 'text-[#745b3c]' : 'text-[#8A7E6E]'} />
+                      <Icon size={16} className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
                       {label}
                     </Link>
                   );
@@ -242,7 +242,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
           <Link to="/admin-dashboard" className="flex items-center gap-2 min-w-0">
             <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto object-contain shrink-0" />
             <div className="flex items-center gap-0.5 bg-[#1E2A35] rounded-full px-1.5 py-0.5 shrink-0">
-              <Crown size={8} className="text-[#745b3c]" />
+              <Crown size={8} className="text-[#c49a3c]" />
               <span className="text-white text-[0.5rem] font-bold uppercase tracking-widest">Admin</span>
             </div>
           </Link>
