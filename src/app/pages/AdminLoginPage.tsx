@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -61,18 +61,19 @@ export default function AdminLoginPage() {
 
         {/* Logo */}
         <div className="flex flex-col items-start">
-          <div className="flex items-center gap-4 mb-12">
+          <div className="flex items-center justify-between w-full gap-4 mb-12">
+            <Link to="/" className="inline-block">
+              <img src={logoMainWhite} alt="BALANSÉ Wellness Hub" className="h-10 w-auto object-contain" />
+            </Link>
             <button
               type="button"
               onClick={() => navigate('/staff-login')}
               aria-label="Back to staff login"
-              className="shrink-0 flex items-center justify-center text-[#c49a3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors"
+              className="shrink-0 flex items-center gap-1 text-[#c49a3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors font-normal not-italic"
             >
-              <ArrowLeft size={22} strokeWidth={2.25} />
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+              <span>Back</span>
             </button>
-            <Link to="/" className="inline-block">
-              <img src={logoMainWhite} alt="BALANSÉ Wellness Hub" className="h-10 w-auto object-contain" />
-            </Link>
           </div>
 
           <div className="bg-[#c49a3c]/15 border border-[#c49a3c]/35 rounded-full px-4 py-1.5 mb-7">

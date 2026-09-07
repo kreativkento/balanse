@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -48,33 +48,35 @@ export default function StaffLoginPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F3E8] flex">
-      {/* ── LEFT PANEL — Brand ── */}
+      {/* ── LEFT PANEL ── */}
       <div
         className="hidden md:flex md:w-[42%] flex-col justify-between px-12 py-10 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #1E2A35 0%, #263545 60%, #1A2530 100%)' }}
+        style={{ background: 'linear-gradient(160deg, #0F1A24 0%, #1E2A35 55%, #152030 100%)' }}
       >
-        {/* Decorative circles */}
-        <div className="absolute top-[-80px] right-[-80px] w-72 h-72 rounded-full border border-white/05" />
-        <div className="absolute top-[-40px] right-[-40px] w-48 h-48 rounded-full border border-white/08" />
-        <div className="absolute bottom-[-60px] left-[-60px] w-64 h-64 rounded-full border border-[#c49a3c]/10" />
+        {/* Decorative elements */}
+        <div className="absolute top-[-90px] right-[-90px] w-80 h-80 rounded-full border border-white/04" />
+        <div className="absolute top-[-45px] right-[-45px] w-52 h-52 rounded-full border border-[#c49a3c]/08" />
+        <div className="absolute bottom-[-70px] left-[-70px] w-72 h-72 rounded-full border border-[#c49a3c]/08" />
+        <div className="absolute bottom-[120px] right-[-30px] w-36 h-36 rounded-full border border-white/04" />
 
         {/* Logo */}
         <div className="flex flex-col items-start">
-          <div className="flex items-center gap-4 mb-14">
+          <div className="flex items-center justify-between w-full gap-4 mb-12">
+            <Link to="/" className="inline-block">
+              <img src={logoMainWhite} alt="BALANSÉ Wellness Hub" className="h-10 w-auto object-contain" />
+            </Link>
             <button
               type="button"
               onClick={() => navigate('/')}
               aria-label="Back to site"
-              className="shrink-0 flex items-center justify-center text-[#c49a3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors"
+              className="shrink-0 flex items-center gap-1 text-[#c49a3c] hover:text-[#D4CDB5] active:opacity-70 transition-colors font-normal not-italic"
             >
-              <ArrowLeft size={22} strokeWidth={2.25} />
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
+              <span>Back</span>
             </button>
-            <Link to="/" className="inline-block">
-              <img src={logoMainWhite} alt="BALANSÉ Wellness Hub" className="h-10 w-auto object-contain" />
-            </Link>
           </div>
 
-          <div className="bg-[#c49a3c]/15 border border-[#c49a3c]/30 rounded-full px-4 py-1.5 mb-6">
+          <div className="bg-[#c49a3c]/15 border border-[#c49a3c]/35 rounded-full px-4 py-1.5 mb-7">
             <span className="text-[#c49a3c] text-xs font-bold uppercase tracking-widest">Staff Access</span>
           </div>
 
@@ -84,15 +86,32 @@ export default function StaffLoginPage() {
           >
             Welcome Back,<br />Coach.
           </h1>
-          <p className="text-white/50 text-sm leading-relaxed max-w-xs">
+          <p className="text-white/45 text-sm leading-relaxed max-w-xs">
             Manage your classes, review student bookings, and keep the studio running at its best.
           </p>
+
+          {/* Feature list */}
+          <div className="mt-8 flex flex-col gap-3">
+            {[
+              'View and manage your class schedule',
+              'Review student bookings and attendance',
+              'Update your availability and profile',
+              'Share studio gallery and updates',
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-[#c49a3c]/20 border border-[#c49a3c]/40 flex items-center justify-center shrink-0">
+                  <ChevronRight size={10} className="text-[#c49a3c]" />
+                </div>
+                <span className="text-white/50 text-sm">{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Bottom quote */}
         <div className="border-t border-white/10 pt-6">
           <p
-            className="text-white/30 italic"
+            className="text-white/25 italic"
             style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1rem' }}
           >
             "Movement is medicine. Your guidance makes it possible."

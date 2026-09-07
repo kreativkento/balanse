@@ -32,26 +32,26 @@ const communityLinks = [
 
 const linkColumns = [
   { title: 'Explore', links: exploreLinks },
-  { title: 'Our Studio', links: studioLinks },
-  { title: 'Our Rates', links: ratesLinks },
-  { title: 'Our Classes', links: classesLinks },
-  { title: 'Our Community', links: communityLinks },
+  { title: 'Studio', links: studioLinks },
+  { title: 'Rates', links: ratesLinks },
+  { title: 'Classes', links: classesLinks },
+  { title: 'Community', links: communityLinks },
 ];
 
 const socialLinks = [
   {
     label: 'Facebook',
-    href: 'https://www.facebook.com/',
+    href: 'https://www.facebook.com/balanse.wellness',
     icon: Facebook,
   },
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/',
+    href: 'https://www.instagram.com/balanse.wellness/?hl=en',
     icon: Instagram,
   },
   {
     label: 'Email',
-    href: 'mailto:support@balanse.com',
+    href: 'mailto:kentveloso11@gmail.com',
     icon: Mail,
   },
 ];
