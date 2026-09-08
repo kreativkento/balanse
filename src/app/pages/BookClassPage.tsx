@@ -5,6 +5,7 @@ import {
   Clock, Users, Check, CalendarDays, User, Layers,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { memberNeedsReaccept } from '../../lib/member-documents';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { WeekCalendarGrid, type WeekGridEvent } from '../components/calendar/WeekCalendarGrid';
@@ -386,11 +387,23 @@ function MultiSelectFilter({
 
 export default function BookClassPage() {
   const navigate = useNavigate();
-  const { profileComplete } = useAuth();
+  const { user, profileComplete } = useAuth();
+  const reacceptRequired = memberNeedsReaccept({
+    terms: {
+      path: user?.profile.termsDocumentPath,
+      version: user?.profile.termsAcceptedVersion,
+      accepted: user?.profile.termsAccepted,
+    },
+    privacy: {
+      path: user?.profile.privacyPolicyDocumentPath,
+      version: user?.profile.privacyAcceptedVersion,
+    },
+  });
 
   useEffect(() => {
     if (!profileComplete) navigate('/profile-setup');
-  }, [profileComplete, navigate]);
+    else if (reacceptRequired) navigate('/documents');
+  }, [profileComplete, reacceptRequired, navigate]);
 
   const today = useMemo(() => getTodayLocal(), []);
   const todayKey = useMemo(() => toDateKey(today), [today]);

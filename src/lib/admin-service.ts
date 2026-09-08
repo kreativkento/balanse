@@ -10,6 +10,8 @@ import type {
   UserRole,
 } from './database.types';
 import { hasAdminPrivileges } from './database.types';
+import { isHealthDeclarationAcknowledged } from './health-declaration';
+import { isProfileComplete } from './profile-completion';
 import { loadProfileImageUrlsForUser } from './storage-service';
 
 const MANAGED_ROLES: UserRole[] = ['user', 'coach'];
@@ -707,16 +709,19 @@ export interface ClientDirectoryItem {
   email: string;
   phone: string;
   nationality: string;
-  address: string;
+  province: string;
+  city: string;
+  barangay: string;
   birthday: string | null;
   sex: string;
   weight: string;
   height: string;
-  medicalHistory: string;
-  shareAvailability: boolean;
+  healthDeclaration: string;
   profileComplete: boolean;
   healthDeclarationSigned: boolean;
   termsAccepted: boolean;
+  termsAcceptedVersion: string;
+  privacyAcceptedVersion: string;
   joinDate: string;
   photo: string;
   coverImage: string;
@@ -745,16 +750,30 @@ export function clientRowToListItem(row: AccountWithClientProfile): ClientDirect
     email: row.account.email,
     phone: profile.phone || '',
     nationality: profile.nationality || '',
-    address: profile.address || '',
+    province: profile.province || '',
+    city: profile.city || '',
+    barangay: profile.barangay || '',
     birthday: profile.birthday,
     sex: profile.sex || '',
     weight: profile.weight || '',
     height: profile.height || '',
-    medicalHistory: profile.medical_history || '',
-    shareAvailability: profile.share_availability ?? false,
-    profileComplete: profile.profile_complete ?? false,
-    healthDeclarationSigned: profile.health_declaration_signed ?? false,
+    healthDeclaration: profile.health_declaration || '',
+    profileComplete: isProfileComplete({
+      firstName: profile.first_name ?? '',
+      lastName: profile.last_name ?? '',
+      birthday: profile.birthday,
+      sex: (profile.sex as 'male' | 'female' | 'prefer_not_to_say' | '') || '',
+      phone: profile.phone || '',
+      nationality: profile.nationality || '',
+      termsAccepted: profile.terms_accepted ?? false,
+      termsDocumentPath: profile.terms_document_path ?? '',
+      termsAcceptedVersion: profile.terms_accepted_version ?? '',
+      healthDeclaration: profile.health_declaration || '',
+    }),
+    healthDeclarationSigned: isHealthDeclarationAcknowledged(profile.health_declaration),
     termsAccepted: profile.terms_accepted ?? false,
+    termsAcceptedVersion: profile.terms_accepted_version ?? '',
+    privacyAcceptedVersion: profile.privacy_accepted_version ?? '',
     joinDate: formatClientJoinDate(row.account.created_at),
     photo: profile.photo || '',
     coverImage: profile.cover_image || '',
@@ -844,7 +863,9 @@ export async function updateClientAccountFromForm(
     email: string;
     phone?: string;
     nationality?: string;
-    address?: string;
+    province?: string;
+    city?: string;
+    barangay?: string;
   },
 ): Promise<{ ok: boolean; error?: string }> {
   const { firstName, lastName } = splitFullName(input.name);
@@ -860,7 +881,9 @@ export async function updateClientAccountFromForm(
     name: input.name.trim(),
     phone: input.phone?.trim() ?? '',
     nationality: input.nationality?.trim() ?? '',
-    address: input.address?.trim() ?? '',
+    province: input.province?.trim() || null,
+    city: input.city?.trim() || null,
+    barangay: input.barangay?.trim() || null,
   });
 }
 

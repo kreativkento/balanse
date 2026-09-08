@@ -13,6 +13,7 @@ const exploreLinks = [{ label: 'About Us', path: '/' }];
 const studioLinks = [
   { label: 'Amenities', path: '/studio' },
   { label: 'Guidelines', path: '/studio/guidelines' },
+  { label: 'Coaches', path: '/coaches' },
 ];
 
 const ratesLinks = [

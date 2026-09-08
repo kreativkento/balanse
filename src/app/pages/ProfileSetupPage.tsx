@@ -3,28 +3,77 @@ import { useNavigate } from 'react-router';
 import {
   User, Calendar, ChevronRight, AlertCircle,
   Shield, FileText, Check, X, Heart, Eye,
-  Phone, Weight, Ruler, PenLine, Eraser,
+  Phone, Weight, Ruler, PenLine, Eraser, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NATIONALITIES } from '../data/nationalities';
 import { ProfileImageHero } from '../components/ProfileImages';
-import { TC_LAST_UPDATED, TERMS_BLOCKS } from '../data/termsAndConditions';
+import { exportTransparentSignaturePng, SignaturePad } from '../components/SignaturePad';
+import { PRIVACY_BLOCKS, PRIVACY_LAST_UPDATED } from '../data/privacyPolicy';
+import { TC_LAST_UPDATED, TERMS_BLOCKS, type TermsBlock } from '../data/termsAndConditions';
+import {
+  HEALTH_FORM_VERSION,
+  HEALTH_QUESTIONS,
+  emptyHealthAnswers,
+  serializeHealthDeclaration,
+  type HealthAnswers,
+  type HealthDeclarationFields,
+} from '../../lib/health-declaration';
+import {
+  generateAndUploadHealthDeclarationPdf,
+  generateAndUploadSignedPrivacyPdf,
+  uploadMemberSignaturePng,
+  type SignedUploadResult,
+} from '../../lib/member-documents';
 import { generateAndSaveSignedTermsPdf } from '../../lib/signed-terms';
 
-const HEALTH_DECLARATION_QUESTIONS = [
-  'Do you have any cardiovascular conditions (heart disease, hypertension, arrhythmia)?',
-  'Do you have any respiratory conditions (asthma, COPD, breathing difficulties)?',
-  'Do you have any musculoskeletal injuries or chronic pain (back, knees, shoulders, etc.)?',
-  'Are you currently pregnant or postpartum within the last 6 months?',
-  'Do you have diabetes or any metabolic condition?',
-  'Are you currently taking medications that may affect physical activity?',
-];
+function PolicyBlocksView({ blocks }: { blocks: TermsBlock[] }) {
+  return (
+    <div className="space-y-4 text-sm text-[#5A5048] leading-relaxed">
+      {blocks.map((block, i) => {
+        if (block.type === 'heading') {
+          return <p key={i} className="font-semibold text-[#1E2A35] mb-1">{block.text}</p>;
+        }
+        if (block.type === 'labelValue') {
+          return <p key={i}>{block.label}: {block.value}</p>;
+        }
+        if (block.type === 'bullets') {
+          return (
+            <ul key={i} className="list-disc pl-5 space-y-2">
+              {block.items.map((item) => (
+                <li key={item.label}><span className="font-semibold text-[#1E2A35]">{item.label}</span> {item.text}</li>
+              ))}
+            </ul>
+          );
+        }
+        if (block.type === 'numbered') {
+          return (
+            <ol key={i} className="list-decimal pl-5 space-y-3">
+              {block.items.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}
+            </ol>
+          );
+        }
+        return <p key={i}>{block.text}</p>;
+      })}
+    </div>
+  );
+}
 
-function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; onAccept: () => void }) {
-  const [answers, setAnswers] = useState<boolean[]>(HEALTH_DECLARATION_QUESTIONS.map(() => false));
+function HealthDeclarationModal({
+  onClose,
+  onAccept,
+}: {
+  onClose: () => void;
+  onAccept: (fields: HealthDeclarationFields, signatureDataUrl: string) => void;
+}) {
+  const [answers, setAnswers] = useState<HealthAnswers>(() => emptyHealthAnswers());
+  const [details, setDetails] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
-
-  const toggle = (i: number) => setAnswers(prev => prev.map((v, idx) => idx === i ? !v : v));
+  const [hasInk, setHasInk] = useState(false);
+  const [padKey, setPadKey] = useState(0);
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const allAnswered = HEALTH_QUESTIONS.every((question) => answers[question.id]);
+  const canSubmit = allAnswered && acknowledged && hasInk;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
@@ -46,29 +95,45 @@ function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; on
 
         <div className="px-5 sm:px-7 py-5 flex flex-col gap-4 max-h-[60vh] overflow-y-auto">
           <p className="text-[#5A5048] text-sm leading-relaxed">
-            This health declaration helps our coaches ensure your safety during classes. Answer each question honestly. If you answered "Yes" to any item, our coaches may reach out before your first session.
+            Please check the appropriate box for each question below to help our coaches ensure your safety during training.
           </p>
 
           <div className="flex flex-col gap-3">
-            {HEALTH_DECLARATION_QUESTIONS.map((q, i) => (
-              <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-2xl border border-[#D4CDB5]/50 hover:border-[#c49a3c]/30 transition-colors">
-                <p className="text-[#5A5048] text-sm flex-1 min-w-0">{q}</p>
-                <div className="flex gap-2 shrink-0 self-end sm:self-auto">
-                  <button
-                    onClick={() => setAnswers(prev => prev.map((v, idx) => idx === i ? true : v))}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${answers[i] ? 'bg-red-500 text-white border-red-500' : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-red-300'}`}
-                  >
-                    Yes
-                  </button>
-                  <button
-                    onClick={() => setAnswers(prev => prev.map((v, idx) => idx === i ? false : v))}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${!answers[i] ? 'bg-[#6B8E6B] text-white border-[#6B8E6B]' : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-green-300'}`}
-                  >
-                    No
-                  </button>
+            {HEALTH_QUESTIONS.map((question) => {
+              const answer = answers[question.id];
+              return (
+                <div key={question.id} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-2xl border border-[#D4CDB5]/50 hover:border-[#c49a3c]/30 transition-colors">
+                  <p className="text-[#5A5048] text-sm flex-1 min-w-0">{question.text}</p>
+                  <div className="flex gap-2 shrink-0 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setAnswers((current) => ({ ...current, [question.id]: 'yes' }))}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${answer === 'yes' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-red-300'}`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnswers((current) => ({ ...current, [question.id]: 'no' }))}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${answer === 'no' ? 'bg-[#6B8E6B] text-white border-[#6B8E6B]' : 'bg-white text-[#8A7E6E] border-[#D4CDB5]/60 hover:border-green-300'}`}
+                    >
+                      No
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+
+          <div>
+            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Additional details</p>
+            <textarea
+              className="w-full rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/25 resize-none"
+              rows={3}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="If you answered Yes to any question, please provide brief details"
+            />
           </div>
 
           <label
@@ -79,9 +144,33 @@ function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; on
               {acknowledged && <Check size={12} className="text-white" strokeWidth={3} />}
             </div>
             <p className="text-[#5A5048] text-xs leading-relaxed">
-              I declare that the above information is true and accurate. I understand that providing false information may affect my safety during classes and is grounds for membership suspension.
+              I confirm that I am physically capable of participating in fitness activities at BALANSÉ.
+              I have disclosed all relevant medical conditions above and agree to notify BALANSÉ
+              of any changes to my health status before attending future sessions.
             </p>
           </label>
+
+          <div>
+            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">E-signature</p>
+            <SignaturePad key={padKey} canvasRef={signatureCanvasRef} onInkChange={setHasInk} />
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="text-[#B0A898] text-xs">
+                {hasInk ? 'Signature captured.' : 'Draw your signature to complete this declaration.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => { setPadKey((key) => key + 1); setHasInk(false); }}
+                disabled={!hasInk}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs transition-all ${
+                  hasInk
+                    ? 'border-[#D4CDB5]/70 text-[#5A5048] hover:bg-[#EDE8D8]'
+                    : 'border-[#D4CDB5]/40 text-[#B0A898] cursor-not-allowed'
+                }`}
+              >
+                <Eraser size={13} /> Clear
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex gap-3">
@@ -89,125 +178,27 @@ function HealthDeclarationModal({ onClose, onAccept }: { onClose: () => void; on
             Cancel
           </button>
           <button
-            onClick={onAccept}
-            disabled={!acknowledged}
-            className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${acknowledged ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
+            onClick={() => {
+              if (!canSubmit) return;
+              const signatureDataUrl = signatureCanvasRef.current
+                ? exportTransparentSignaturePng(signatureCanvasRef.current)
+                : null;
+              if (!signatureDataUrl) return;
+              onAccept({
+                answers,
+                details,
+                acknowledged: true,
+                schemaVersion: HEALTH_FORM_VERSION,
+              }, signatureDataUrl);
+            }}
+            disabled={!canSubmit}
+            className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${canSubmit ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
             style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
           >
             <Check size={14} /> I Declare
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SignaturePad({
-  onInkChange,
-  canvasRef,
-}: {
-  onInkChange: (hasInk: boolean) => void;
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const drawing = useRef(false);
-  const last = useRef<{ x: number; y: number } | null>(null);
-  const hasInkRef = useRef(false);
-  const sizeRef = useRef({ w: 0, h: 0 });
-  const onInkChangeRef = useRef(onInkChange);
-  onInkChangeRef.current = onInkChange;
-
-  const pointFromEvent = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-
-  const setupCanvas = () => {
-    const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const w = wrap.clientWidth;
-    const h = wrap.clientHeight;
-    if (w < 8 || h < 8) return;
-    if (sizeRef.current.w === w && sizeRef.current.h === h && canvas.width > 0) return;
-    sizeRef.current = { w, h };
-    canvas.width = Math.floor(w * dpr);
-    canvas.height = Math.floor(h * dpr);
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1E2A35';
-    ctx.lineWidth = 2.25;
-    hasInkRef.current = false;
-    onInkChangeRef.current(false);
-  };
-
-  useEffect(() => {
-    setupCanvas();
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const ro = new ResizeObserver(() => setupCanvas());
-    ro.observe(wrap);
-    return () => ro.disconnect();
-  }, []);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    canvas.setPointerCapture(e.pointerId);
-    drawing.current = true;
-    last.current = pointFromEvent(e);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawing.current || !last.current) return;
-    const ctx = canvasRef.current?.getContext('2d');
-    if (!ctx) return;
-    const next = pointFromEvent(e);
-    ctx.beginPath();
-    ctx.moveTo(last.current.x, last.current.y);
-    ctx.lineTo(next.x, next.y);
-    ctx.stroke();
-    last.current = next;
-    if (!hasInkRef.current) {
-      hasInkRef.current = true;
-      onInkChange(true);
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    drawing.current = false;
-    last.current = null;
-    try { canvasRef.current?.releasePointerCapture(e.pointerId); } catch { /* already released */ }
-  };
-
-  return (
-    <div
-      ref={wrapRef}
-      className="relative h-40 sm:h-52 w-full rounded-2xl bg-[#F8F3E8] border-2 border-[#D4CDB5]/70 overflow-hidden"
-    >
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 h-full w-full touch-none cursor-crosshair"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-      />
-      <div className="pointer-events-none absolute left-6 right-6 bottom-8 h-px bg-[#c49a3c]/50" />
-      <p className="pointer-events-none absolute left-0 right-0 bottom-3 text-center text-[#B0A898] text-[11px] uppercase tracking-widest">
-        Sign here
-      </p>
     </div>
   );
 }
@@ -232,7 +223,9 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: (sig
 
   const confirmSignature = () => {
     if (!hasInk || !accepted) return;
-    const dataUrl = signatureCanvasRef.current?.toDataURL('image/png') ?? '';
+    const dataUrl = signatureCanvasRef.current
+      ? exportTransparentSignaturePng(signatureCanvasRef.current)
+      : null;
     if (!dataUrl) return;
     onAccept(dataUrl);
   };
@@ -280,33 +273,7 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: (sig
         {step === 'terms' ? (
           <>
             <div className="px-5 sm:px-7 py-5 max-h-[46vh] overflow-y-auto flex-1 min-h-0" onScroll={handleScroll}>
-              <div className="space-y-4 text-sm text-[#5A5048] leading-relaxed">
-                {TERMS_BLOCKS.map((block, i) => {
-                  if (block.type === 'heading') {
-                    return <p key={i} className="font-semibold text-[#1E2A35] mb-1">{block.text}</p>;
-                  }
-                  if (block.type === 'labelValue') {
-                    return <p key={i}>{block.label}: {block.value}</p>;
-                  }
-                  if (block.type === 'bullets') {
-                    return (
-                      <ul key={i} className="list-disc pl-5 space-y-2">
-                        {block.items.map((item) => (
-                          <li key={item.label}><span className="font-semibold text-[#1E2A35]">{item.label}</span> {item.text}</li>
-                        ))}
-                      </ul>
-                    );
-                  }
-                  if (block.type === 'numbered') {
-                    return (
-                      <ol key={i} className="list-decimal pl-5 space-y-3">
-                        {block.items.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}
-                      </ol>
-                    );
-                  }
-                  return <p key={i}>{block.text}</p>;
-                })}
-              </div>
+              <PolicyBlocksView blocks={TERMS_BLOCKS} />
 
               <div className="mt-4 bg-[#F8F3E8] border border-[#D4CDB5]/60 rounded-2xl px-4 py-3 flex items-center gap-3">
                 <Eye size={14} className="text-[#c49a3c] shrink-0" />
@@ -392,6 +359,75 @@ function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: (sig
   );
 }
 
+function PrivacyModal({ onClose, onAccept }: { onClose: () => void; onAccept: () => void }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) setScrolled(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
+        <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center shrink-0">
+              <ShieldCheck size={16} className="text-[#c49a3c]" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-[#1E2A35] truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>
+                Privacy Policy
+              </h3>
+              <p className="text-[#9A8E7E] text-xs">Last Updated: {PRIVACY_LAST_UPDATED}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 sm:px-7 py-5 max-h-[46vh] overflow-y-auto flex-1 min-h-0" onScroll={handleScroll}>
+          <PolicyBlocksView blocks={PRIVACY_BLOCKS} />
+        </div>
+
+        {!scrolled && (
+          <p className="text-[#B0A898] text-xs text-center py-2 shrink-0">Scroll to read the full policy</p>
+        )}
+
+        <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex flex-col gap-3 shrink-0">
+          <label
+            onClick={() => scrolled && setAccepted(v => !v)}
+            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
+          >
+            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
+              {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
+            </div>
+            <p className="text-[#5A5048] text-xs leading-relaxed">
+              I have read this Privacy Policy and understand how BALANSÉ collects and uses my information.
+            </p>
+          </label>
+          <div className="flex gap-3">
+            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => accepted && onAccept()}
+              disabled={!accepted}
+              className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+            >
+              <Check size={14} /> I Accept
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileSetupPage() {
   const navigate = useNavigate();
   const { completeProfile, updateProfile, user } = useAuth();
@@ -408,9 +444,15 @@ export default function ProfileSetupPage() {
   const [weight, setWeight]             = useState('');
   const [height, setHeight]             = useState('');
   const [healthSigned, setHealthSigned] = useState(false);
+  const [healthFields, setHealthFields] = useState<HealthDeclarationFields | null>(null);
+  const [healthUpload, setHealthUpload] = useState<SignedUploadResult | null>(null);
   const [termsSigned, setTermsSigned]   = useState(false);
+  const [termsUpload, setTermsUpload] = useState<SignedUploadResult | null>(null);
+  const [privacySigned, setPrivacySigned] = useState(false);
+  const [privacyUpload, setPrivacyUpload] = useState<SignedUploadResult | null>(null);
   const [showHealthModal, setShowHealthModal] = useState(false);
   const [showTermsModal, setShowTermsModal]   = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [errors, setErrors]             = useState<Record<string, string>>({});
   const [loading, setLoading]           = useState(false);
 
@@ -424,6 +466,7 @@ export default function ProfileSetupPage() {
     if (!sex) e.sex = 'Please select your sex.';
     if (!healthSigned) e.health = 'You must complete the Health Declaration.';
     if (!termsSigned)  e.terms  = 'You must accept the Terms & Conditions and provide an e-signature.';
+    if (!privacySigned) e.privacy = 'You must accept the Privacy Policy.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -447,9 +490,18 @@ export default function ProfileSetupPage() {
       nationality: nationality.trim(),
       weight: weight.trim(),
       height: height.trim(),
-      healthDeclarationSigned: healthSigned,
+      healthDeclaration: healthFields
+        ? serializeHealthDeclaration(healthFields)
+        : '',
+      healthDeclarationDocumentPath: healthUpload?.path ?? '',
+      healthDeclarationSignedAt: healthUpload?.signedAt ?? '',
       termsAccepted: termsSigned,
-      profileComplete: true,
+      termsDocumentPath: termsUpload?.path ?? '',
+      termsAcceptedVersion: termsUpload?.version ?? '',
+      termsSignedAt: termsUpload?.signedAt ?? '',
+      privacyPolicyDocumentPath: privacyUpload?.path ?? '',
+      privacyAcceptedVersion: privacyUpload?.version ?? '',
+      privacySignedAt: privacyUpload?.signedAt ?? '',
     });
     navigate('/dashboard');
   };
@@ -465,7 +517,31 @@ export default function ProfileSetupPage() {
       {showHealthModal && (
         <HealthDeclarationModal
           onClose={() => setShowHealthModal(false)}
-          onAccept={() => { setHealthSigned(true); setShowHealthModal(false); setErrors(e => ({ ...e, health: '' })); }}
+          onAccept={async (fields, signatureDataUrl) => {
+            setHealthFields(fields);
+            setHealthSigned(true);
+            setShowHealthModal(false);
+            setErrors(e => ({ ...e, health: '' }));
+            const signerName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || user?.name || 'Member';
+            if (user?.email) {
+              try {
+                const uploadedSignature = await uploadMemberSignaturePng(signatureDataUrl);
+                if (uploadedSignature.ok) {
+                  fields.signaturePath = uploadedSignature.path;
+                  setHealthFields({ ...fields, signaturePath: uploadedSignature.path });
+                }
+                const uploaded = await generateAndUploadHealthDeclarationPdf({
+                  email: user.email,
+                  signerName,
+                  fields,
+                  signatureDataUrl,
+                });
+                setHealthUpload(uploaded);
+              } catch (err) {
+                console.error('Failed to save Health Declaration PDF:', err);
+              }
+            }
+          }}
         />
       )}
       {showTermsModal && (
@@ -478,13 +554,36 @@ export default function ProfileSetupPage() {
             const signerName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || user?.name || 'Member';
             if (user?.email) {
               try {
-                await generateAndSaveSignedTermsPdf({
+                const uploaded = await generateAndSaveSignedTermsPdf({
                   email: user.email,
                   signerName,
                   signatureDataUrl,
                 });
+                setTermsUpload(uploaded);
               } catch (err) {
                 console.error('Failed to save signed Terms PDF:', err);
+              }
+            }
+          }}
+        />
+      )}
+      {showPrivacyModal && (
+        <PrivacyModal
+          onClose={() => setShowPrivacyModal(false)}
+          onAccept={async () => {
+            setPrivacySigned(true);
+            setShowPrivacyModal(false);
+            setErrors(e => ({ ...e, privacy: '' }));
+            const signerName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || user?.name || 'Member';
+            if (user?.email) {
+              try {
+                const uploaded = await generateAndUploadSignedPrivacyPdf({
+                  email: user.email,
+                  signerName,
+                });
+                setPrivacyUpload(uploaded);
+              } catch (err) {
+                console.error('Failed to save Privacy Policy PDF:', err);
               }
             }
           }}
@@ -753,12 +852,37 @@ export default function ProfileSetupPage() {
                       </button>
                     )}
                   </div>
+
+                  <div className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border transition-all min-w-0 ${privacySigned ? 'border-green-300 bg-green-50' : errors.privacy ? 'border-red-300 bg-red-50/30' : 'border-[#D4CDB5]/60'}`}>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${privacySigned ? 'bg-green-100' : 'bg-[#c49a3c]/10'}`}>
+                        <ShieldCheck size={16} className={privacySigned ? 'text-green-600' : 'text-[#c49a3c]'} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold ${privacySigned ? 'text-green-700' : 'text-[#1E2A35]'}`}>Privacy Policy</p>
+                        <p className="text-[#9A8E7E] text-xs break-words">{privacySigned ? `Accepted ✓ (Updated ${PRIVACY_LAST_UPDATED})` : `Last Updated: ${PRIVACY_LAST_UPDATED}`}</p>
+                      </div>
+                    </div>
+                    {privacySigned ? (
+                      <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center self-end sm:self-auto shrink-0">
+                        <Check size={13} className="text-green-600" strokeWidth={3} />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowPrivacyModal(true)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-1 text-[#c49a3c] text-xs font-bold border border-[#c49a3c]/40 px-3 py-2 sm:py-1.5 rounded-xl hover:bg-[#c49a3c]/08 transition-all shrink-0"
+                      >
+                        View &amp; Accept <ChevronRight size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {(errors.health || errors.terms) && (
+                {(errors.health || errors.terms || errors.privacy) && (
                   <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
                     <AlertCircle size={12} />
-                    {errors.health || errors.terms}
+                    {errors.health || errors.terms || errors.privacy}
                   </p>
                 )}
               </div>

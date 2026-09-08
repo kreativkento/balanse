@@ -14,6 +14,9 @@ export type EventStatus = ClassStatus;
 export type TicketType = 'bug' | 'feature' | 'support' | 'incident' | 'other';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type FeedbackLabel = 'positive' | 'bug' | 'feature' | 'question' | 'improvement';
+export type FeedbackStatus = 'unresolved' | 'in_progress' | 'resolved';
+export type FeedbackPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type LogAction =
   | 'insert'
   | 'update'
@@ -180,6 +183,16 @@ export interface Database {
         Insert: Partial<TicketLogRow> & { action: LogAction };
         Update: never;
       };
+      feedback_system: {
+        Row: FeedbackRow;
+        Insert: {
+          title: string;
+          description: string;
+          label: FeedbackLabel;
+          account_id: string;
+        } & Partial<Omit<FeedbackRow, 'title' | 'description' | 'label' | 'account_id' | 'created_at' | 'updated_at'>>;
+        Update: Partial<Omit<FeedbackRow, 'id' | 'created_at' | 'account_id'>>;
+      };
     };
     Functions: {
       admin_delete_managed_account: {
@@ -286,14 +299,24 @@ export interface ProfileClientRow {
   sex: string;
   phone: string;
   nationality: string;
-  address: string;
+  province: string | null;
+  city: string | null;
+  barangay: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_number: string | null;
+  emergency_contact_relationship: string | null;
   weight: string;
   height: string;
-  medical_history: string;
-  health_declaration_signed: boolean;
+  health_declaration: string;
+  health_declaration_document_path: string | null;
+  health_declaration_signed_at: string | null;
   terms_accepted: boolean;
-  share_availability: boolean;
-  profile_complete: boolean;
+  terms_document_path: string | null;
+  terms_accepted_version: string | null;
+  terms_signed_at: string | null;
+  privacy_policy_document_path: string | null;
+  privacy_accepted_version: string | null;
+  privacy_signed_at: string | null;
   photo: string;
   cover_image: string;
   created_at: string;
@@ -591,6 +614,22 @@ export interface TicketRow {
   creator_account_id: string;
   creator_email: string;
   assignee_account_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeedbackRow {
+  id: string;
+  account_id: string;
+  title: string;
+  description: string;
+  label: FeedbackLabel;
+  status: FeedbackStatus;
+  priority: FeedbackPriority | null;
+  ticket_level: number;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  attachment_mime: string | null;
   created_at: string;
   updated_at: string;
 }

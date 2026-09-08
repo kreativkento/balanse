@@ -8,8 +8,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
+import { AccountMenu } from '../components/layout/AccountMenu';
+import { DashboardGreetingBar } from '../components/layout/DashboardGreetingBar';
+import { MemberPageShell } from '../components/layout/MemberPageShell';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
-import { ProfileAvatar } from '../components/ProfileImages';
+import { getPhilippinesGreeting } from '../../lib/philippines-time';
 
 // ─────────────────────────────────────────────
 // DATE HELPERS
@@ -403,7 +406,7 @@ function CalendarWidget({ onBook }: { onBook: () => void }) {
 // DASHBOARD PAGE
 // ─────────────────────────────────────────────
 
-export default function DashboardPage() {
+export default function MemberDashboardPage() {
   const navigate = useNavigate();
   const { user, logout, profileComplete } = useAuth();
 
@@ -419,8 +422,7 @@ export default function DashboardPage() {
   const handleLogout = () => { logout(); navigate('/'); };
 
   const firstName = user?.name?.split(' ')[0] || 'Member';
-  const hour      = new Date().getHours();
-  const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting  = getPhilippinesGreeting();
 
   // Membership info
   const memberPlan       = 'Gold Membership';
@@ -435,7 +437,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="bg-[#F8F3E8] min-h-full">
+    <>
       {/* Modals */}
       {cancellingBooking && (
         <CancelModal booking={cancellingBooking} onClose={() => setCancellingId(null)} onConfirm={handleConfirmCancel} />
@@ -464,33 +466,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8">
-
-        {/* ── Header ── */}
-        <div className="pt-6 pb-5 border-b border-[#D4CDB5]/60">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-[#8A7E6E] text-sm">{greeting},</p>
-              <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 5vw, 3rem)', letterSpacing: '0.04em' }}>
-                {firstName}
-              </h1>
-            </div>
-            <button
-              onClick={() => navigate('/profile')}
-              className="w-11 h-11 bg-[#c49a3c]/15 border-2 border-[#c49a3c]/40 rounded-full flex items-center justify-center hover:bg-[#c49a3c]/25 active:scale-95 transition-all overflow-hidden"
-              title="My Profile"
-            >
-              <ProfileAvatar
-                src={user?.profile.photo}
-                initials={user?.name?.split(' ').map(n => n[0]).join('') || 'M'}
-                alt="My profile"
-                className="h-full w-full"
-                initialsClassName="text-[#a67f2e] font-black text-sm"
-              />
-            </button>
-          </div>
-
-          {/* Membership status + credits */}
+      <MemberPageShell
+        header={
+          <DashboardGreetingBar
+            greeting={greeting}
+            firstName={firstName}
+            searchPlaceholder="Search classes, bookings…"
+            accountMenu={<AccountMenu onLogout={() => setShowLogoutModal(true)} />}
+          />
+        }
+      >
+        {/* ── Membership status + credits ── */}
+        <div className="pt-5 pb-5 border-b border-[#D4CDB5]/60">
           {profileComplete ? (
             <div className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
               <div className="flex items-center gap-3 px-4 py-3">
@@ -780,10 +767,10 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Calendar Widget ── */}
-        <div className="pb-10">
+        <div className="pb-2">
           <CalendarWidget onBook={() => navigate('/book')} />
         </div>
-      </div>
-    </div>
+      </MemberPageShell>
+    </>
   );
 }

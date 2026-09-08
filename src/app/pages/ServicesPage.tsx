@@ -84,27 +84,9 @@ function PriceRow({
   );
 }
 
-export default function ServicesPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const handleAction = () => navigate(isAuthenticated ? '/dashboard' : '/auth');
-
+export function ServicesOfferings({ onAction }: { onAction: () => void }) {
   return (
-    <div className="bg-[#F8F3E8] flex-1 flex flex-col">
-      <header className="max-w-6xl mx-auto w-full px-4 md:px-8 pt-4 md:pt-5 pb-3">
-        <PublicBreadcrumb parent="Our Rates" current="Services" parentTo="/pricing" />
-        <h1
-          className="text-[#1E2A35] leading-none"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.05em' }}
-        >
-          Services
-        </h1>
-        <p className="text-[#8A7E6E] text-sm mt-1.5 max-w-xl">
-          One-on-one coaching, private sessions, and recovery treatments tailored to you.
-        </p>
-      </header>
-
-      <div className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-8 pb-5">
+    <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-stretch">
 
           <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
@@ -143,7 +125,7 @@ export default function ServicesPage() {
             <div className="px-4 pb-4 pt-1">
               <button
                 type="button"
-                onClick={handleAction}
+                onClick={onAction}
                 className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
               >
@@ -188,7 +170,7 @@ export default function ServicesPage() {
             <div className="px-4 pb-4 pt-1">
               <button
                 type="button"
-                onClick={handleAction}
+                onClick={onAction}
                 className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
               >
@@ -220,7 +202,7 @@ export default function ServicesPage() {
             <div className="px-4 pb-4 pt-3">
               <button
                 type="button"
-                onClick={handleAction}
+                onClick={onAction}
                 className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
               >
@@ -233,6 +215,32 @@ export default function ServicesPage() {
         <p className="text-[#8A7E6E] text-[11px] text-center pt-4">
           All rates are in Philippine Peso (₱). Prices are subject to change — confirm with our team for the latest rates.
         </p>
+    </>
+  );
+}
+
+export default function ServicesPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const handleAction = () => navigate(isAuthenticated ? '/dashboard' : '/auth');
+
+  return (
+    <div className="bg-[#F8F3E8] flex-1 flex flex-col">
+      <header className="max-w-6xl mx-auto w-full px-4 md:px-8 pt-4 md:pt-5 pb-3">
+        <PublicBreadcrumb parent="Our Rates" current="Services" parentTo="/pricing" />
+        <h1
+          className="text-[#1E2A35] leading-none"
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.05em' }}
+        >
+          Services
+        </h1>
+        <p className="text-[#8A7E6E] text-sm mt-1.5 max-w-xl">
+          One-on-one coaching, private sessions, and recovery treatments tailored to you.
+        </p>
+      </header>
+
+      <div className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-8 pb-5">
+        <ServicesOfferings onAction={handleAction} />
       </div>
     </div>
   );

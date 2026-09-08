@@ -316,7 +316,7 @@ export default function HomePage() {
 
       </div>
 
-      <HelpSupportFab />
+      <HelpSupportFab withBottomCta />
     </div>
   );
 }

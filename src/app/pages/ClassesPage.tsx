@@ -45,7 +45,7 @@ const CLASS_COLORS: Record<string, string> = {
   Capoeira: '#A07050',
 };
 
-function WeeklySchedule({ onBook }: { onBook: () => void }) {
+export function WeeklySchedule({ onBook }: { onBook: () => void }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const today = getTodayLocal();
   const weekDates = useMemo(() => getWeekDatesForOffset(weekOffset), [weekOffset]);

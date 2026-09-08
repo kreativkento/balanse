@@ -1,5 +1,15 @@
+/** ISO version stored on the member profile and used in the PDF filename. */
+export const TERMS_VERSION = '2026-01-15';
 export const TC_LAST_UPDATED = 'January 15, 2026';
 export const TC_DOCUMENT_TITLE = 'Balansé Terms & Conditions';
+/**
+ * Publishing an update:
+ * 1. Edit TERMS_BLOCKS below.
+ * 2. Bump TERMS_VERSION / TC_LAST_UPDATED.
+ * 3. Leave TERMS_REQUIRES_REACCEPT false unless the change is material (refunds, waiver scope).
+ * Existing signed PDFs are never overwritten.
+ */
+export const TERMS_REQUIRES_REACCEPT = false;
 
 export type TermsBlock =
   | { type: 'heading'; text: string }

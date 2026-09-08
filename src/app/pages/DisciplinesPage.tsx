@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, ChevronLeft, ChevronRight, Loader2, LogIn } from 'lucide-react';
+import { AlertCircle, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   AdminDisciplineCardsGrid,
@@ -8,12 +8,14 @@ import {
   type DisciplineCardDensity,
 } from '../components/disciplines/AdminDisciplineCardsGrid';
 import { AdminDisciplineModal } from '../components/disciplines/AdminDisciplineModal';
+import { AdminTablePagination } from '../components/layout/AdminTablePagination';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 import {
   fetchDisciplinesForPublic,
   type DisciplineDisplay,
 } from '../../lib/discipline-service';
 
+/** Two rows per page: compact = 4 cols × 2, large = 3 cols × 2 */
 const PAGE_SIZE: Record<DisciplineCardDensity, number> = {
   compact: 8,
   large: 6,
@@ -73,7 +75,7 @@ export default function DisciplinesPage() {
   };
 
   return (
-    <div className="h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
+    <div className="min-h-full bg-[#F8F3E8] flex flex-col">
       {selectedDiscipline && (
         <AdminDisciplineModal
           discipline={selectedDiscipline}
@@ -155,9 +157,9 @@ export default function DisciplinesPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 max-w-6xl mx-auto w-full px-4 md:px-8 py-3 md:py-4 flex flex-col">
+      <div className="max-w-6xl mx-auto w-full px-4 md:px-8 py-3 md:py-4 flex flex-col pb-10">
         {disciplinesLoading && (
-          <div className="flex-1 flex items-center justify-center gap-2 text-[#8A7E6E]">
+          <div className="flex items-center justify-center gap-2 py-16 text-[#8A7E6E]">
             <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
             <span className="text-sm">Loading disciplines…</span>
           </div>
@@ -182,61 +184,29 @@ export default function DisciplinesPage() {
 
         {!disciplinesLoading && disciplines.length > 0 && (
           <>
-            <div className="shrink-0 flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <p className="text-[#8A7E6E] text-xs">
                 {disciplines.length} discipline{disciplines.length === 1 ? '' : 's'} available
               </p>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <AdminDisciplineCardsGrid
-                variant="public"
-                density={density}
-                hideCount
-                disciplines={pageDisciplines}
-                onSelect={setSelectedDiscipline}
-              />
-            </div>
+            <AdminDisciplineCardsGrid
+              variant="public"
+              density={density}
+              hideCount
+              disciplines={pageDisciplines}
+              onSelect={setSelectedDiscipline}
+            />
 
-            <div className="shrink-0 mt-3 pt-3 border-t border-[#D4CDB5]/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p className="text-[#8A7E6E] text-xs">
-                Showing {rangeStart}–{rangeEnd} of {disciplines.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                  className="w-9 h-9 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setPage(n)}
-                    className={`min-w-9 h-9 px-2.5 rounded-full text-xs font-semibold transition-all ${
-                      n === currentPage
-                        ? 'bg-[#c49a3c] text-white'
-                        : 'bg-white border border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#c49a3c]/40'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="w-9 h-9 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Next page"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
+            <AdminTablePagination
+              page={currentPage}
+              totalPages={totalPages}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              total={disciplines.length}
+              noun="disciplines"
+              onPageChange={setPage}
+            />
           </>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Camera, ImagePlus, Loader2 } from 'lucide-react';
+import { Camera, ImagePlus, Loader2, Pencil } from 'lucide-react';
 import { uploadProfileImage, type ProfileImageKind } from '../../lib/storage-service';
 
 export function ProfileAvatar({
@@ -144,10 +144,17 @@ export function ProfileImageHero({
               type="button"
               onClick={() => pickFile('cover')}
               disabled={uploading !== null}
-              className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-xl bg-white/85 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#5A5048] shadow-sm backdrop-blur-sm transition-all hover:bg-white disabled:opacity-60"
+              className="group absolute top-3 right-3 z-10 inline-flex h-8 items-center overflow-hidden rounded-xl bg-white/85 pl-2 pr-2 shadow-sm backdrop-blur-sm transition-all duration-300 ease-in-out hover:bg-white hover:pr-2.5 disabled:opacity-60"
+              aria-label={coverUrl ? 'Change cover' : 'Add cover'}
             >
-              {uploading === 'cover' ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
-              {coverUrl ? 'Change cover' : 'Add cover'}
+              {uploading === 'cover' ? (
+                <Loader2 size={12} className="shrink-0 animate-spin text-[#5A5048]" />
+              ) : (
+                <Pencil size={12} className="shrink-0 text-[#5A5048]" />
+              )}
+              <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-[#5A5048] opacity-0 transition-all duration-300 ease-in-out group-hover:ml-1.5 group-hover:max-w-[7.5rem] group-hover:opacity-100">
+                {coverUrl ? 'Change Cover' : 'Add Cover'}
+              </span>
             </button>
             <input
               ref={coverInputRef}

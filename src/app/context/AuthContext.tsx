@@ -20,6 +20,7 @@ import {
 } from '../../lib/profile-service';
 import type { AccountWithClientProfile } from '../../lib/database.types';
 import { loadOwnProfileImageUrls, mergeProfileImageUrls } from '../../lib/storage-service';
+import { isProfileComplete } from '../../lib/profile-completion';
 
 export interface UserProfile {
   firstName: string;
@@ -30,14 +31,24 @@ export interface UserProfile {
   sex: 'male' | 'female' | 'prefer_not_to_say' | '';
   phone: string;
   nationality: string;
-  address: string;
+  province: string;
+  city: string;
+  barangay: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  emergencyContactRelationship: string;
   weight: string;
   height: string;
-  medicalHistory: string;
-  healthDeclarationSigned: boolean;
+  healthDeclaration: string;
+  healthDeclarationDocumentPath: string;
+  healthDeclarationSignedAt: string;
   termsAccepted: boolean;
-  shareAvailability: boolean;
-  profileComplete: boolean;
+  termsDocumentPath: string;
+  termsAcceptedVersion: string;
+  termsSignedAt: string;
+  privacyPolicyDocumentPath: string;
+  privacyAcceptedVersion: string;
+  privacySignedAt: string;
   photo: string;
   coverImage: string;
 }
@@ -74,14 +85,24 @@ const defaultProfile = (): UserProfile => ({
   sex: '',
   phone: '',
   nationality: '',
-  address: '',
+  province: '',
+  city: '',
+  barangay: '',
+  emergencyContactName: '',
+  emergencyContactNumber: '',
+  emergencyContactRelationship: '',
   weight: '',
   height: '',
-  medicalHistory: '',
-  healthDeclarationSigned: false,
+  healthDeclaration: '',
+  healthDeclarationDocumentPath: '',
+  healthDeclarationSignedAt: '',
   termsAccepted: false,
-  shareAvailability: false,
-  profileComplete: false,
+  termsDocumentPath: '',
+  termsAcceptedVersion: '',
+  termsSignedAt: '',
+  privacyPolicyDocumentPath: '',
+  privacyAcceptedVersion: '',
+  privacySignedAt: '',
   photo: '',
   coverImage: '',
 });
@@ -288,14 +309,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeProfile = (data: Partial<UserProfile>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const merged = { ...prev.profile, ...data, profileComplete: true };
+      const merged = { ...prev.profile, ...data };
       const fn = merged.firstName || prev.profile.firstName;
       const ln = merged.lastName || prev.profile.lastName;
       const mi = merged.middleInitial ?? prev.profile.middleInitial;
       const derivedName = buildFullName(fn, mi, ln) || prev.name;
       const updated: UserProfile = { ...merged, name: data.name || derivedName };
 
-      void persistProfile({ ...data, name: updated.name, profileComplete: true });
+      void persistProfile({ ...data, name: updated.name });
       return { ...prev, name: updated.name, profile: updated };
     });
   };
@@ -324,7 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
         logout,
         isAuthenticated: !!user,
-        profileComplete: !!user?.profile?.profileComplete,
+        profileComplete: isProfileComplete(user?.profile),
       }}
     >
       {children}

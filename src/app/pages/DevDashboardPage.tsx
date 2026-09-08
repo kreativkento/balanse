@@ -4,6 +4,7 @@ import { Ticket, Bot, ArrowUpRight } from 'lucide-react';
 import { useDevAuth } from '../context/DevAuthContext';
 import { DevSidebar } from '../components/layout/DevSidebar';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { getPhilippinesGreeting } from '../../lib/philippines-time';
 
 const MODULES = [
   {
@@ -30,8 +31,7 @@ export default function DevDashboardPage() {
 
   if (!devUser) return null;
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = getPhilippinesGreeting();
 
   return (
     <DevSidebar>

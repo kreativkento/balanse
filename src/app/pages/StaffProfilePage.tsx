@@ -10,7 +10,7 @@ import { NATIONALITIES } from '../data/nationalities';
 import { ProfileImageHero } from '../components/ProfileImages';
 
 // ─────────────────────────────────────────────
-// SHARED STYLES  (mirrors ProfilePage exactly)
+// SHARED STYLES  (mirrors MemberProfilePage exactly)
 // ─────────────────────────────────────────────
 
 const INPUT =

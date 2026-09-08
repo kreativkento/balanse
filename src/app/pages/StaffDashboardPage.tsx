@@ -4,11 +4,13 @@ import {
   LogOut, CalendarDays, ChevronRight,
   ShieldCheck, LayoutGrid, Clock, Users,
   Images, KeyRound, SendHorizonal, CalendarCheck,
-  User, Pencil,
+  MessageSquare,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { AccountMenu } from '../components/layout/AccountMenu';
+import { DashboardGreetingBar } from '../components/layout/DashboardGreetingBar';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
-import { ProfileAvatar } from '../components/ProfileImages';
+import { getPhilippinesGreeting } from '../../lib/philippines-time';
 
 // ── Mock Data ──────────────────────────────────────────────────
 
@@ -158,8 +160,7 @@ export default function StaffDashboardPage() {
   if (!staffUser) return null;
 
   const firstName = staffUser.name.split(' ')[0];
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = getPhilippinesGreeting();
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
@@ -190,47 +191,29 @@ export default function StaffDashboardPage() {
 
       <div className="max-w-6xl mx-auto px-4 md:px-8">
 
-        {/* ── Header ── */}
-        <div className="pt-6 pb-5 border-b border-[#D4CDB5]/60">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <ShieldCheck size={13} className="text-[#c49a3c]" />
-                <span className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${staffUser.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#c49a3c]/12 text-[#a67f2e]'}`}>
-                  {staffUser.role}
-                </span>
-              </div>
-              <p className="text-[#8A7E6E] text-sm">{greeting},</p>
-              <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4vw, 2.8rem)', letterSpacing: '0.04em' }}>
-                {firstName}
-              </h1>
+        {/* ── Greeting bar ── */}
+        <DashboardGreetingBar
+          greeting={greeting}
+          firstName={firstName}
+          searchPlaceholder="Search classes, students…"
+          leadingExtra={
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck size={13} className="text-[#c49a3c]" />
+              <span className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${staffUser.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#c49a3c]/12 text-[#a67f2e]'}`}>
+                {staffUser.role}
+              </span>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/staff-profile')}
-                title="Edit Profile"
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#1E2A35]/20 hover:border-[#c49a3c]/50 hover:shadow-md transition-all relative group shrink-0"
-              >
-                <ProfileAvatar
-                  src={staffProfile?.photo}
-                  initials={(staffProfile?.displayName || staffUser.name).split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                  alt="Profile"
-                  className="h-full w-full bg-[#1E2A35]/10"
-                  initialsClassName="text-[#1E2A35] font-bold text-sm"
-                />
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Pencil size={12} className="text-white" />
-                </div>
-              </button>
-              <button
-                onClick={() => setShowLogoutModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#D4CDB5]/60 rounded-xl text-sm text-[#8A7E6E] hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all"
-              >
-                <LogOut size={15} /> Log Out
-              </button>
-            </div>
-          </div>
-        </div>
+          }
+          accountMenu={
+            <AccountMenu
+              onLogout={() => setShowLogoutModal(true)}
+              name={staffProfile?.displayName || staffUser.name}
+              email={staffUser.email}
+              photo={staffProfile?.photo}
+              profilePath="/staff-profile"
+            />
+          }
+        />
 
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-5">
@@ -368,6 +351,20 @@ export default function StaffDashboardPage() {
                 <div className="text-left flex-1">
                   <p className="text-sm font-semibold">Account Settings</p>
                   <p className="text-[#8A7E6E] text-xs">Change password</p>
+                </div>
+                <ChevronRight size={16} className="text-[#c49a3c] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+
+              <button
+                onClick={() => navigate('/staff-feedback')}
+                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
+                  <MessageSquare size={16} className="text-[#8A7E6E]" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="text-sm font-semibold">Send Feedback</p>
+                  <p className="text-[#8A7E6E] text-xs">Report a bug or share an idea</p>
                 </div>
                 <ChevronRight size={16} className="text-[#c49a3c] opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>

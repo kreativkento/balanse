@@ -48,6 +48,11 @@ export function mapAuthError(error: AuthError | null | undefined, fallback: stri
   return error.message || fallback;
 }
 
+function emptyToNull(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 export function profileRowToUserProfile(row: ProfileClientRow, email: string): UserProfile {
   return {
     firstName: row.first_name ?? '',
@@ -58,14 +63,24 @@ export function profileRowToUserProfile(row: ProfileClientRow, email: string): U
     sex: (row.sex as UserProfile['sex']) || '',
     phone: row.phone ?? '',
     nationality: row.nationality ?? '',
-    address: row.address ?? '',
+    province: row.province ?? '',
+    city: row.city ?? '',
+    barangay: row.barangay ?? '',
+    emergencyContactName: row.emergency_contact_name ?? '',
+    emergencyContactNumber: row.emergency_contact_number ?? '',
+    emergencyContactRelationship: row.emergency_contact_relationship ?? '',
     weight: row.weight ?? '',
     height: row.height ?? '',
-    medicalHistory: row.medical_history ?? '',
-    healthDeclarationSigned: row.health_declaration_signed ?? false,
+    healthDeclaration: row.health_declaration ?? '',
+    healthDeclarationDocumentPath: row.health_declaration_document_path ?? '',
+    healthDeclarationSignedAt: row.health_declaration_signed_at ?? '',
     termsAccepted: row.terms_accepted ?? false,
-    shareAvailability: row.share_availability ?? false,
-    profileComplete: row.profile_complete ?? false,
+    termsDocumentPath: row.terms_document_path ?? '',
+    termsAcceptedVersion: row.terms_accepted_version ?? '',
+    termsSignedAt: row.terms_signed_at ?? '',
+    privacyPolicyDocumentPath: row.privacy_policy_document_path ?? '',
+    privacyAcceptedVersion: row.privacy_accepted_version ?? '',
+    privacySignedAt: row.privacy_signed_at ?? '',
     photo: row.photo ?? '',
     coverImage: row.cover_image ?? '',
   };
@@ -94,16 +109,40 @@ export function userProfileToDbUpdate(data: Partial<UserProfile>): Record<string
   if (data.sex !== undefined) update.sex = data.sex;
   if (data.phone !== undefined) update.phone = data.phone;
   if (data.nationality !== undefined) update.nationality = data.nationality;
-  if (data.address !== undefined) update.address = data.address;
+  if (data.province !== undefined) update.province = emptyToNull(data.province);
+  if (data.city !== undefined) update.city = emptyToNull(data.city);
+  if (data.barangay !== undefined) update.barangay = emptyToNull(data.barangay);
+  if (data.emergencyContactName !== undefined) {
+    update.emergency_contact_name = emptyToNull(data.emergencyContactName);
+  }
+  if (data.emergencyContactNumber !== undefined) {
+    update.emergency_contact_number = emptyToNull(data.emergencyContactNumber);
+  }
+  if (data.emergencyContactRelationship !== undefined) {
+    update.emergency_contact_relationship = emptyToNull(data.emergencyContactRelationship);
+  }
   if (data.weight !== undefined) update.weight = data.weight;
   if (data.height !== undefined) update.height = data.height;
-  if (data.medicalHistory !== undefined) update.medical_history = data.medicalHistory;
-  if (data.healthDeclarationSigned !== undefined) {
-    update.health_declaration_signed = data.healthDeclarationSigned;
+  if (data.healthDeclaration !== undefined) update.health_declaration = data.healthDeclaration;
+  if (data.healthDeclarationDocumentPath !== undefined) {
+    update.health_declaration_document_path = emptyToNull(data.healthDeclarationDocumentPath);
+  }
+  if (data.healthDeclarationSignedAt !== undefined) {
+    update.health_declaration_signed_at = data.healthDeclarationSignedAt || null;
   }
   if (data.termsAccepted !== undefined) update.terms_accepted = data.termsAccepted;
-  if (data.shareAvailability !== undefined) update.share_availability = data.shareAvailability;
-  if (data.profileComplete !== undefined) update.profile_complete = data.profileComplete;
+  if (data.termsDocumentPath !== undefined) update.terms_document_path = emptyToNull(data.termsDocumentPath);
+  if (data.termsAcceptedVersion !== undefined) {
+    update.terms_accepted_version = emptyToNull(data.termsAcceptedVersion);
+  }
+  if (data.termsSignedAt !== undefined) update.terms_signed_at = data.termsSignedAt || null;
+  if (data.privacyPolicyDocumentPath !== undefined) {
+    update.privacy_policy_document_path = emptyToNull(data.privacyPolicyDocumentPath);
+  }
+  if (data.privacyAcceptedVersion !== undefined) {
+    update.privacy_accepted_version = emptyToNull(data.privacyAcceptedVersion);
+  }
+  if (data.privacySignedAt !== undefined) update.privacy_signed_at = data.privacySignedAt || null;
   if (data.photo) update.photo = data.photo;
   if (data.coverImage) update.cover_image = data.coverImage;
 

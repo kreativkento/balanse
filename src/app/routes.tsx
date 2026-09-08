@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { Root } from './Root';
 import { RouteErrorBoundary } from './components/error/RouteErrorBoundary';
 import { PublicSiteLayout } from './components/layout/PublicSiteLayout';
+import { MemberSiteLayout } from './components/layout/MemberSiteLayout';
 import HomePage from './pages/HomePage';
 import StudioPage from './pages/StudioPage';
 import GuidelinesPage from './pages/GuidelinesPage';
@@ -9,14 +10,23 @@ import PricingPage from './pages/PricingPage';
 import ServicesPage from './pages/ServicesPage';
 import ClassesPage from './pages/ClassesPage';
 import DisciplinesPage from './pages/DisciplinesPage';
+import MemberDisciplinesPage from './pages/MemberDisciplinesPage';
+import MemberBulletinPage from './pages/MemberBulletinPage';
+import MemberServicesPage from './pages/MemberServicesPage';
 import LoginChoicePage from './pages/LoginChoicePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
-import DashboardPage from './pages/DashboardPage';
+import MemberDashboardPage from './pages/MemberDashboardPage';
+import MemberClasses from './pages/MemberClasses';
+import MemberClassSchedule from './pages/MemberClassSchedule';
+import MemberSubscription from './pages/MemberSubscription';
+import MemberDocumentsPage from './pages/MemberDocumentsPage';
+import PerformancePage from './pages/PerformancePage';
+import FeedbackPage from './pages/FeedbackPage';
 import BookClassPage from './pages/BookClassPage';
 import PaymentPage from './pages/PaymentPage';
 import BookingPendingPage from './pages/BookingPendingPage';
-import ProfilePage from './pages/ProfilePage';
+import MemberProfilePage from './pages/MemberProfilePage';
 import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
 import StaffSchedulePage from './pages/StaffSchedulePage';
@@ -44,6 +54,7 @@ import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
 import StaffProfilePage from './pages/StaffProfilePage';
 import BulletinPage from './pages/BulletinPage';
 import CoachesPage from './pages/CoachesPage';
+import MemberCoachesPage from './pages/MemberCoachesPage';
 import EventsPage from './pages/EventsPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import StudentPaymentHistoryPage from './pages/StudentPaymentHistoryPage';
@@ -88,13 +99,28 @@ export const router = createBrowserRouter([
               { path: 'login', Component: LoginPage },
               { path: 'signup', Component: SignupPage },
               { path: 'profile-setup', Component: ProfileSetupPage },
-              { path: 'dashboard', Component: DashboardPage },
               { path: 'book', Component: BookClassPage },
               { path: 'payment', Component: PaymentPage },
               { path: 'booking-pending', Component: BookingPendingPage },
-              { path: 'profile', Component: ProfilePage },
-              { path: 'payment-history', Component: StudentPaymentHistoryPage },
               { path: '*', Component: NotFoundPage },
+            ],
+          },
+          {
+            Component: MemberSiteLayout,
+            children: [
+              { path: 'dashboard', Component: MemberDashboardPage },
+              { path: 'profile', Component: MemberProfilePage },
+              { path: 'documents', Component: MemberDocumentsPage },
+              { path: 'payment-history', Component: StudentPaymentHistoryPage },
+              { path: 'performance', Component: PerformancePage },
+              { path: 'subscriptions', Component: MemberSubscription },
+              { path: 'my-classes', Component: MemberClasses },
+              { path: 'class-schedule', Component: MemberClassSchedule },
+              { path: 'studio-services', Component: MemberServicesPage },
+              { path: 'studio-coaches', Component: MemberCoachesPage },
+              { path: 'studio-disciplines', Component: MemberDisciplinesPage },
+              { path: 'member-bulletin', Component: MemberBulletinPage },
+              { path: 'feedback', Component: FeedbackPage },
             ],
           },
           { path: 'staff-login', Component: StaffLoginPage },
@@ -126,14 +152,17 @@ export const router = createBrowserRouter([
               { path: 'admin-bulletin', Component: AdminBulletinPage },
               { path: 'admin-news', element: <Navigate to="/admin-bulletin" replace /> },
               { path: 'admin-policies', Component: AdminPoliciesPage },
+              { path: 'admin-feedback', Component: FeedbackPage },
             ],
           },
           { path: 'admin-absence', Component: AdminAbsenceTrackerPage },
           { path: 'admin-coach-availability', Component: AdminCoachAvailabilityPage },
+          { path: 'staff-feedback', Component: FeedbackPage },
           { path: 'development', Component: DevelopmentLoginPage },
           { path: 'development/dashboard', Component: DevDashboardPage },
           { path: 'development/account', Component: DevAccountPage },
           { path: 'development/tickets', Component: DevTicketsPage },
+          { path: 'development/feedback', Component: FeedbackPage },
           { path: 'development/ai-setup', Component: DevAiSetupPage },
           { path: 'development/logs/accounts', Component: DevAccountLogsPage },
           { path: 'development/logs/profiles', Component: DevProfileLogsPage },

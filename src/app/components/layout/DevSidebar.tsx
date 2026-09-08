@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Code2, LogOut, Ticket, Bot, Menu, ChevronDown, ScrollText,
-  UserCog, UserRound, Landmark, Headphones,
+  UserCog, UserRound, Landmark, Headphones, MessageSquare,
 } from 'lucide-react';
 import { useDevAuth } from '../../context/DevAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -10,6 +10,7 @@ import { ProfileAvatar } from '../ProfileImages';
 
 const NAV_LINKS = [
   { label: 'Ticket Management', path: '/development/tickets', icon: Ticket },
+  { label: 'Feedback', path: '/development/feedback', icon: MessageSquare },
   { label: 'AI Setup', path: '/development/ai-setup', icon: Bot },
 ];
 

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  CreditCard, ChevronLeft, Search, Check, X,
+  CreditCard, Search, Check, X,
   Receipt, Download, Clock, CheckCircle2, Smartphone,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { MemberPageShell } from '../components/layout/MemberPageShell';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
@@ -173,25 +174,18 @@ export default function StudentPaymentHistoryPage() {
   };
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
+    <>
       {selected && <PaymentDetailModal payment={selected} onClose={() => setSelected(null)} />}
 
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-8">
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-7">
-          <button onClick={() => navigate('/dashboard')} className="w-9 h-9 rounded-xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center text-[#8A7E6E] hover:bg-[#EDE8D8] active:scale-95 transition-all shrink-0">
-            <ChevronLeft size={16} />
-          </button>
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <CreditCard size={13} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Dashboard › Payments</span>
-            </div>
-            <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', letterSpacing: '0.04em' }}>
-              Payment History
-            </h1>
+      <MemberPageShell searchPlaceholder="Search payments…">
+        <div className="pt-6 mb-7">
+          <div className="flex items-center gap-2 mb-0.5">
+            <CreditCard size={13} className="text-[#c49a3c]" />
+            <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Account › Payments</span>
           </div>
+          <h2 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}>
+            Payment History
+          </h2>
         </div>
 
         {/* Profile gate */}
@@ -297,7 +291,7 @@ export default function StudentPaymentHistoryPage() {
           {filtered.length} record{filtered.length !== 1 ? 's' : ''} · Click any row to view receipt details
         </p>
         </>}
-      </div>
-    </div>
+      </MemberPageShell>
+    </>
   );
 }

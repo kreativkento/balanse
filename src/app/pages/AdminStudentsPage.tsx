@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Search, Pencil, Trash2, X, Users,
-  Activity, CalendarDays, Clock, Mail, Phone, MapPin, Check, Globe,
+  Activity, CalendarDays, Mail, Phone, MapPin, Check, Globe,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
@@ -15,6 +15,8 @@ import {
   type ClientDirectoryItem,
 } from '../../lib/admin-service';
 import { ProfileAvatar } from '../components/ProfileImages';
+import { parseHealthDeclaration } from '../../lib/health-declaration';
+import { CURRENT_DOCUMENTS } from '../../lib/member-documents';
 
 const ACCENT = '#c49a3c';
 
@@ -23,8 +25,14 @@ const EMPTY_FORM = {
   email: '',
   phone: '',
   nationality: '',
-  address: '',
+  province: '',
+  city: '',
+  barangay: '',
 };
+
+function formatClientLocation(student: Pick<ClientDirectoryItem, 'barangay' | 'city' | 'province'>) {
+  return [student.barangay, student.city, student.province].filter(Boolean).join(', ');
+}
 
 function clientInitials(name: string) {
   return name
@@ -174,22 +182,13 @@ function ClientProfileModal({
                 </div>
                 <div className="flex items-start gap-2 text-sm text-[#5A5048]">
                   <MapPin size={13} className="text-[#c49a3c] shrink-0 mt-0.5" />
-                  <span>{student.address || 'Not provided'}</span>
+                  <span>{formatClientLocation(student) || 'Not provided'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-[#5A5048]">
                   <Globe size={13} className="text-[#c49a3c] shrink-0" />
                   <span>{student.nationality || 'Not provided'}</span>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2 flex items-center gap-1">
-                <Clock size={11} /> Availability
-              </p>
-              <p className="text-[#5A5048] text-sm">
-                {student.shareAvailability ? 'Shares availability' : 'Not sharing availability'}
-              </p>
             </div>
 
             <div>
@@ -216,7 +215,7 @@ function ClientProfileModal({
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { icon: <Activity size={13} className="text-[#c49a3c]" />, label: 'Classes', value: bookingsLoading ? '…' : String(bookings.length) },
-                  { icon: <CalendarDays size={13} className="text-[#8A9E7A]" />, label: 'Health form', value: student.healthDeclarationSigned ? 'Yes' : 'No' },
+                  { icon: <CalendarDays size={13} className="text-[#8A9E7A]" />, label: 'Health form', value: student.healthDeclarationSigned ? `Yes · ${parseHealthDeclaration(student.healthDeclaration).schemaVersion}` : 'No' },
                 ].map((metric) => (
                   <div
                     key={metric.label}
@@ -235,6 +234,15 @@ function ClientProfileModal({
                   </div>
                 ))}
               </div>
+              {(student.termsAcceptedVersion || student.privacyAcceptedVersion) && (
+                <p className="mt-2 text-[11px] leading-relaxed text-[#9A8E7E]">
+                  Signed Terms {student.termsAcceptedVersion || '—'}
+                  {student.termsAcceptedVersion && student.termsAcceptedVersion !== CURRENT_DOCUMENTS.terms.version
+                    ? ` · current ${CURRENT_DOCUMENTS.terms.version}`
+                    : ''}
+                  {student.privacyAcceptedVersion ? ` · Privacy ${student.privacyAcceptedVersion}` : ''}
+                </p>
+              )}
             </div>
 
             <div>
@@ -344,7 +352,9 @@ export default function AdminStudentsPage() {
       email: student.email,
       phone: student.phone,
       nationality: student.nationality,
-      address: student.address,
+      province: student.province,
+      city: student.city,
+      barangay: student.barangay,
     });
     setEditingId(student.id);
     setFormError('');
@@ -365,7 +375,9 @@ export default function AdminStudentsPage() {
       email: form.email.trim(),
       phone: form.phone.trim(),
       nationality: form.nationality.trim(),
-      address: form.address.trim(),
+      province: form.province.trim(),
+      city: form.city.trim(),
+      barangay: form.barangay.trim(),
     });
     setSaving(false);
 
@@ -590,8 +602,18 @@ export default function AdminStudentsPage() {
               </div>
 
               <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Address</label>
-                <input type="text" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="City, Metro Manila" className={inputClass} />
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Province</label>
+                <input type="text" value={form.province} onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))} placeholder="e.g. Metro Manila" className={inputClass} />
+              </div>
+
+              <div>
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">City</label>
+                <input type="text" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} placeholder="e.g. Makati" className={inputClass} />
+              </div>
+
+              <div>
+                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Barangay <span className="normal-case tracking-normal text-[#B0A898]">optional</span></label>
+                <input type="text" value={form.barangay} onChange={(e) => setForm((f) => ({ ...f, barangay: e.target.value }))} placeholder="e.g. Poblacion" className={inputClass} />
               </div>
 
               {formError && (

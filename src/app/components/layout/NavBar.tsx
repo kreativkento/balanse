@@ -2,11 +2,12 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Menu, X, LogOut, LayoutDashboard,
-  Home, Images, CreditCard, Layers, ShieldCheck, Newspaper, Users, ChevronDown, CalendarDays, Sparkles, ClipboardList,
+  Home, Images, CreditCard, Layers, ShieldCheck, Newspaper, Users, ChevronDown, CalendarDays, Sparkles, ClipboardList, Bookmark,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStaffAuth } from '../../context/StaffAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
+import { AccountMenu } from './AccountMenu';
 
 export const ratesLinks = [
   { label: 'Pricing and Plans', path: '/pricing', icon: <CreditCard size={18} /> },
@@ -23,9 +24,23 @@ export const classesLinks = [
   { label: 'Disciplines', path: '/disciplines', icon: <Layers size={18} /> },
 ];
 
+/** Member sidebar Class Management — schedules stay on a member page. */
+export const memberClassLinks = [
+  { label: 'Class Schedules', path: '/class-schedule', icon: <CalendarDays size={18} /> },
+  { label: 'My Classes', path: '/my-classes', icon: <Bookmark size={18} /> },
+];
+
 export const studioLinks = [
   { label: 'Amenities', path: '/studio', icon: <Images size={18} /> },
   { label: 'Guidelines', path: '/studio/guidelines', icon: <ClipboardList size={18} /> },
+  { label: 'Coaches', path: '/coaches', icon: <Users size={18} /> },
+];
+
+/** Member sidebar Studio group — pricing lives under Finances as Subscriptions. */
+export const memberStudioLinks = [
+  { label: 'Services', path: '/studio-services', icon: <Sparkles size={18} /> },
+  { label: 'Coaches', path: '/studio-coaches', icon: <Users size={18} /> },
+  { label: 'Disciplines', path: '/studio-disciplines', icon: <Layers size={18} /> },
 ];
 
 export const aboutLink = { label: 'About Us', path: '/', icon: <Home size={18} /> };
@@ -234,18 +249,12 @@ export function NavBar() {
               <>
                 <Link
                   to="/dashboard"
-                  className="flex items-center gap-2 px-4 py-2 bg-[#c49a3c]/10 text-[#c49a3c] rounded-xl text-sm font-semibold hover:bg-[#c49a3c]/20 transition-colors"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#c49a3c] text-white rounded-full text-sm font-bold shadow-[0_4px_16px_rgba(196,154,60,0.35)] hover:bg-[#a67f2e] transition-colors active:scale-95"
                 >
                   <LayoutDashboard size={15} />
                   Dashboard
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-[#8A7E6E] hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                  title="Log out"
-                >
-                  <LogOut size={18} />
-                </button>
+                <AccountMenu variant="avatar" onLogout={handleLogout} />
               </>
             ) : (
               <Link
@@ -381,7 +390,7 @@ export function NavBar() {
               <Link
                 to="/dashboard"
                 onClick={closeMenu}
-                className="flex items-center gap-3 px-4 py-3 text-[#c49a3c] hover:bg-[#EDE8D8] rounded-xl text-base font-medium transition-colors min-h-[52px]"
+                className="flex items-center justify-center gap-2 px-4 py-4 bg-[#c49a3c] text-white rounded-2xl font-bold transition-all hover:bg-[#a67f2e] active:scale-95 min-h-[56px] shadow-[0_4px_20px_rgba(196,154,60,0.3)]"
               >
                 <LayoutDashboard size={18} />
                 Dashboard

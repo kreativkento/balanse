@@ -64,6 +64,22 @@ Postgres rejects using new enum values in the same transaction that adds them (`
 
 **Discipline catalog images:** after `019`, run `020_disciplines_images.sql`, then `021_disciplines_images_admin_only.sql` if `020` was already applied. Creates the public `disciplines_images` bucket. Anyone (including the public website) can view; only `accounts.role = admin` can add, replace, or delete files. Logos live in `logo/`; covers live in `cover/`.
 
+**User feedback loop:** after `001_profiles.sql`, run `023_feedback.sql`. Creates `public.feedback_system` (ticket id = `id`) and the private `feedback_attachments` bucket. Any signed-in account can submit; status starts as `unresolved`; `ticket_level` defaults to 1; `priority` is nullable and staff-only. Files: `{auth_user_id}/{ticket_id}/…`, 50 MB max, images or video up to 30s (duration checked in the app). Labels: Positive, Bug, Feature, Question, Improvement.
+
+**Feedback label rename:** if `023_feedback.sql` was already applied with `recommendation`, run `024_feedback_label_improvement.sql`. Renames that enum value to `improvement` and keeps existing rows. Skip `024` on a fresh install that used the updated `023`.
+
+**Feedback self-delete:** if `023` was already applied, run `025_feedback_delete_own_unresolved.sql`. Submitters can delete their own ticket only while status is `unresolved`.
+
+**Feedback table rename + ticket level:** if `023` created `public.feedback`, run `026_feedback_system_ticket_level.sql`. Renames the table to `public.feedback_system` and adds `ticket_level smallint not null default 1`. Skip `026` on a fresh install that used the updated `023`.
+
+**Client location + emergency contact:** after `012`, run `027_profiles_client_location_emergency.sql`. Adds nullable province / city / barangay and emergency contact fields, and drops free-text `address`.
+
+**Health declaration column:** after `027`, run `028_profiles_client_health_declaration.sql`. Renames `medical_history` → `health_declaration` and drops `health_declaration_signed`, `share_availability`, and `profile_complete`.
+
+**Signed member documents:** after `028`, run `029_member_documents.sql`. Adds Terms / Privacy / Health PDF path + version + signed_at columns on `profiles_client`, and the private `member_documents` bucket (`{auth_user_id}/{kind}-{version}.pdf`). Template edits do not overwrite existing files.
+
+**E-signature PNGs:** if `029` was already applied, run `030_member_documents_signature_png.sql` so the bucket also accepts `image/png` (`{auth_user_id}/e-signature.png`). Skip `030` on a fresh install that used the updated `029`.
+
 This creates or syncs:
 
 | Table | Purpose |
@@ -74,6 +90,8 @@ This creates or syncs:
 | `public.profiles_staff` | Staff/ops profile (coach, admin, dev, frontdesk, marketing) |
 | `storage.profile_images` | Public bucket for profile photos + cover images (`018`) |
 | `storage.disciplines_images` | Public bucket for discipline logo/cover options (`020`) |
+| `public.feedback_system` | User feedback tickets (`023` / `026`). `id` is the ticket id; `ticket_level` defaults to 1 |
+| `storage.member_documents` | Private signed Terms / Privacy / Health PDFs per member and version (`029`) |
 | `public.coach_disciplines` | Multi-tags: coach account ↔ `disciplines` (`015`) |
 | `public.disciplines` | Dynamic discipline list for event/class tagging (`008_disciplines.sql`) |
 | `public.classes` | Class shell: name, discipline tag, date, capacity, status, creator (`013`) |

@@ -10,7 +10,13 @@ const menuItems = [
 
 type MenuItemId = (typeof menuItems)[number]['id'];
 
-export function HelpSupportFab() {
+export function HelpSupportFab({
+  withBottomCta = false,
+  variant = 'help',
+}: {
+  withBottomCta?: boolean;
+  variant?: 'help' | 'chat';
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,7 +63,9 @@ export function HelpSupportFab() {
       {!chatOpen && (
         <div
           ref={containerRef}
-          className="fixed bottom-24 right-4 z-40 flex flex-col items-end gap-3 md:bottom-6 md:right-6"
+          className={`fixed right-4 z-40 flex flex-col items-end gap-3 md:right-6 ${
+            withBottomCta ? 'bottom-24 md:bottom-6' : 'bottom-6'
+          }`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <div
@@ -87,31 +95,49 @@ export function HelpSupportFab() {
 
           <button
             type="button"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            aria-label={menuOpen ? 'Close help menu' : 'Open help menu'}
-            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-expanded={variant === 'help' ? menuOpen : undefined}
+            aria-haspopup={variant === 'help' ? 'menu' : undefined}
+            aria-label={
+              variant === 'chat'
+                ? 'Open chatbot'
+                : menuOpen
+                  ? 'Close help menu'
+                  : 'Open help menu'
+            }
+            onClick={() => {
+              if (variant === 'chat') {
+                setChatOpen(true);
+                return;
+              }
+              setMenuOpen((prev) => !prev);
+            }}
             className={cn(
               'flex h-14 w-14 items-center justify-center rounded-full bg-[#c49a3c] text-xl font-bold text-white shadow-[0_4px_20px_rgba(196,154,60,0.35)] transition-all duration-200 hover:bg-[#a67f2e] hover:shadow-[0_6px_24px_rgba(196,154,60,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F3E8] active:scale-[0.97]',
               menuOpen && 'scale-105 bg-[#a67f2e]',
             )}
           >
-            <span
-              aria-hidden="true"
-              className={cn(
-                'leading-none transition-transform duration-200',
-                menuOpen && 'rotate-12 scale-110',
-              )}
-            >
-              ?
-            </span>
+            {variant === 'chat' ? (
+              <MessageCircle size={22} aria-hidden="true" />
+            ) : (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'leading-none transition-transform duration-200',
+                  menuOpen && 'rotate-12 scale-110',
+                )}
+              >
+                ?
+              </span>
+            )}
           </button>
         </div>
       )}
 
       {chatOpen && (
         <div
-          className="fixed bottom-24 right-4 z-40 w-[min(calc(100vw-2rem),320px)] md:bottom-6 md:right-6"
+          className={`fixed right-4 z-40 w-[min(calc(100vw-2rem),320px)] md:right-6 ${
+            withBottomCta ? 'bottom-24 md:bottom-6' : 'bottom-6'
+          }`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <div

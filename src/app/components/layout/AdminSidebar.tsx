@@ -4,7 +4,7 @@ import {
   Crown, LogOut, LayoutDashboard, Users,
   CalendarDays, CreditCard, Images,
   Tag, ShieldCheck, Layers, CalendarRange, Newspaper,
-  Award, Briefcase,
+  Award, Briefcase, MessageSquare,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -58,6 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Payments', path: '/admin-payments', icon: CreditCard },
       { label: 'Subscriptions', path: '/admin-subscriptions', icon: CreditCard },
       { label: 'Policies', path: '/admin-policies', icon: ShieldCheck },
+      { label: 'Feedback', path: '/admin-feedback', icon: MessageSquare },
     ],
   },
 ];

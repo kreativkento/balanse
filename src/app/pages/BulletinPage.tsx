@@ -1,11 +1,47 @@
 import { useState } from 'react';
-import { Newspaper, Tag, Calendar, ChevronRight, Search, X } from 'lucide-react';
+import { Newspaper, Tag, Calendar, ChevronRight, Search, Facebook, Instagram } from 'lucide-react';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 
+export const BULLETIN_SOCIAL_LINKS = [
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/balanse.wellness',
+    icon: Facebook,
+  },
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/balanse.wellness/?hl=en',
+    icon: Instagram,
+  },
+] as const;
+
+export function BulletinSocialButtons() {
+  return (
+    <div className="flex shrink-0 items-center justify-end gap-2.5 self-end sm:self-start">
+      {BULLETIN_SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={label}
+          title={label}
+          className="inline-flex items-center gap-2.5 rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#5A5048] shadow-sm transition-colors hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] hover:text-[#1E2A35]"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
+            <Icon size={18} />
+          </span>
+          {label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 // ── Mock bulletin data (in production this comes from the admin panel) ──
 
-interface BulletinPost {
+export interface BulletinPost {
   id: number;
   title: string;
   category: 'Event' | 'Promo' | 'Announcement' | 'Update';
@@ -18,7 +54,7 @@ interface BulletinPost {
   pinned?: boolean;
 }
 
-const BULLETIN_POSTS: BulletinPost[] = [
+export const BULLETIN_POSTS: BulletinPost[] = [
   {
     id: 1,
     title: 'Summer Grand Open Mat — Free Community Session!',
@@ -90,10 +126,10 @@ const BULLETIN_POSTS: BulletinPost[] = [
   },
 ];
 
-const CATEGORIES = ['All', 'Event', 'Promo', 'Announcement', 'Update'] as const;
-type Category = typeof CATEGORIES[number];
+export const BULLETIN_CATEGORIES = ['All', 'Event', 'Promo', 'Announcement', 'Update'] as const;
+export type BulletinCategory = typeof BULLETIN_CATEGORIES[number];
 
-function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onClose: () => void }) {
+export function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -125,7 +161,7 @@ function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onClose: (
 }
 
 export default function BulletinPage() {
-  const [activeCategory, setActiveCategory] = useState<Category>('All');
+  const [activeCategory, setActiveCategory] = useState<BulletinCategory>('All');
   const [search, setSearch] = useState('');
   const [selectedPost, setSelectedPost] = useState<BulletinPost | null>(null);
 
@@ -145,22 +181,25 @@ export default function BulletinPage() {
       {selectedPost && <BulletinDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />}
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-10">
-        <div className="mb-8">
-          <PublicBreadcrumb parent="Our Community" current="Bulletin" parentTo="/bulletin" />
-          <h1
-            className="text-[#1E2A35] leading-tight"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '0.04em' }}
-          >
-            Bulletin
-          </h1>
-          <p className="text-[#8A7E6E] text-sm mt-1 max-w-xl">
-            Stay updated on upcoming events, special promos, and studio announcements.
-          </p>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <PublicBreadcrumb parent="Our Community" current="Bulletin" parentTo="/bulletin" />
+            <h1
+              className="text-[#1E2A35] leading-tight"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '0.04em' }}
+            >
+              Bulletin
+            </h1>
+            <p className="text-[#8A7E6E] text-sm mt-1 max-w-xl">
+              Stay updated on upcoming events, special promos, and studio announcements.
+            </p>
+          </div>
+          <BulletinSocialButtons />
         </div>
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-8">
           <div className="flex gap-2 flex-wrap">
-            {CATEGORIES.map((cat) => (
+            {BULLETIN_CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -223,7 +262,7 @@ export default function BulletinPage() {
   );
 }
 
-function BulletinCard({
+export function BulletinCard({
   post,
   onClick,
   featured,

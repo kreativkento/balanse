@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { getPhilippinesGreeting } from '../../lib/philippines-time';
 import { formatDateLongFromKey, getTodayDateKey } from '../components/calendar/weekCalendarUtils';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -59,8 +60,7 @@ export default function AdminDashboardPage() {
   useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
   if (!adminUser) return null;
 
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = getPhilippinesGreeting();
 
   const saveFeatured = () => {
     setSaved(true);
