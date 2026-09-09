@@ -175,7 +175,7 @@ export function ProfileImageHero({
         onClick={() => pickFile('photo')}
         disabled={!editable || uploading !== null}
         aria-label={editable ? 'Change profile photo' : 'Profile photo'}
-        className={`absolute bottom-0 left-6 md:left-8 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg ${
+        className={`absolute bottom-0 left-6 md:left-5 z-10 h-24 w-24 md:h-28 md:w-28 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white shadow-lg ${
           editable ? 'group cursor-pointer hover:brightness-95 hover:ring-2 hover:ring-[#c49a3c]/40 active:scale-[0.98]' : 'cursor-default'
         }`}
         style={{ backgroundColor: `${accent}18` }}

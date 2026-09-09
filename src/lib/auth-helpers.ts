@@ -5,7 +5,7 @@ import type { ProfileClientRow, ProfileStaffRow, UserRole } from './database.typ
 
 export const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
-export type AuthResult = { success: boolean; error?: string };
+export type AuthResult = { success: boolean; error?: string; profileComplete?: boolean };
 
 export function deriveNameFromEmail(email: string): string {
   const local = email.split('@')[0];
@@ -58,10 +58,12 @@ export function profileRowToUserProfile(row: ProfileClientRow, email: string): U
     firstName: row.first_name ?? '',
     lastName: row.last_name ?? '',
     middleInitial: row.middle_initial ?? '',
+    nickname: row.nickname ?? '',
     name: row.name || deriveNameFromEmail(email),
     birthday: row.birthday ?? '',
     sex: (row.sex as UserProfile['sex']) || '',
     phone: row.phone ?? '',
+    phoneValid: row.phone_valid ?? false,
     nationality: row.nationality ?? '',
     province: row.province ?? '',
     city: row.city ?? '',
@@ -74,13 +76,16 @@ export function profileRowToUserProfile(row: ProfileClientRow, email: string): U
     healthDeclaration: row.health_declaration ?? '',
     healthDeclarationDocumentPath: row.health_declaration_document_path ?? '',
     healthDeclarationSignedAt: row.health_declaration_signed_at ?? '',
+    healthValid: row.health_valid ?? false,
     termsAccepted: row.terms_accepted ?? false,
     termsDocumentPath: row.terms_document_path ?? '',
     termsAcceptedVersion: row.terms_accepted_version ?? '',
     termsSignedAt: row.terms_signed_at ?? '',
+    termsValid: row.terms_valid ?? false,
     privacyPolicyDocumentPath: row.privacy_policy_document_path ?? '',
     privacyAcceptedVersion: row.privacy_accepted_version ?? '',
     privacySignedAt: row.privacy_signed_at ?? '',
+    privacyValid: row.privacy_valid ?? false,
     photo: row.photo ?? '',
     coverImage: row.cover_image ?? '',
   };
@@ -98,12 +103,51 @@ export function profileRowToCoachProfile(row: ProfileStaffRow, email: string): C
   };
 }
 
+export function withDocumentValidReset(data: Partial<UserProfile>): Partial<UserProfile> {
+  const next = { ...data };
+  if (
+    data.healthDeclaration !== undefined
+    || data.healthDeclarationDocumentPath !== undefined
+    || data.healthDeclarationSignedAt !== undefined
+  ) {
+    next.healthValid = false;
+  }
+  if (
+    data.termsAccepted !== undefined
+    || data.termsDocumentPath !== undefined
+    || data.termsAcceptedVersion !== undefined
+    || data.termsSignedAt !== undefined
+  ) {
+    next.termsValid = false;
+  }
+  if (
+    data.privacyPolicyDocumentPath !== undefined
+    || data.privacyAcceptedVersion !== undefined
+    || data.privacySignedAt !== undefined
+  ) {
+    next.privacyValid = false;
+  }
+  return next;
+}
+
+export function withPhoneChangeValidReset(
+  data: Partial<UserProfile>,
+  currentPhone?: string | null,
+): Partial<UserProfile> {
+  if (data.phone === undefined) return data;
+  if (data.phone.trim() === (currentPhone ?? '').trim()) return data;
+  if (data.phoneValid === true) return data;
+  return { ...data, phoneValid: false };
+}
+
 export function userProfileToDbUpdate(data: Partial<UserProfile>): Record<string, unknown> {
+  data = withDocumentValidReset(data);
   const update: Record<string, unknown> = {};
 
   if (data.firstName !== undefined) update.first_name = data.firstName;
   if (data.lastName !== undefined) update.last_name = data.lastName;
   if (data.middleInitial !== undefined) update.middle_initial = data.middleInitial;
+  if (data.nickname !== undefined) update.nickname = data.nickname;
   if (data.name !== undefined) update.name = data.name;
   if (data.birthday !== undefined) update.birthday = data.birthday || null;
   if (data.sex !== undefined) update.sex = data.sex;
@@ -143,6 +187,10 @@ export function userProfileToDbUpdate(data: Partial<UserProfile>): Record<string
     update.privacy_accepted_version = emptyToNull(data.privacyAcceptedVersion);
   }
   if (data.privacySignedAt !== undefined) update.privacy_signed_at = data.privacySignedAt || null;
+  if (data.healthValid !== undefined) update.health_valid = data.healthValid;
+  if (data.termsValid !== undefined) update.terms_valid = data.termsValid;
+  if (data.privacyValid !== undefined) update.privacy_valid = data.privacyValid;
+  if (data.phoneValid !== undefined) update.phone_valid = data.phoneValid;
   if (data.photo) update.photo = data.photo;
   if (data.coverImage) update.cover_image = data.coverImage;
 

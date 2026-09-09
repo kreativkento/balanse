@@ -19,8 +19,8 @@ import SignupPage from './pages/SignupPage';
 import MemberDashboardPage from './pages/MemberDashboardPage';
 import MemberClasses from './pages/MemberClasses';
 import MemberClassSchedule from './pages/MemberClassSchedule';
+import MemberGuidelinesPage from './pages/MemberGuidelinesPage';
 import MemberSubscription from './pages/MemberSubscription';
-import MemberDocumentsPage from './pages/MemberDocumentsPage';
 import PerformancePage from './pages/PerformancePage';
 import FeedbackPage from './pages/FeedbackPage';
 import BookClassPage from './pages/BookClassPage';
@@ -56,7 +56,6 @@ import BulletinPage from './pages/BulletinPage';
 import CoachesPage from './pages/CoachesPage';
 import MemberCoachesPage from './pages/MemberCoachesPage';
 import EventsPage from './pages/EventsPage';
-import ProfileSetupPage from './pages/ProfileSetupPage';
 import StudentPaymentHistoryPage from './pages/StudentPaymentHistoryPage';
 import DevelopmentLoginPage from './pages/DevelopmentLoginPage';
 import DevDashboardPage from './pages/DevDashboardPage';
@@ -98,7 +97,7 @@ export const router = createBrowserRouter([
               { path: 'auth', Component: LoginChoicePage },
               { path: 'login', Component: LoginPage },
               { path: 'signup', Component: SignupPage },
-              { path: 'profile-setup', Component: ProfileSetupPage },
+              { path: 'profile-setup', element: <Navigate to="/profile" replace /> },
               { path: 'book', Component: BookClassPage },
               { path: 'payment', Component: PaymentPage },
               { path: 'booking-pending', Component: BookingPendingPage },
@@ -110,12 +109,13 @@ export const router = createBrowserRouter([
             children: [
               { path: 'dashboard', Component: MemberDashboardPage },
               { path: 'profile', Component: MemberProfilePage },
-              { path: 'documents', Component: MemberDocumentsPage },
+              { path: 'documents', element: <Navigate to="/profile" replace /> },
               { path: 'payment-history', Component: StudentPaymentHistoryPage },
               { path: 'performance', Component: PerformancePage },
               { path: 'subscriptions', Component: MemberSubscription },
               { path: 'my-classes', Component: MemberClasses },
               { path: 'class-schedule', Component: MemberClassSchedule },
+              { path: 'studio-guidelines', Component: MemberGuidelinesPage },
               { path: 'studio-services', Component: MemberServicesPage },
               { path: 'studio-coaches', Component: MemberCoachesPage },
               { path: 'studio-disciplines', Component: MemberDisciplinesPage },

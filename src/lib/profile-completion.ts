@@ -10,8 +10,22 @@ const CARD_SCORE_WEIGHTS = {
   emergency: 10,
 } as const;
 
+const DOCUMENT_SCORE_WEIGHTS = {
+  healthRecord: 10,
+  termsRecord: 15,
+  privacyRecord: 15,
+  healthValid: 2,
+  termsValid: 2,
+  privacyValid: 2,
+  phoneValid: 4,
+} as const;
+
 function isFilled(value?: string | null): boolean {
   return Boolean((value ?? '').trim());
+}
+
+function hasClientRecord(...values: Array<string | boolean | null | undefined>): boolean {
+  return values.some((value) => (typeof value === 'boolean' ? value : isFilled(value)));
 }
 
 export function computeProfileScore(profile?: UserProfile): number {
@@ -34,10 +48,32 @@ export function computeProfileScore(profile?: UserProfile): number {
     profile?.emergencyContactNumber,
     profile?.emergencyContactRelationship,
   ].every(isFilled);
+  const healthRecord = hasClientRecord(
+    profile?.healthDeclarationDocumentPath,
+    profile?.healthDeclarationSignedAt,
+  ) || isHealthDeclarationAcknowledged(profile?.healthDeclaration);
+  const termsRecord = hasClientRecord(
+    profile?.termsDocumentPath,
+    profile?.termsSignedAt,
+    profile?.termsAcceptedVersion,
+    profile?.termsAccepted,
+  );
+  const privacyRecord = hasClientRecord(
+    profile?.privacyPolicyDocumentPath,
+    profile?.privacySignedAt,
+    profile?.privacyAcceptedVersion,
+  );
   return (
     (basicComplete ? CARD_SCORE_WEIGHTS.basic : 0)
     + (contactComplete ? CARD_SCORE_WEIGHTS.contact : 0)
     + (emergencyComplete ? CARD_SCORE_WEIGHTS.emergency : 0)
+    + (healthRecord ? DOCUMENT_SCORE_WEIGHTS.healthRecord : 0)
+    + (termsRecord ? DOCUMENT_SCORE_WEIGHTS.termsRecord : 0)
+    + (privacyRecord ? DOCUMENT_SCORE_WEIGHTS.privacyRecord : 0)
+    + (profile?.healthValid ? DOCUMENT_SCORE_WEIGHTS.healthValid : 0)
+    + (profile?.termsValid ? DOCUMENT_SCORE_WEIGHTS.termsValid : 0)
+    + (profile?.privacyValid ? DOCUMENT_SCORE_WEIGHTS.privacyValid : 0)
+    + (profile?.phoneValid ? DOCUMENT_SCORE_WEIGHTS.phoneValid : 0)
   );
 }
 

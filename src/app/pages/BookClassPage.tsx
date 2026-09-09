@@ -5,7 +5,7 @@ import {
   Clock, Users, Check, CalendarDays, User, Layers,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { memberNeedsReaccept } from '../../lib/member-documents';
+import { CURRENT_DOCUMENTS, memberNeedsReaccept } from '../../lib/member-documents';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { WeekCalendarGrid, type WeekGridEvent } from '../components/calendar/WeekCalendarGrid';
@@ -401,9 +401,13 @@ export default function BookClassPage() {
   });
 
   useEffect(() => {
-    if (!profileComplete) navigate('/profile-setup');
-    else if (reacceptRequired) navigate('/documents');
-  }, [profileComplete, reacceptRequired, navigate]);
+    if (!profileComplete) navigate('/profile');
+    else if (reacceptRequired) {
+      const termsNeeds = CURRENT_DOCUMENTS.terms.requiresReaccept
+        && user?.profile.termsAcceptedVersion !== CURRENT_DOCUMENTS.terms.version;
+      navigate(termsNeeds ? '/profile?tab=terms' : '/profile?tab=privacy');
+    }
+  }, [profileComplete, reacceptRequired, navigate, user?.profile.termsAcceptedVersion]);
 
   const today = useMemo(() => getTodayLocal(), []);
   const todayKey = useMemo(() => toDateKey(today), [today]);

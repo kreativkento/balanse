@@ -8,6 +8,8 @@ import {
   mapAuthError,
   profileRowToUserProfile,
   userProfileToDbUpdate,
+  withDocumentValidReset,
+  withPhoneChangeValidReset,
   validateEmailPassword,
   wrongRoleMessage,
 } from '../../lib/auth-helpers';
@@ -26,10 +28,12 @@ export interface UserProfile {
   firstName: string;
   lastName: string;
   middleInitial: string;
+  nickname: string;
   name: string;
   birthday: string;
   sex: 'male' | 'female' | 'prefer_not_to_say' | '';
   phone: string;
+  phoneValid: boolean;
   nationality: string;
   province: string;
   city: string;
@@ -42,13 +46,16 @@ export interface UserProfile {
   healthDeclaration: string;
   healthDeclarationDocumentPath: string;
   healthDeclarationSignedAt: string;
+  healthValid: boolean;
   termsAccepted: boolean;
   termsDocumentPath: string;
   termsAcceptedVersion: string;
   termsSignedAt: string;
+  termsValid: boolean;
   privacyPolicyDocumentPath: string;
   privacyAcceptedVersion: string;
   privacySignedAt: string;
+  privacyValid: boolean;
   photo: string;
   coverImage: string;
 }
@@ -67,12 +74,12 @@ interface AuthContextType {
   signup: (
     email: string,
     password: string,
-    firstName: string,
-    lastName: string,
+    firstName?: string,
+    lastName?: string,
     middleInitial?: string,
   ) => Promise<AuthResult>;
   completeProfile: (data: Partial<UserProfile>) => void;
-  updateProfile: (data: Partial<UserProfile>) => void;
+  updateProfile: (data: Partial<UserProfile>) => void | Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -80,10 +87,12 @@ const defaultProfile = (): UserProfile => ({
   firstName: '',
   lastName: '',
   middleInitial: '',
+  nickname: '',
   name: '',
   birthday: '',
   sex: '',
   phone: '',
+  phoneValid: false,
   nationality: '',
   province: '',
   city: '',
@@ -96,13 +105,16 @@ const defaultProfile = (): UserProfile => ({
   healthDeclaration: '',
   healthDeclarationDocumentPath: '',
   healthDeclarationSignedAt: '',
+  healthValid: false,
   termsAccepted: false,
   termsDocumentPath: '',
   termsAcceptedVersion: '',
   termsSignedAt: '',
+  termsValid: false,
   privacyPolicyDocumentPath: '',
   privacyAcceptedVersion: '',
   privacySignedAt: '',
+  privacyValid: false,
   photo: '',
   coverImage: '',
 });
@@ -187,15 +199,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('user') };
     }
 
-    setUser(await mapToUserWithBucket(accountData as AccountWithClientProfile));
-    return { success: true };
+    const mapped = await mapToUserWithBucket(accountData as AccountWithClientProfile);
+    setUser(mapped);
+    return { success: true, profileComplete: isProfileComplete(mapped.profile) };
   };
 
   const signup = async (
     email: string,
     password: string,
-    firstName: string,
-    lastName: string,
+    firstName = '',
+    lastName = '',
     middleInitial = '',
   ): Promise<AuthResult> => {
     if (!EMAIL_RE.test(email)) {
@@ -203,9 +216,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (!password || password.length < 6) {
       return { success: false, error: 'Password must be at least 6 characters.' };
-    }
-    if (!firstName.trim() || !lastName.trim()) {
-      return { success: false, error: 'First and last name are required.' };
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -264,7 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const refreshedAccount = await fetchAccountWithProfileByAuthUserId(loginData.user.id);
       setUser(await mapToUserWithBucket((refreshedAccount ?? repairedAccount) as AccountWithClientProfile));
-      return { success: true };
+      return { success: true, profileComplete: false };
     }
 
     if (data.session) {
@@ -283,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(await mapToUserWithBucket(accountData as AccountWithClientProfile));
-      return { success: true };
+      return { success: true, profileComplete: false };
     }
 
     // Email confirmation enabled — auth user created; confirm via email before login
@@ -309,25 +319,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeProfile = (data: Partial<UserProfile>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const merged = { ...prev.profile, ...data };
+      const next = withPhoneChangeValidReset(withDocumentValidReset(data), prev.profile.phone);
+      const merged = { ...prev.profile, ...next };
       const fn = merged.firstName || prev.profile.firstName;
       const ln = merged.lastName || prev.profile.lastName;
       const mi = merged.middleInitial ?? prev.profile.middleInitial;
       const derivedName = buildFullName(fn, mi, ln) || prev.name;
       const updated: UserProfile = { ...merged, name: data.name || derivedName };
 
-      void persistProfile({ ...data, name: updated.name });
+      void persistProfile({ ...next, name: updated.name });
       return { ...prev, name: updated.name, profile: updated };
     });
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
+    let toPersist = withDocumentValidReset(data);
     setUser((prev) => {
       if (!prev) return prev;
-      const updated: UserProfile = { ...prev.profile, ...data };
-      void persistProfile(data);
+      toPersist = withPhoneChangeValidReset(withDocumentValidReset(data), prev.profile.phone);
+      const updated: UserProfile = { ...prev.profile, ...toPersist };
       return { ...prev, name: data.name || prev.name, profile: updated };
     });
+    return persistProfile(toPersist);
   };
 
   const logout = async () => {

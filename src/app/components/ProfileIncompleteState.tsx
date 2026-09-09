@@ -29,7 +29,7 @@ export function ProfileIncompleteState({
         {description}
       </p>
       <button
-        onClick={() => navigate('/profile-setup')}
+        onClick={() => navigate('/profile')}
         className="mt-5 flex items-center gap-2 bg-[#c49a3c] text-white px-6 py-3 rounded-full text-sm font-bold shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e] active:scale-[0.97] transition-all"
         style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.07em' }}
       >

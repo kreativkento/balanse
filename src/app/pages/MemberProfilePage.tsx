@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
-  User, Heart, Lock, Eye, EyeOff,
+  User, Heart, Lock, Eye, EyeOff, Clock, Send, Loader2,
   Check, AlertTriangle, Shield, Save, FileText, Download, Pencil, X, LogOut, ShieldCheck, Eraser,
 } from 'lucide-react';
 import { useAuth, type UserProfile } from '../context/AuthContext';
 import { ProfileImageHero } from '../components/ProfileImages';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
+import logoMain from '@/assets/logo_main.svg';
 import { CountryFlag, CountrySelect } from '../components/CountrySelect';
 import { ClearableInput, ClearableTextarea } from '../components/FieldClearButton';
 import { SearchableSelect } from '../components/SearchableSelect';
+import { PrivacyModal, TermsModal } from '../components/documents/PolicyAcceptModals';
+import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '../components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { exportTransparentSignaturePng, SignaturePad } from '../components/SignaturePad';
 import { usePhAddressOptions } from '../components/usePhAddressOptions';
 import { toCountryName } from '../data/nationalities';
@@ -25,15 +29,20 @@ import {
 import { computeProfileScore, profileScoreBarClasses } from '../../lib/profile-completion';
 import {
   CURRENT_DOCUMENTS,
+  createMemberDocumentViewUrl,
   documentStatus,
   downloadMemberDocument,
   generateAndUploadHealthDeclarationPdf,
+  generateAndUploadSignedPrivacyPdf,
+  loadMemberSignatureDataUrl,
   loadMemberSignatureUrl,
   memberDocumentFileName,
   uploadMemberSignaturePng,
+  type MemberDocumentStatus,
 } from '../../lib/member-documents';
 import {
   downloadSignedTermsPdf,
+  generateAndSaveSignedTermsPdf,
   getSignedTermsRecord,
   type SignedTermsRecord,
 } from '../../lib/signed-terms';
@@ -49,6 +58,9 @@ const INPUT_ERROR =
 const TEXTAREA = INPUT + ' resize-none';
 const CARD =
   'bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 transition-[box-shadow,border-color] duration-500 ease-in-out delay-100 hover:border-[#c49a3c] hover:shadow-[inset_0_0_0_3px_#c49a3c]';
+const SLIM_SCROLL =
+  'overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#C4B8A0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C4B8A0] [&::-webkit-scrollbar-thumb:hover]:bg-[#c49a3c]/55';
+const SLIM_SCROLL_OUTSET = `${SLIM_SCROLL} pr-3 -mr-3`;
 const SECTION_TITLE: React.CSSProperties = {
   fontFamily: "'Bebas Neue', sans-serif",
   fontSize: '1.2rem',
@@ -78,6 +90,8 @@ type BasicRequiredKey = 'firstName' | 'lastName' | 'birthday' | 'sex' | 'nationa
 type ContactRequiredKey = 'phone' | 'province' | 'city';
 type EmergencyRequiredKey = 'name' | 'phone' | 'relationship';
 const REQUIRED_MSG = 'This field is required.';
+const INVALID_PHONE_MSG = 'Invalid number';
+const PHONE_DIGITS_RE = /^\d{11}$/;
 
 function requiredErrors<K extends string>(checks: Record<K, boolean>): Partial<Record<K, string>> {
   const errors: Partial<Record<K, string>> = {};
@@ -121,12 +135,14 @@ function Field({
   optional,
   hint,
   error,
+  success,
   children,
 }: {
   label: string;
   optional?: boolean;
   hint?: string;
   error?: string;
+  success?: string;
   children: ReactNode;
 }) {
   return (
@@ -142,6 +158,8 @@ function Field({
       {children}
       {error ? (
         <p className="text-red-500 text-xs mt-1">{error}</p>
+      ) : success ? (
+        <p className="text-green-600 text-xs mt-1">{success}</p>
       ) : hint ? (
         <p className="text-[#B0A898] text-xs mt-1 italic">{hint}</p>
       ) : null}
@@ -155,21 +173,26 @@ function DisplayField({
   value,
   multiline,
   leading,
+  badge,
 }: {
   label: string;
   optional?: boolean;
   value: string;
   multiline?: boolean;
   leading?: ReactNode;
+  badge?: ReactNode;
 }) {
   const empty = value === '--';
   return (
     <div>
-      <p className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">
-        {label}
-        {optional && (
-          <span className="ml-1.5 normal-case tracking-normal italic text-[#B0A898]">optional</span>
-        )}
+      <p className="mb-1.5 flex items-center gap-1.5">
+        <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">
+          {label}
+          {optional && (
+            <span className="ml-1.5 normal-case tracking-normal italic text-[#B0A898]">optional</span>
+          )}
+        </span>
+        {badge}
       </p>
       <div className="flex items-start gap-2">
         {!empty && leading}
@@ -195,6 +218,9 @@ function EditableCard({
   saved,
   children,
   display,
+  className = '',
+  showHeaderEdit = true,
+  headerAside,
 }: {
   title: string;
   description?: string;
@@ -205,19 +231,27 @@ function EditableCard({
   saved?: boolean;
   children: ReactNode;
   display: ReactNode;
+  className?: string;
+  showHeaderEdit?: boolean;
+  headerAside?: ReactNode;
 }) {
   return (
-    <div className={CARD}>
+    <div className={`${CARD}${className ? ` ${className}` : ''}`}>
       <div className={`flex items-start justify-between gap-3 ${description ? 'mb-1' : 'mb-5'}`}>
         <h3 className="text-[#1E2A35] min-w-0" style={SECTION_TITLE}>{title}</h3>
-        {!editing && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1.5 text-xs font-semibold text-[#5A5048] hover:border-[#c49a3c]/40 hover:text-[#a67f2e] transition-all"
-          >
-            <Pencil size={12} /> Edit
-          </button>
+        {(headerAside || (showHeaderEdit && !editing)) && (
+          <div className="flex shrink-0 items-center gap-2">
+            {headerAside}
+            {showHeaderEdit && !editing && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1.5 text-xs font-semibold text-[#5A5048] hover:border-[#c49a3c]/40 hover:text-[#a67f2e] transition-all"
+              >
+                <Pencil size={12} /> Edit
+              </button>
+            )}
+          </div>
         )}
       </div>
       {description && <p className="text-[#8A7E6E] text-xs mb-5">{description}</p>}
@@ -307,152 +341,422 @@ function SectionNavButton({
   );
 }
 
+const DOC_STATUS_LABEL: Record<MemberDocumentStatus, string> = {
+  missing: 'Missing',
+  current: 'Current',
+  accepted_legacy: 'Signed',
+  reaccept_required: 'Update required',
+};
+
+const DOC_STATUS_CLASS: Record<MemberDocumentStatus, string> = {
+  missing: 'border-red-200 bg-red-50 text-red-600',
+  current: 'border-green-200 bg-green-50 text-green-700',
+  accepted_legacy: 'border-amber-200 bg-amber-50 text-amber-700',
+  reaccept_required: 'border-red-200 bg-red-50 text-red-600',
+};
+
+const DOC_STATUS_DOT: Record<MemberDocumentStatus, string> = {
+  missing: 'bg-red-500',
+  current: 'bg-green-500',
+  accepted_legacy: 'bg-amber-500',
+  reaccept_required: 'bg-red-500',
+};
+
+const DOC_STATUS_ICON: Record<MemberDocumentStatus, string> = {
+  missing: 'border border-red-200 bg-red-50 text-red-600',
+  current: 'border border-green-200 bg-green-50 text-green-700',
+  accepted_legacy: 'border border-amber-200 bg-amber-50 text-amber-700',
+  reaccept_required: 'border border-red-200 bg-red-50 text-red-600',
+};
+
+const DOC_VALID_PILL = {
+  verified: {
+    wrap: 'border-blue-200 bg-blue-50 text-blue-700',
+    dot: 'bg-blue-500',
+    label: 'Verified',
+  },
+  unverified: {
+    wrap: 'border-gray-300 bg-gray-100 text-gray-600',
+    dot: 'bg-gray-400',
+    label: 'Unverified',
+  },
+} as const;
+
+function ValidStatusBadge({ verified, compact = false }: { verified: boolean; compact?: boolean }) {
+  const pill = verified ? DOC_VALID_PILL.verified : DOC_VALID_PILL.unverified;
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full border font-bold uppercase tracking-widest ${
+        compact
+          ? 'gap-1 px-1.5 py-0 text-[9px]'
+          : 'gap-1.5 px-2 py-0.5 text-[10px]'
+      } ${pill.wrap}`}
+    >
+      <span
+        className={`rounded-full ${compact ? 'h-1 w-1' : 'h-1.5 w-1.5'} ${pill.dot}`}
+        aria-hidden="true"
+      />
+      {pill.label}
+    </span>
+  );
+}
+
+function formatSignedDate(iso?: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function DocumentDetailsBar({
+  submitted,
+  submittedLabel,
+  downloadDisabled,
+  downloadBusy,
+  onDownload,
+  onUpdate,
+  updateMode = 'update',
+}: {
+  submitted: boolean;
+  submittedLabel?: string | null;
+  downloadDisabled?: boolean;
+  downloadBusy?: boolean;
+  onDownload: () => void;
+  onUpdate: () => void;
+  updateMode?: 'update' | 'cancel';
+}) {
+  return (
+    <div className="flex shrink-0 items-center justify-between gap-3 rounded-3xl border border-[#D4CDB5]/60 bg-white px-5 py-4 shadow-sm">
+      <div className="min-w-0">
+        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">Document details</p>
+        <p className={`mt-1 text-sm ${submitted ? 'text-[#1E2A35]' : 'text-[#B0A898]'}`}>
+          {submitted
+            ? submittedLabel
+              ? `Submitted ${submittedLabel}`
+              : 'Submitted'
+            : 'No Record'}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          disabled={downloadDisabled || downloadBusy}
+          onClick={onDownload}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#1E2A35] px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-[#263545] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {downloadBusy ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          Download PDF
+        </button>
+        {updateMode === 'cancel' ? (
+          <button
+            type="button"
+            onClick={onUpdate}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1.5 text-xs font-semibold text-[#5A5048] hover:border-[#c49a3c]/40 hover:text-[#a67f2e] transition-all"
+          >
+            <X size={12} /> Cancel
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onUpdate}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1.5 text-xs font-semibold text-[#5A5048] hover:border-[#c49a3c]/40 hover:text-[#a67f2e] transition-all"
+          >
+            <Pencil size={12} /> Update
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SignedDocumentTab({
-  email,
-  name,
   kind,
-  documentName,
-  subtitle,
-  unsignedAccepted,
-  unsignedPending,
+  title,
+  note,
   path,
   acceptedVersion,
   signedAt,
   accepted,
+  verified,
   localRecord,
 }: {
-  email?: string;
-  name?: string;
   kind: 'terms' | 'privacy';
-  documentName: string;
-  subtitle: string;
-  unsignedAccepted: string;
-  unsignedPending: string;
+  title: string;
+  note: string;
   path?: string;
   acceptedVersion?: string;
   signedAt?: string;
   accepted: boolean;
+  verified: boolean;
   localRecord?: SignedTermsRecord | null;
 }) {
-  const navigate = useNavigate();
+  const { user, updateProfile } = useAuth();
   const current = CURRENT_DOCUMENTS[kind];
   const status = documentStatus(kind, { path, version: acceptedVersion, signedAt, accepted });
-  const signed = Boolean(path) || Boolean(localRecord?.pdfDataUrl);
-  const signedLabel = signedAt
-    ? new Date(signedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
-    : localRecord?.signedAt
-      ? new Date(localRecord.signedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
-      : null;
+  const submitted = status !== 'missing';
+  const fileName = localRecord?.fileName
+    || memberDocumentFileName(kind, acceptedVersion || current.version, signedAt || localRecord?.signedAt);
+  const signedLabel = formatSignedDate(signedAt || localRecord?.signedAt);
+  const validPill = verified ? DOC_VALID_PILL.verified : DOC_VALID_PILL.unverified;
+  const footnote = status === 'accepted_legacy' && current
+    ? `Signed ${signedLabel ?? acceptedVersion ?? 'earlier'} · Current policy updated ${current.label}`
+    : status === 'current' && signedLabel
+      ? `Signed ${signedLabel}`
+      : current
+        ? `Current version ${current.label}`
+        : null;
+  const hasPdf = Boolean(path || localRecord?.pdfDataUrl);
 
-  const handleDownload = async () => {
-    if (path) {
-      await downloadMemberDocument(path, memberDocumentFileName(kind, acceptedVersion || current.version));
-      return;
+  const [actionBusy, setActionBusy] = useState(false);
+  const [viewBusy, setViewBusy] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
+
+  useEffect(() => {
+    if (!submitOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [submitOpen]);
+
+  const openInNewTab = async () => {
+    if (!hasPdf || viewBusy) return;
+    const tab = window.open('', '_blank');
+    setViewBusy(true);
+    try {
+      let url = '';
+      if (path) {
+        url = await createMemberDocumentViewUrl(path);
+      } else if (localRecord?.pdfDataUrl) {
+        url = localRecord.pdfDataUrl;
+      }
+      if (!url) {
+        tab?.close();
+        return;
+      }
+      if (tab) {
+        tab.location.replace(url);
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      console.error('Failed to open signed PDF:', err);
+      tab?.close();
+    } finally {
+      setViewBusy(false);
     }
-    if (localRecord) downloadSignedTermsPdf(localRecord);
+  };
+
+  const acceptTerms = async () => {
+    if (!user?.email) throw new Error('missing-email');
+    const uploaded = await generateAndSaveSignedTermsPdf({
+      email: user.email,
+      signerName: user.name || 'Member',
+    });
+    updateProfile({
+      termsAccepted: true,
+      termsDocumentPath: uploaded.path,
+      termsAcceptedVersion: uploaded.version,
+      termsSignedAt: uploaded.signedAt,
+    });
+    setSubmitOpen(false);
+  };
+
+  const acceptPrivacy = async () => {
+    if (!user?.email) throw new Error('missing-email');
+    const uploaded = await generateAndUploadSignedPrivacyPdf({
+      email: user.email,
+      signerName: user.name || 'Member',
+    });
+    updateProfile({
+      privacyPolicyDocumentPath: uploaded.path,
+      privacyAcceptedVersion: uploaded.version,
+      privacySignedAt: uploaded.signedAt,
+    });
+    setSubmitOpen(false);
+  };
+
+  const downloadFromBar = async () => {
+    if (!hasPdf || actionBusy) return;
+    setActionBusy(true);
+    try {
+      if (path) {
+        await downloadMemberDocument(path, fileName);
+      } else if (localRecord && kind === 'terms') {
+        downloadSignedTermsPdf(localRecord);
+      }
+    } catch (err) {
+      console.error('Failed to download signed PDF:', err);
+    } finally {
+      setActionBusy(false);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className={CARD}>
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div>
-            <h3 className="text-[#1E2A35] mb-1" style={SECTION_TITLE}>Signed Document</h3>
-            <p className="text-[#8A7E6E] text-xs">{subtitle}</p>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <DocumentDetailsBar
+        submitted={submitted}
+        submittedLabel={signedLabel}
+        downloadDisabled={!hasPdf}
+        downloadBusy={actionBusy}
+        onDownload={() => { void downloadFromBar(); }}
+        onUpdate={() => setSubmitOpen(true)}
+      />
+      {submitOpen && kind === 'terms' && (
+        <TermsModal onClose={() => setSubmitOpen(false)} onAccept={acceptTerms} />
+      )}
+      {submitOpen && kind === 'privacy' && (
+        <PrivacyModal onClose={() => setSubmitOpen(false)} onAccept={acceptPrivacy} />
+      )}
+      <article className="flex w-full min-w-0 flex-col rounded-3xl border border-[#D4CDB5]/60 bg-white p-5 shadow-sm">
+        <div className="flex flex-col">
+          <div className="flex items-start justify-between gap-3">
+            <div className={`flex h-18 w-18 shrink-0 items-center justify-center rounded-xl ${DOC_STATUS_ICON[status]}`}>
+              {kind === 'privacy' ? <ShieldCheck size={32} /> : <FileText size={32} />}
+            </div>
+            <div className="flex flex-col items-end gap-1.5">
+              <span
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${DOC_STATUS_CLASS[status]}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${DOC_STATUS_DOT[status]}`} aria-hidden="true" />
+                {DOC_STATUS_LABEL[status]}
+              </span>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${validPill.wrap}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${validPill.dot}`} aria-hidden="true" />
+                {validPill.label}
+              </span>
+            </div>
           </div>
-          <span
-            className={`text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${
-              signed
-                ? 'bg-green-50 text-green-700 border-green-200'
-                : 'bg-[#EDE8D8] text-[#8A7E6E] border-[#D4CDB5]/60'
-            }`}
-          >
-            {signed ? 'Signed' : 'Not signed'}
-          </span>
-        </div>
-
-        {signed ? (
-          <>
-            <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 p-4 flex flex-col gap-2.5 mb-5">
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Document</span>
-                <span className="text-[#1E2A35] text-xs font-semibold text-right">{documentName}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Signed by</span>
-                <span className="text-[#1E2A35] text-xs font-semibold text-right">{localRecord?.signerName || name}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Account</span>
-                <span className="text-[#1E2A35] text-xs font-semibold text-right break-all">{localRecord?.email || email}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Signed on</span>
-                <span className="text-[#1E2A35] text-xs font-semibold text-right">{signedLabel ?? '--'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">You signed</span>
-                <span className="text-[#1E2A35] text-xs font-semibold text-right">{acceptedVersion || '--'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Current policy</span>
-                <span className="text-[#1E2A35] text-xs font-semibold text-right">{current.label}</span>
-              </div>
-            </div>
-
-            {status === 'accepted_legacy' && (
-              <p className="mb-4 text-xs leading-relaxed text-[#8A7E6E]">
-                Your agreement dated {signedLabel ?? acceptedVersion} remains in effect. The studio policy was later updated to {current.label}. That update did not replace this signed PDF.
-              </p>
-            )}
-            {status === 'reaccept_required' && (
-              <p className="mb-4 text-xs leading-relaxed text-red-600">
-                This policy changed in a way that requires a new signature. Please complete Profile Setup again for the current version.
-              </p>
-            )}
-
-            {localRecord?.signatureDataUrl && (
-              <div className="mb-5">
-                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Electronic signature</p>
-                <div className="rounded-2xl border border-[#D4CDB5]/60 bg-[#F8F3E8] px-4 py-3">
-                  <img src={localRecord.signatureDataUrl} alt="Your electronic signature" className="h-16 w-auto max-w-full object-contain" />
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                void handleDownload().catch((err) => {
-                  console.error('Failed to download signed PDF:', err);
-                });
-              }}
-              className="w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-3.5 hover:bg-[#263545] active:scale-[0.97] transition-all"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
-            >
-              <Download size={16} /> Download Signed PDF
-            </button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center text-center py-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center mb-3">
-              <FileText size={22} className="text-[#c49a3c]/70" />
-            </div>
-            <p className="text-[#1E2A35] text-sm font-semibold mb-1">No signed PDF on file</p>
-            <p className="text-[#8A7E6E] text-xs leading-relaxed max-w-sm">
-              {accepted ? unsignedAccepted : unsignedPending}
+          <h2 className="mt-3 min-w-0 truncate text-sm font-semibold text-[#1E2A35]">{title}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-[#5A5048]">{note}</p>
+          {footnote ? (
+            <p className="mt-2 flex items-center gap-1 text-[11px] text-[#B0A898]">
+              <Clock size={11} /> {footnote}
             </p>
+          ) : null}
+        </div>
+        <div className="mt-4 flex gap-1.5">
+          {submitted ? (
             <button
               type="button"
-              onClick={() => navigate('/profile-setup')}
-              className="mt-4 flex items-center justify-center gap-1 text-[#c49a3c] text-xs font-bold border border-[#c49a3c]/40 px-4 py-2 rounded-xl hover:bg-[#c49a3c]/08 transition-all"
+              disabled={!hasPdf || viewBusy}
+              onClick={() => { void openInNewTab(); }}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-[#D4CDB5]/80 bg-[#F8F3E8] px-3 py-1.5 text-xs font-semibold text-[#5A5048] transition-colors hover:bg-[#EDE8D8] hover:text-[#1E2A35] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Go to Profile Setup
+              {viewBusy ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />}
+              View
             </button>
-          </div>
-        )}
-      </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSubmitOpen(true)}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-[#c49a3c]/40 bg-[#c49a3c]/10 px-3 py-1.5 text-xs font-semibold text-[#a67f2e] transition-colors hover:bg-[#c49a3c]/20 hover:text-[#8a6824]"
+            >
+              <Send size={12} />
+              Submit
+            </button>
+          )}
+        </div>
+      </article>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// FIRST-LOGIN NICKNAME
+// ─────────────────────────────────────────────
+
+function NicknameWelcomeModal({
+  value,
+  error,
+  saving,
+  onChange,
+  onSubmit,
+}: {
+  value: string;
+  error: string;
+  saving: boolean;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <Dialog open>
+      <DialogPortal>
+        <DialogOverlay
+          className="z-[120]"
+          style={{ backgroundColor: 'rgba(30,42,53,0.72)', backdropFilter: 'blur(4px)' }}
+        />
+        <DialogPrimitive.Content
+          className="fixed left-1/2 top-1/2 z-[121] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-[#D4CDB5]/60 bg-white p-7 text-center shadow-2xl outline-none md:p-9"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+        >
+          <img
+            src={logoMain}
+            alt="BALANSÉ"
+            className="mx-auto mb-6 h-14 w-auto object-contain"
+          />
+          <DialogTitle className="text-xl font-semibold leading-snug text-[#1E2A35]">
+            Welcome to BALANSÉ!
+          </DialogTitle>
+          <DialogDescription className="mt-1 text-base !text-[#5A5048]">
+            How may I call you?
+          </DialogDescription>
+
+          <form
+            className="mt-6 flex w-full flex-col items-center"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
+            <input
+              autoFocus
+              aria-label="Your Name"
+              value={value}
+              maxLength={40}
+              autoComplete="nickname"
+              placeholder="Your Name"
+              onChange={(e) => onChange(e.target.value)}
+              className={`w-full bg-transparent px-2 py-2.5 text-center text-[#1E2A35] placeholder:text-[#8A7E6E] outline-none border-0 border-b rounded-none ${
+                error ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]'
+              }`}
+              style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: 'clamp(1.45rem, 3.4vw, 2.1rem)',
+                letterSpacing: '0.04em',
+              }}
+            />
+            {error ? (
+              <p className="mt-2 flex items-center justify-center gap-1 text-xs text-red-500">
+                <AlertTriangle size={12} /> {error}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-[#5A5048]">This is required. We'll use it when we greet you.</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="mt-6 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#c49a3c] py-3.5 text-base font-bold text-white shadow-[0_4px_24px_rgba(196,154,60,0.4)] transition-all hover:bg-[#a67f2e] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Continue'
+              )}
+            </button>
+          </form>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
   );
 }
 
@@ -467,6 +771,11 @@ export default function MemberProfilePage() {
   const profile = user?.profile;
 
   const [tab, setTab] = useState<TabId>(() => parseProfileTab(searchParams.get('tab')) ?? 'personal');
+
+  useEffect(() => {
+    const next = parseProfileTab(searchParams.get('tab'));
+    if (next) setTab(next);
+  }, [searchParams]);
   const [editingCard, setEditingCard] = useState<EditableCardId | null>(null);
   const [cardSaved, setCardSaved] = useState<EditableCardId | null>(null);
 
@@ -474,6 +783,10 @@ export default function MemberProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [middleInitial, setMiddleInitial] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [welcomeNickname, setWelcomeNickname] = useState('');
+  const [welcomeNicknameError, setWelcomeNicknameError] = useState('');
+  const [welcomeNicknameSaving, setWelcomeNicknameSaving] = useState(false);
   const [birthday, setBirthday] = useState('');
   const [sex, setSex] = useState<UserProfile['sex']>('');
   const [nationality, setNationality] = useState('');
@@ -488,6 +801,8 @@ export default function MemberProfilePage() {
   const [emergencyRelationship, setEmergencyRelationship] = useState('');
   const [basicErrors, setBasicErrors] = useState<Partial<Record<BasicRequiredKey, string>>>({});
   const [contactErrors, setContactErrors] = useState<Partial<Record<ContactRequiredKey, string>>>({});
+  const [phoneVerifyBusy, setPhoneVerifyBusy] = useState(false);
+  const [phoneVerifyOk, setPhoneVerifyOk] = useState(false);
   const [emergencyErrors, setEmergencyErrors] = useState<Partial<Record<EmergencyRequiredKey, string>>>({});
 
   // ── Medical draft ──
@@ -495,6 +810,8 @@ export default function MemberProfilePage() {
   const [healthDetails, setHealthDetails] = useState('');
   const [consent, setConsent] = useState(false);
   const [healthError, setHealthError] = useState('');
+  const [healthPdfBusy, setHealthPdfBusy] = useState(false);
+  const [healthSkipSignature, setHealthSkipSignature] = useState(false);
   const [healthHasInk, setHealthHasInk] = useState(false);
   const [healthPadKey, setHealthPadKey] = useState(0);
   const [healthSignaturePath, setHealthSignaturePath] = useState('');
@@ -515,6 +832,7 @@ export default function MemberProfilePage() {
     setFirstName(profile.firstName || '');
     setLastName(profile.lastName || '');
     setMiddleInitial(profile.middleInitial || '');
+    setNickname(profile.nickname || '');
     setBirthday((profile.birthday || '').slice(0, 10));
     setSex(profile.sex || '');
     setNationality(toCountryName(profile.nationality));
@@ -535,6 +853,10 @@ export default function MemberProfilePage() {
     setHealthAnswers(medical.answers);
     setHealthDetails(medical.details);
     setConsent(medical.acknowledged);
+    setHealthSkipSignature(
+      medical.signatureOptOut === true
+      || (medical.acknowledged && !medical.signaturePath),
+    );
     setHealthSignaturePath(medical.signaturePath || '');
     setHealthHasInk(false);
     setHealthPadKey((key) => key + 1);
@@ -589,6 +911,8 @@ export default function MemberProfilePage() {
     setContactErrors({});
     setEmergencyErrors({});
     setHealthError('');
+    setPhoneVerifyOk(false);
+    setPhoneVerifyBusy(false);
 
     if (card === 'basic') {
       setBasicErrors(requiredErrors({
@@ -626,6 +950,8 @@ export default function MemberProfilePage() {
     setContactErrors({});
     setEmergencyErrors({});
     setHealthError('');
+    setPhoneVerifyOk(false);
+    setPhoneVerifyBusy(false);
   };
 
   const markSaved = (card: EditableCardId) => {
@@ -657,6 +983,7 @@ export default function MemberProfilePage() {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       middleInitial: middleInitial.trim(),
+      nickname: nickname.trim(),
       name: fullName,
       birthday,
       sex,
@@ -679,13 +1006,41 @@ export default function MemberProfilePage() {
     }
 
     setContactErrors({});
+    const nextPhone = phone.trim();
+    const phoneChanged = nextPhone !== (profile?.phone ?? '').trim();
     updateProfile({
-      phone: phone.trim(),
+      phone: nextPhone,
       province: province.trim(),
       city: city.trim(),
       barangay: barangay.trim(),
+      ...(phoneChanged ? { phoneValid: false } : {}),
     });
     markSaved('contact');
+  };
+
+  const verifyPhone = async () => {
+    const nextPhone = phone.trim();
+    if (!PHONE_DIGITS_RE.test(nextPhone)) {
+      setPhoneVerifyOk(false);
+      setContactErrors((current) => ({ ...current, phone: INVALID_PHONE_MSG }));
+      return;
+    }
+
+    setContactErrors((current) => {
+      if (!current.phone) return current;
+      const next = { ...current };
+      delete next.phone;
+      return next;
+    });
+    setPhoneVerifyBusy(true);
+    try {
+      await updateProfile({ phone: nextPhone });
+      await updateProfile({ phoneValid: true });
+      setPhone(nextPhone);
+      setPhoneVerifyOk(true);
+    } finally {
+      setPhoneVerifyBusy(false);
+    }
   };
 
   const saveEmergency = () => {
@@ -718,11 +1073,13 @@ export default function MemberProfilePage() {
       setHealthError('Please confirm the acknowledgment to submit this declaration.');
       return;
     }
-    const signatureDataUrl = healthSignatureRef.current
+
+    const drawnSignature = !healthSkipSignature && healthHasInk && healthSignatureRef.current
       ? exportTransparentSignaturePng(healthSignatureRef.current)
       : null;
-    if (!healthHasInk || !signatureDataUrl) {
-      setHealthError('Please draw your e-signature to submit this declaration.');
+
+    if (!healthSkipSignature && !drawnSignature && !healthSignaturePath) {
+      setHealthError('Please draw your e-signature, or opt out to save with Electronic Acknowledgment.');
       return;
     }
 
@@ -731,7 +1088,8 @@ export default function MemberProfilePage() {
       details: healthDetails,
       acknowledged: true,
       schemaVersion: HEALTH_FORM_VERSION,
-      signaturePath: healthSignaturePath,
+      signaturePath: healthSignaturePath || undefined,
+      signatureOptOut: healthSkipSignature,
     };
 
     setHealthError('');
@@ -740,12 +1098,20 @@ export default function MemberProfilePage() {
     };
 
     try {
-      const uploadedSignature = await uploadMemberSignaturePng(signatureDataUrl);
-      if (uploadedSignature.ok) {
-        fields.signaturePath = uploadedSignature.path;
-        payload.healthDeclaration = serializeHealthDeclaration(fields);
-        setHealthSignaturePath(uploadedSignature.path);
-        setHealthSignatureUrl(signatureDataUrl);
+      let signatureDataUrl: string | undefined;
+      if (!healthSkipSignature) {
+        if (drawnSignature) {
+          const uploadedSignature = await uploadMemberSignaturePng(drawnSignature);
+          if (uploadedSignature.ok) {
+            fields.signaturePath = uploadedSignature.path;
+            payload.healthDeclaration = serializeHealthDeclaration(fields);
+            setHealthSignaturePath(uploadedSignature.path);
+            setHealthSignatureUrl(drawnSignature);
+          }
+          signatureDataUrl = drawnSignature;
+        } else {
+          signatureDataUrl = await loadMemberSignatureDataUrl(healthSignaturePath) || undefined;
+        }
       }
 
       const uploaded = await generateAndUploadHealthDeclarationPdf({
@@ -781,8 +1147,62 @@ export default function MemberProfilePage() {
     .toUpperCase() || 'M';
 
   const medicalDisplay = parseHealthDeclaration(profile?.healthDeclaration);
+  const healthPdfPath = (profile?.healthDeclarationDocumentPath ?? '').trim();
+  const healthSignedLabel = formatSignedDate(profile?.healthDeclarationSignedAt);
+  const hasHealthRecord = Boolean(healthPdfPath || healthSignedLabel);
+
+  const downloadHealthPdf = async () => {
+    if (!healthPdfPath || healthPdfBusy) return;
+    setHealthPdfBusy(true);
+    try {
+      await downloadMemberDocument(
+        healthPdfPath,
+        memberDocumentFileName(
+          'health',
+          medicalDisplay.schemaVersion || CURRENT_DOCUMENTS.health.version,
+          profile?.healthDeclarationSignedAt,
+        ),
+      );
+    } catch (err) {
+      console.error('Failed to download Health Declaration PDF:', err);
+    } finally {
+      setHealthPdfBusy(false);
+    }
+  };
+
+  const needsNickname = Boolean(user) && !(profile?.nickname ?? '').trim();
+
+  useEffect(() => {
+    if (!needsNickname) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [needsNickname]);
+
+  const saveWelcomeNickname = async () => {
+    const value = welcomeNickname.trim();
+    if (!value) {
+      setWelcomeNicknameError(REQUIRED_MSG);
+      return;
+    }
+    setWelcomeNicknameSaving(true);
+    setWelcomeNicknameError('');
+    try {
+      await updateProfile({ nickname: value });
+      setNickname(value);
+    } catch (err) {
+      console.error('Failed to save nickname:', err);
+      setWelcomeNicknameError('Could not save your nickname. Please try again.');
+    } finally {
+      setWelcomeNicknameSaving(false);
+    }
+  };
+
   const profileScore = computeProfileScore(profile);
   const profileScoreBar = profileScoreBarClasses(profileScore);
+  const phoneValid = Boolean(profile?.phoneValid);
   const {
     provinces,
     cities,
@@ -797,11 +1217,11 @@ export default function MemberProfilePage() {
   const ActiveIcon = activeTab.Icon;
 
   return (
-    <MemberPageShell searchPlaceholder="Search profile…">
-      <div className="pt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:items-start lg:gap-0">
+    <MemberPageShell searchPlaceholder="Search profile…" fill>
+      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-6 overflow-hidden pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0">
         {/* ── Left: selected section title + forms ── */}
-        <div className="min-w-0 order-2 lg:order-1 lg:pr-6">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#D4CDB5]/60 pb-5">
+        <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden order-2 lg:order-1 lg:pr-6">
+          <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#D4CDB5]/60 pb-5">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
                 <ActiveIcon size={16} />
@@ -839,7 +1259,7 @@ export default function MemberProfilePage() {
             </div>
           </div>
 
-          <div className="pb-4">
+          <div className={tab === 'medical' ? 'flex min-h-0 flex-1 flex-col pb-4' : `min-h-0 flex-1 pb-4 ${SLIM_SCROLL_OUTSET}`}>
 
           {/* ══ PERSONAL INFO ══ */}
           {tab === 'personal' && (
@@ -852,27 +1272,38 @@ export default function MemberProfilePage() {
                 onSave={saveBasic}
                 saved={cardSaved === 'basic'}
                 display={
-                  <div className="flex flex-col gap-4">
-                    <DisplayField
-                      label="Full Name"
-                      value={displayText(buildFullName(
-                        profile?.firstName || '',
-                        profile?.middleInitial || '',
-                        profile?.lastName || '',
-                      ))}
-                    />
-                    <DisplayField label="Birthday" value={formatBirthday(profile?.birthday)} />
-                    <DisplayField label="Sex" value={sexLabel(profile?.sex)} />
-                    <DisplayField
-                      label="Nationality"
-                      value={displayText(toCountryName(profile?.nationality))}
-                      leading={
-                        profile?.nationality
-                          ? <CountryFlag country={toCountryName(profile.nationality)} />
-                          : undefined
-                      }
-                    />
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-12">
+                    <div className="col-span-2 sm:col-span-6">
+                      <DisplayField
+                        label="Full Name"
+                        value={displayText(buildFullName(
+                          profile?.firstName || '',
+                          profile?.middleInitial || '',
+                          profile?.lastName || '',
+                        ))}
+                      />
+                    </div>
+                    <div className="col-span-2 sm:col-span-6">
+                      <DisplayField label="Nickname" optional value={displayText(profile?.nickname)} />
+                    </div>
+                    <div className="col-span-1 sm:col-span-3">
+                      <DisplayField label="Birthday" value={formatBirthday(profile?.birthday)} />
+                    </div>
+                    <div className="col-span-1 sm:col-span-3">
+                      <DisplayField label="Sex" value={sexLabel(profile?.sex)} />
+                    </div>
+                    <div className="col-span-2 sm:col-span-6">
+                      <DisplayField
+                        label="Nationality"
+                        value={displayText(toCountryName(profile?.nationality))}
+                        leading={
+                          profile?.nationality
+                            ? <CountryFlag country={toCountryName(profile.nationality)} />
+                            : undefined
+                        }
+                      />
+                    </div>
+                    <div className="col-span-2 flex gap-8 sm:col-span-6">
                       <DisplayField label="Weight" value={displayText(profile?.weight, ' kg')} />
                       <DisplayField label="Height" value={displayText(profile?.height, ' cm')} />
                     </div>
@@ -915,6 +1346,16 @@ export default function MemberProfilePage() {
                       onClear={() => { setLastName(''); clearBasicError('lastName'); }}
                       placeholder="dela Cruz"
                       autoComplete="family-name"
+                    />
+                  </Field>
+                  <Field label="Nickname" optional>
+                    <ClearableInput
+                      className={INPUT}
+                      value={nickname}
+                      onChange={e => setNickname(e.target.value)}
+                      onClear={() => setNickname('')}
+                      placeholder="Optional preferred name"
+                      autoComplete="nickname"
                     />
                   </Field>
                   <Field label="Birthday" error={basicErrors.birthday}>
@@ -1001,27 +1442,56 @@ export default function MemberProfilePage() {
                 onSave={saveContact}
                 saved={cardSaved === 'contact'}
                 display={
-                  <div className="flex flex-col gap-4">
-                    <DisplayField label="Phone Number" value={displayText(profile?.phone)} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <DisplayField label="Province" value={displayText(profile?.province)} />
-                      <DisplayField label="City" value={displayText(profile?.city)} />
-                    </div>
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-3 lg:grid-cols-4">
+                    <DisplayField
+                      label="Phone Number"
+                      value={displayText(profile?.phone)}
+                      badge={<ValidStatusBadge verified={phoneValid} compact />}
+                    />
+                    <DisplayField label="Province" value={displayText(profile?.province)} />
+                    <DisplayField label="City / Municipality" value={displayText(profile?.city)} />
                     <DisplayField label="Barangay" optional value={displayText(profile?.barangay)} />
                   </div>
                 }
               >
                 <div className="flex flex-col gap-4">
-                  <Field label="Phone Number" error={contactErrors.phone}>
-                    <ClearableInput
-                      className={`${INPUT} ${contactErrors.phone ? INPUT_ERROR : ''}`}
-                      type="tel"
-                      value={phone}
-                      onChange={e => { setPhone(e.target.value); clearContactError('phone'); }}
-                      onClear={() => setPhone('')}
-                      placeholder="+63 9XX XXX XXXX"
-                      autoComplete="tel"
-                    />
+                  <Field
+                    label="Phone Number"
+                    error={contactErrors.phone}
+                    success={!contactErrors.phone && phoneVerifyOk ? 'Verified' : undefined}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <ClearableInput
+                          className={`${INPUT} ${contactErrors.phone ? INPUT_ERROR : ''}`}
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={11}
+                          value={phone}
+                          onChange={e => {
+                            setPhone(e.target.value);
+                            setPhoneVerifyOk(false);
+                            clearContactError('phone');
+                          }}
+                          onClear={() => {
+                            setPhone('');
+                            setPhoneVerifyOk(false);
+                            clearContactError('phone');
+                          }}
+                          placeholder="09171234567"
+                          autoComplete="tel"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={phoneVerifyBusy}
+                        onClick={() => { void verifyPhone(); }}
+                        className="inline-flex h-[46px] shrink-0 items-center gap-1.5 rounded-xl border border-[#c49a3c]/40 bg-[#c49a3c]/10 px-3 text-xs font-semibold text-[#a67f2e] transition-all hover:bg-[#c49a3c]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {phoneVerifyBusy ? <Loader2 size={12} className="animate-spin" /> : phoneVerifyOk ? <Check size={12} /> : null}
+                        {phoneVerifyBusy ? 'Checking…' : phoneVerifyOk ? 'Verified' : 'Verify'}
+                      </button>
+                    </div>
                   </Field>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field label="Province" error={contactErrors.province}>
@@ -1047,7 +1517,7 @@ export default function MemberProfilePage() {
                         suggested={['Cebu']}
                       />
                     </Field>
-                    <Field label="City" error={contactErrors.city}>
+                    <Field label="City / Municipality" error={contactErrors.city}>
                       <SearchableSelect
                         value={city}
                         invalid={Boolean(contactErrors.city)}
@@ -1091,7 +1561,7 @@ export default function MemberProfilePage() {
                 onSave={saveEmergency}
                 saved={cardSaved === 'emergency'}
                 display={
-                  <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-3">
                     <DisplayField label="Contact Name" value={displayText(profile?.emergencyContactName)} />
                     <DisplayField label="Contact Number" value={displayText(profile?.emergencyContactNumber)} />
                     <DisplayField label="Relationship" value={displayText(profile?.emergencyContactRelationship)} />
@@ -1139,6 +1609,17 @@ export default function MemberProfilePage() {
 
           {/* ══ HEALTH DECLARATION ══ */}
           {tab === 'medical' && (
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+            <DocumentDetailsBar
+              submitted={hasHealthRecord}
+              submittedLabel={healthSignedLabel}
+              downloadDisabled={!healthPdfPath}
+              downloadBusy={healthPdfBusy}
+              onDownload={() => { void downloadHealthPdf(); }}
+              onUpdate={editingCard === 'health' ? cancelEdit : () => startEdit('health')}
+              updateMode={editingCard === 'health' ? 'cancel' : 'update'}
+            />
+            <div className={`min-h-0 flex-1 ${SLIM_SCROLL_OUTSET}`}>
             <EditableCard
               title="Health Declaration Form"
               description="Welcome to Balansé Wellness! Your safety and well-being are our top priorities. Please complete this health declaration accurately before participating in any of our movement sessions."
@@ -1147,6 +1628,8 @@ export default function MemberProfilePage() {
               onCancel={cancelEdit}
               onSave={saveHealth}
               saved={cardSaved === 'health'}
+              showHeaderEdit={false}
+              headerAside={<ValidStatusBadge verified={Boolean(profile?.healthValid)} />}
               display={
                 <div className="flex flex-col gap-6">
                   <div className="bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
@@ -1203,8 +1686,11 @@ export default function MemberProfilePage() {
                       I have disclosed all relevant medical conditions above and agree to notify BALANSÉ
                       of any changes to my health status before attending future sessions.
                     </p>
-                    <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mt-4 mb-1.5">E-signature</p>
-                    {healthSignatureUrl ? (
+                    <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mt-4 mb-1.5">
+                      E-signature
+                      <span className="ml-1.5 normal-case tracking-normal italic text-[#B0A898]">optional</span>
+                    </p>
+                    {healthSignatureUrl && !medicalDisplay.signatureOptOut ? (
                       <div className="rounded-2xl border border-[#D4CDB5]/60 bg-[#F8F3E8] px-4 py-3">
                         <img
                           src={healthSignatureUrl}
@@ -1212,6 +1698,8 @@ export default function MemberProfilePage() {
                           className="h-16 w-auto max-w-full object-contain"
                         />
                       </div>
+                    ) : medicalDisplay.acknowledged ? (
+                      <p className="text-[#1E2A35] text-sm">Electronic Acknowledgment</p>
                     ) : (
                       <p className="text-[#B0A898] text-sm">--</p>
                     )}
@@ -1320,40 +1808,95 @@ export default function MemberProfilePage() {
                 </div>
 
                 <div>
-                  <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">E-signature</p>
-                  <p className="text-[#8A7E6E] text-xs mb-3">
-                    Draw your signature below. It is saved as a transparent image and embedded on your signed Health Declaration PDF.
+                  <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">
+                    E-signature
+                    <span className="ml-1.5 normal-case tracking-normal italic text-[#B0A898]">optional</span>
                   </p>
-                  <SignaturePad
-                    key={healthPadKey}
-                    canvasRef={healthSignatureRef}
-                    onInkChange={(ink) => {
-                      setHealthHasInk(ink);
-                      if (ink) setHealthError('');
-                    }}
-                  />
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    {!healthHasInk ? (
-                      <p className="text-[#B0A898] text-xs">A signature is required to save this declaration.</p>
-                    ) : (
-                      <p className="text-[#6B8E6B] text-xs">Signature captured.</p>
-                    )}
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#D4CDB5]/50 bg-[#F8F3E8] px-3.5 py-3 mb-3">
+                    <div className="min-w-0">
+                      <p className="text-[#1E2A35] text-sm font-medium">Opt out of e-signature</p>
+                      <p className="text-[#8A7E6E] text-xs mt-0.5">
+                        {healthSkipSignature
+                          ? 'This declaration will be saved with an Electronic Acknowledgment.'
+                          : 'Turn on to save without drawing a signature.'}
+                      </p>
+                    </div>
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={healthSkipSignature}
+                      aria-label="Opt out of e-signature"
                       onClick={() => {
-                        setHealthPadKey((key) => key + 1);
-                        setHealthHasInk(false);
+                        setHealthSkipSignature((current) => !current);
+                        setHealthError('');
                       }}
-                      disabled={!healthHasInk}
-                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs transition-all ${
-                        healthHasInk
-                          ? 'border-[#D4CDB5]/70 text-[#5A5048] hover:bg-[#EDE8D8]'
-                          : 'border-[#D4CDB5]/40 text-[#B0A898] cursor-not-allowed'
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                        healthSkipSignature ? 'bg-[#c49a3c]' : 'bg-[#D4CDB5]'
                       }`}
                     >
-                      <Eraser size={13} /> Clear
+                      <span
+                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${
+                          healthSkipSignature ? 'left-5' : 'left-0.5'
+                        }`}
+                      />
                     </button>
                   </div>
+
+                  {healthSkipSignature ? (
+                    <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3">
+                      <p className="text-[#1E2A35] text-sm font-medium">Electronic Acknowledgment</p>
+                      <p className="text-[#8A7E6E] text-xs mt-1">
+                        Your affirmation is enough to save this document. No drawn signature will be embedded.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {healthSignatureUrl && !healthHasInk && (
+                        <div className="rounded-2xl border border-[#D4CDB5]/60 bg-[#F8F3E8] px-4 py-3 mb-3">
+                          <img
+                            src={healthSignatureUrl}
+                            alt="Your saved electronic signature"
+                            className="h-16 w-auto max-w-full object-contain"
+                          />
+                        </div>
+                      )}
+                      <p className="text-[#8A7E6E] text-xs mb-3">
+                        Draw your signature below to embed it on your Health Declaration PDF.
+                      </p>
+                      <SignaturePad
+                        key={healthPadKey}
+                        canvasRef={healthSignatureRef}
+                        onInkChange={(ink) => {
+                          setHealthHasInk(ink);
+                          if (ink) setHealthError('');
+                        }}
+                      />
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className={`text-xs ${healthHasInk ? 'text-[#6B8E6B]' : 'text-[#B0A898]'}`}>
+                          {healthHasInk
+                            ? 'Signature captured.'
+                            : healthSignatureUrl
+                              ? 'A saved signature will be reused unless you draw a new one.'
+                              : 'Optional — or opt out above to use Electronic Acknowledgment.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHealthPadKey((key) => key + 1);
+                            setHealthHasInk(false);
+                          }}
+                          disabled={!healthHasInk}
+                          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs transition-all ${
+                            healthHasInk
+                              ? 'border-[#D4CDB5]/70 text-[#5A5048] hover:bg-[#EDE8D8]'
+                              : 'border-[#D4CDB5]/40 text-[#B0A898] cursor-not-allowed'
+                          }`}
+                        >
+                          <Eraser size={13} /> Clear
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {healthError && (
@@ -1361,6 +1904,8 @@ export default function MemberProfilePage() {
                 )}
               </div>
             </EditableCard>
+            </div>
+            </div>
           )}
 
           {/* ══ ACCOUNT ══ */}
@@ -1532,17 +2077,14 @@ export default function MemberProfilePage() {
           {/* ══ TERMS & CONDITIONS ══ */}
           {tab === 'terms' && (
             <SignedDocumentTab
-              email={user?.email}
-              name={user?.name}
               kind="terms"
+              title="Terms & Conditions"
+              note="Your signed studio membership terms, waiver, and media consent."
               accepted={!!profile?.termsAccepted}
-              subtitle="Your personal copy of the Balansé Terms & Conditions."
-              documentName="Terms & Conditions PDF"
-              unsignedAccepted="Your Terms & Conditions acceptance is recorded, but a signed PDF is not available for this account yet. Complete the e-signature step in Profile Setup to generate your downloadable copy."
-              unsignedPending="You have not completed the Terms & Conditions agreement and e-signature yet. Once you sign, your personal PDF will appear here."
               path={profile?.termsDocumentPath}
               acceptedVersion={profile?.termsAcceptedVersion}
               signedAt={profile?.termsSignedAt}
+              verified={Boolean(profile?.termsValid)}
               localRecord={getSignedTermsRecord(user?.email)}
             />
           )}
@@ -1550,24 +2092,21 @@ export default function MemberProfilePage() {
           {/* ══ PRIVACY POLICY ══ */}
           {tab === 'privacy' && (
             <SignedDocumentTab
-              email={user?.email}
-              name={user?.name}
               kind="privacy"
+              title="Privacy Policy"
+              note="How BALANSÉ stores profile, booking, and payment information."
               accepted={!!profile?.privacyPolicyDocumentPath || !!profile?.privacyAcceptedVersion}
-              subtitle="Your personal copy of the Balansé Privacy Policy."
-              documentName="Privacy Policy PDF"
-              unsignedAccepted="Your Privacy Policy acceptance is recorded, but a signed PDF is not available for this account yet. Complete acceptance in Profile Setup to generate your downloadable copy."
-              unsignedPending="You have not completed the Privacy Policy agreement yet. Once you accept, your personal PDF will appear here."
               path={profile?.privacyPolicyDocumentPath}
               acceptedVersion={profile?.privacyAcceptedVersion}
               signedAt={profile?.privacySignedAt}
+              verified={Boolean(profile?.privacyValid)}
             />
           )}
           </div>
         </div>
 
         {/* ── Right: profile card + section selection ── */}
-        <aside className="order-1 lg:order-2 flex flex-col gap-4 lg:sticky lg:top-4 lg:border-l lg:border-[#D4CDB5]/50 lg:pl-6">
+        <aside className="order-1 flex min-h-0 flex-col gap-4 lg:order-2 lg:h-full lg:overflow-y-auto lg:border-l lg:border-[#D4CDB5]/50 lg:pl-6">
           <div className="overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
             <ProfileImageHero
               photoUrl={user?.profile.photo || ''}
@@ -1585,7 +2124,7 @@ export default function MemberProfilePage() {
                 {user?.name || 'Member'}
               </h2>
               <p className="text-[#8A7E6E] text-sm truncate">{user?.email}</p>
-              <span className="inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
+              <span className="hidden inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
                 <Shield size={10} /> Gold Membership · Active
               </span>
             </div>
@@ -1638,6 +2177,19 @@ export default function MemberProfilePage() {
           </nav>
         </aside>
       </div>
+
+      {needsNickname && (
+        <NicknameWelcomeModal
+          value={welcomeNickname}
+          error={welcomeNicknameError}
+          saving={welcomeNicknameSaving}
+          onChange={(next) => {
+            setWelcomeNickname(next);
+            if (welcomeNicknameError) setWelcomeNicknameError('');
+          }}
+          onSubmit={() => { void saveWelcomeNickname(); }}
+        />
+      )}
     </MemberPageShell>
   );
 }

@@ -45,6 +45,7 @@ export type HealthDeclarationFields = {
   acknowledged: boolean;
   schemaVersion: string;
   signaturePath?: string;
+  signatureOptOut?: boolean;
 };
 
 export function emptyHealthAnswers(): HealthAnswers {
@@ -79,6 +80,7 @@ export function parseHealthDeclaration(raw?: string | null): HealthDeclarationFi
       acknowledged?: boolean;
       schemaVersion?: string;
       signaturePath?: string;
+      signatureOptOut?: boolean;
       conditions?: string;
       allergies?: string;
       medications?: string;
@@ -102,6 +104,7 @@ export function parseHealthDeclaration(raw?: string | null): HealthDeclarationFi
         acknowledged: parsed.acknowledged === true,
         schemaVersion: String(parsed.schemaVersion || '').trim() || HEALTH_FORM_VERSION,
         signaturePath: String(parsed.signaturePath || '').trim() || undefined,
+        signatureOptOut: parsed.signatureOptOut === true,
       };
     }
   } catch {
@@ -120,6 +123,7 @@ export function serializeHealthDeclaration(fields: HealthDeclarationFields): str
     details,
     acknowledged: fields.acknowledged,
     ...(fields.signaturePath ? { signaturePath: fields.signaturePath } : {}),
+    ...(fields.signatureOptOut ? { signatureOptOut: true } : {}),
   });
 }
 

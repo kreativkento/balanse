@@ -32,6 +32,15 @@ export function getSignedTermsRecord(email: string | undefined | null): SignedTe
   }
 }
 
+export function clearSignedTermsRecord(email: string | undefined | null) {
+  if (!email || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem(storageKey(email));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
 export function downloadSignedTermsPdf(record: SignedTermsRecord) {
   const link = document.createElement('a');
   link.href = record.pdfDataUrl;
@@ -44,7 +53,7 @@ export function downloadSignedTermsPdf(record: SignedTermsRecord) {
 export async function generateAndSaveSignedTermsPdf(input: {
   email: string;
   signerName: string;
-  signatureDataUrl: string;
+  signatureDataUrl?: string;
   signedAt?: Date;
 }): Promise<SignedUploadResult> {
   return generateAndUploadSignedTermsPdf(input);

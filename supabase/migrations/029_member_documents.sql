@@ -6,6 +6,7 @@
 --   • Private storage.member_documents bucket
 --     Paths: {auth_user_id}/{kind}-{version}.pdf
 --     Never overwrite a different version — filename includes the template version.
+--     Folder layout {auth_user_id}/{kind}/… is applied later in 031.
 
 alter table public.profiles_client
   add column if not exists terms_document_path text,

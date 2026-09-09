@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
   User, Calendar, ChevronRight, AlertCircle,
-  Shield, FileText, Check, X, Heart, Eye,
-  Phone, Weight, Ruler, PenLine, Eraser, ShieldCheck,
+  Shield, FileText, Check, X, Heart,
+  Phone, Weight, Ruler, Eraser, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NATIONALITIES } from '../data/nationalities';
 import { ProfileImageHero } from '../components/ProfileImages';
+import { PrivacyModal, TermsModal } from '../components/documents/PolicyAcceptModals';
 import { exportTransparentSignaturePng, SignaturePad } from '../components/SignaturePad';
-import { PRIVACY_BLOCKS, PRIVACY_LAST_UPDATED } from '../data/privacyPolicy';
-import { TC_LAST_UPDATED, TERMS_BLOCKS, type TermsBlock } from '../data/termsAndConditions';
+import { PRIVACY_LAST_UPDATED } from '../data/privacyPolicy';
+import { TC_LAST_UPDATED } from '../data/termsAndConditions';
 import {
   HEALTH_FORM_VERSION,
   HEALTH_QUESTIONS,
@@ -26,38 +27,6 @@ import {
   type SignedUploadResult,
 } from '../../lib/member-documents';
 import { generateAndSaveSignedTermsPdf } from '../../lib/signed-terms';
-
-function PolicyBlocksView({ blocks }: { blocks: TermsBlock[] }) {
-  return (
-    <div className="space-y-4 text-sm text-[#5A5048] leading-relaxed">
-      {blocks.map((block, i) => {
-        if (block.type === 'heading') {
-          return <p key={i} className="font-semibold text-[#1E2A35] mb-1">{block.text}</p>;
-        }
-        if (block.type === 'labelValue') {
-          return <p key={i}>{block.label}: {block.value}</p>;
-        }
-        if (block.type === 'bullets') {
-          return (
-            <ul key={i} className="list-disc pl-5 space-y-2">
-              {block.items.map((item) => (
-                <li key={item.label}><span className="font-semibold text-[#1E2A35]">{item.label}</span> {item.text}</li>
-              ))}
-            </ul>
-          );
-        }
-        if (block.type === 'numbered') {
-          return (
-            <ol key={i} className="list-decimal pl-5 space-y-3">
-              {block.items.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}
-            </ol>
-          );
-        }
-        return <p key={i}>{block.text}</p>;
-      })}
-    </div>
-  );
-}
 
 function HealthDeclarationModal({
   onClose,
@@ -203,231 +172,6 @@ function HealthDeclarationModal({
   );
 }
 
-function TermsModal({ onClose, onAccept }: { onClose: () => void; onAccept: (signatureDataUrl: string) => void }) {
-  const [step, setStep] = useState<'terms' | 'sign'>('terms');
-  const [scrolled, setScrolled] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-  const [hasInk, setHasInk] = useState(false);
-  const [padKey, setPadKey] = useState(0);
-  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) setScrolled(true);
-  };
-
-  const clearSignature = () => {
-    setPadKey((k) => k + 1);
-    setHasInk(false);
-  };
-
-  const confirmSignature = () => {
-    if (!hasInk || !accepted) return;
-    const dataUrl = signatureCanvasRef.current
-      ? exportTransparentSignaturePng(signatureCanvasRef.current)
-      : null;
-    if (!dataUrl) return;
-    onAccept(dataUrl);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
-        <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center shrink-0">
-              {step === 'terms' ? <FileText size={16} className="text-[#c49a3c]" /> : <PenLine size={16} className="text-[#c49a3c]" />}
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-[#1E2A35] truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>
-                {step === 'terms' ? 'Balansé Terms & Conditions' : 'E-Signature'}
-              </h3>
-              <p className="text-[#9A8E7E] text-xs">
-                {step === 'terms' ? `Last Updated: ${TC_LAST_UPDATED}` : 'Draw your signature to complete the agreement'}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0">
-            <X size={15} />
-          </button>
-        </div>
-
-        <div className="px-5 sm:px-7 pt-4 shrink-0">
-          <div className="flex items-center gap-2 bg-[#F8F3E8] rounded-2xl px-3 py-2.5 border border-[#D4CDB5]/50">
-            <div className={`flex items-center gap-1.5 min-w-0 ${step === 'terms' ? 'text-[#a67f2e]' : 'text-[#8A7E6E]'}`}>
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step === 'sign' || accepted ? 'bg-[#c49a3c] text-white' : 'bg-[#c49a3c] text-white'}`}>
-                {step === 'sign' ? <Check size={11} strokeWidth={3} /> : <span className="text-[10px] font-bold">1</span>}
-              </div>
-              <span className="text-[11px] sm:text-xs font-semibold truncate">Read &amp; Agree</span>
-            </div>
-            <div className={`flex-1 h-px ${step === 'sign' ? 'bg-[#c49a3c]' : 'bg-[#D4CDB5]'}`} />
-            <div className={`flex items-center gap-1.5 min-w-0 ${step === 'sign' ? 'text-[#a67f2e]' : 'text-[#8A7E6E]'}`}>
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step === 'sign' ? 'bg-[#c49a3c] text-white' : 'bg-[#EDE8D8] text-[#9A8E7E]'}`}>
-                <span className="text-[10px] font-bold">2</span>
-              </div>
-              <span className="text-[11px] sm:text-xs font-semibold truncate">E-Signature</span>
-            </div>
-          </div>
-        </div>
-
-        {step === 'terms' ? (
-          <>
-            <div className="px-5 sm:px-7 py-5 max-h-[46vh] overflow-y-auto flex-1 min-h-0" onScroll={handleScroll}>
-              <PolicyBlocksView blocks={TERMS_BLOCKS} />
-
-              <div className="mt-4 bg-[#F8F3E8] border border-[#D4CDB5]/60 rounded-2xl px-4 py-3 flex items-center gap-3">
-                <Eye size={14} className="text-[#c49a3c] shrink-0" />
-                <p className="text-[#8A7E6E] text-xs">You can download this signed agreement as a PDF anytime from your Profile page.</p>
-              </div>
-            </div>
-
-            {!scrolled && (
-              <p className="text-[#B0A898] text-xs text-center py-2 shrink-0">Scroll to read all terms</p>
-            )}
-
-            <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex flex-col gap-3 shrink-0">
-              <label
-                onClick={() => scrolled && setAccepted(v => !v)}
-                className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
-              >
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
-                  {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
-                </div>
-                <p className="text-[#5A5048] text-xs leading-relaxed">
-                  I have read the above Waiver &amp; Release form and Media Release &amp; Consent Statement, fully understand and agree to its contents.
-                </p>
-              </label>
-
-              <div className="flex gap-3">
-                <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => accepted && setStep('sign')}
-                  disabled={!accepted}
-                  className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
-                >
-                  Continue <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="px-5 sm:px-7 py-5 flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
-            <p className="text-[#5A5048] text-sm leading-relaxed">
-              Please draw your electronic signature below using your mouse, trackpad, or touchscreen. This confirms you agree to the Balansé Terms &amp; Conditions.
-            </p>
-
-            <SignaturePad key={padKey} canvasRef={signatureCanvasRef} onInkChange={setHasInk} />
-
-            {!hasInk && (
-              <p className="text-[#B0A898] text-xs text-center -mt-1">A signature is required to complete this agreement.</p>
-            )}
-
-            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-auto pt-1">
-              <button
-                type="button"
-                onClick={() => { clearSignature(); setStep('terms'); }}
-                className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={clearSignature}
-                disabled={!hasInk}
-                className={`flex-1 py-3 rounded-full border text-sm transition-all flex items-center justify-center gap-2 ${hasInk ? 'border-[#D4CDB5]/70 text-[#5A5048] hover:bg-[#EDE8D8]' : 'border-[#D4CDB5]/40 text-[#B0A898] cursor-not-allowed'}`}
-              >
-                <Eraser size={14} /> Clear
-              </button>
-              <button
-                type="button"
-                onClick={confirmSignature}
-                disabled={!hasInk || !accepted}
-                className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${hasInk && accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
-              >
-                <Check size={14} /> Confirm Signature
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PrivacyModal({ onClose, onAccept }: { onClose: () => void; onAccept: () => void }) {
-  const [scrolled, setScrolled] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) setScrolled(true);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
-        <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/10 border border-[#c49a3c]/30 flex items-center justify-center shrink-0">
-              <ShieldCheck size={16} className="text-[#c49a3c]" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-[#1E2A35] truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }}>
-                Privacy Policy
-              </h3>
-              <p className="text-[#9A8E7E] text-xs">Last Updated: {PRIVACY_LAST_UPDATED}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0">
-            <X size={15} />
-          </button>
-        </div>
-
-        <div className="px-5 sm:px-7 py-5 max-h-[46vh] overflow-y-auto flex-1 min-h-0" onScroll={handleScroll}>
-          <PolicyBlocksView blocks={PRIVACY_BLOCKS} />
-        </div>
-
-        {!scrolled && (
-          <p className="text-[#B0A898] text-xs text-center py-2 shrink-0">Scroll to read the full policy</p>
-        )}
-
-        <div className="px-5 sm:px-7 pb-6 sm:pb-7 flex flex-col gap-3 shrink-0">
-          <label
-            onClick={() => scrolled && setAccepted(v => !v)}
-            className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${accepted ? 'border-[#c49a3c]/60 bg-[#c49a3c]/06' : scrolled ? 'border-[#D4CDB5]/60 hover:border-[#c49a3c]/30' : 'border-[#D4CDB5]/40 opacity-50 cursor-not-allowed'}`}
-          >
-            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${accepted ? 'bg-[#c49a3c] border-[#c49a3c]' : 'border-[#D4CDB5]'}`}>
-              {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
-            </div>
-            <p className="text-[#5A5048] text-xs leading-relaxed">
-              I have read this Privacy Policy and understand how BALANSÉ collects and uses my information.
-            </p>
-          </label>
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => accepted && onAccept()}
-              disabled={!accepted}
-              className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
-            >
-              <Check size={14} /> I Accept
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ProfileSetupPage() {
   const navigate = useNavigate();
   const { completeProfile, updateProfile, user } = useAuth();
@@ -465,7 +209,7 @@ export default function ProfileSetupPage() {
     if (!birthday) e.birthday = 'Birthday is required.';
     if (!sex) e.sex = 'Please select your sex.';
     if (!healthSigned) e.health = 'You must complete the Health Declaration.';
-    if (!termsSigned)  e.terms  = 'You must accept the Terms & Conditions and provide an e-signature.';
+    if (!termsSigned)  e.terms  = 'You must accept the Terms & Conditions.';
     if (!privacySigned) e.privacy = 'You must accept the Privacy Policy.';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -547,7 +291,7 @@ export default function ProfileSetupPage() {
       {showTermsModal && (
         <TermsModal
           onClose={() => setShowTermsModal(false)}
-          onAccept={async (signatureDataUrl) => {
+          onAccept={async () => {
             setTermsSigned(true);
             setShowTermsModal(false);
             setErrors(e => ({ ...e, terms: '' }));
@@ -557,7 +301,6 @@ export default function ProfileSetupPage() {
                 const uploaded = await generateAndSaveSignedTermsPdf({
                   email: user.email,
                   signerName,
-                  signatureDataUrl,
                 });
                 setTermsUpload(uploaded);
               } catch (err) {

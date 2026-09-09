@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Activity, ChevronDown, CreditCard, FileText, LayoutDashboard, MessageSquare, Newspaper, Repeat, User } from 'lucide-react';
+import { Activity, ChevronDown, CreditCard, LayoutDashboard, MessageSquare, Newspaper, Repeat, User, Info } from 'lucide-react';
 import logoMain from '@/assets/logo_main.svg';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -39,7 +39,6 @@ const userProfileLinks: {
   icon: ReactNode;
 }[] = [
   { label: 'Profile', path: '/profile', icon: <User size={16} /> },
-  { label: 'Documents', path: '/documents', icon: <FileText size={16} /> },
   { label: 'Performance', path: '/performance', icon: <Activity size={16} /> },
 ];
 
@@ -68,6 +67,7 @@ function SidebarNavLink({
   onNavigate,
   statusDotClass,
   statusLabel,
+  disabled = false,
 }: {
   to: string;
   icon: ReactNode;
@@ -76,7 +76,33 @@ function SidebarNavLink({
   onNavigate: () => void;
   statusDotClass?: string;
   statusLabel?: string;
+  disabled?: boolean;
 }) {
+  const content = (
+    <>
+      <span className={disabled ? 'text-[#C4B8A0]' : active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'}>{icon}</span>
+      <span className="flex-1">{label}</span>
+      {statusDotClass && (
+        <span
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass}`}
+          aria-label={statusLabel || 'Incomplete'}
+        />
+      )}
+    </>
+  );
+
+  if (disabled) {
+    return (
+      <span
+        aria-disabled="true"
+        title="Finish setting up your profile to unlock this"
+        className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#B0A898] opacity-60"
+      >
+        {content}
+      </span>
+    );
+  }
+
   return (
     <Link
       to={to}
@@ -87,14 +113,7 @@ function SidebarNavLink({
           : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
       }`}
     >
-      <span className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'}>{icon}</span>
-      <span className="flex-1">{label}</span>
-      {statusDotClass && (
-        <span
-          className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass}`}
-          aria-label={statusLabel || 'Incomplete'}
-        />
-      )}
+      {content}
     </Link>
   );
 }
@@ -111,12 +130,14 @@ function MemberSidebarNav({
     Object.fromEntries(NAV_GROUPS.map((group) => [group.key, true])),
   );
   const profileScore = computeProfileScore(user?.profile);
-  const showProfileStatus = profileScore < PROFILE_COMPLETION_READY;
-  const profileStatusDot = showProfileStatus
+  const featuresLocked = profileScore < PROFILE_COMPLETION_READY;
+  const profileStatusDot = featuresLocked
     ? profileScoreBarClasses(profileScore).bar
     : undefined;
+  const profileLink = userProfileLinks.find((link) => link.path === '/profile');
 
   const toggleGroup = (key: string) => {
+    if (featuresLocked) return;
     setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
   };
 
@@ -138,6 +159,26 @@ function MemberSidebarNav({
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="flex flex-col gap-0.5">
+          {featuresLocked && (
+            <div className="mb-3 rounded-2xl border border-[#c49a3c]/30 bg-[#c49a3c]/10 px-3 py-2.5">
+              <p className="flex items-start gap-2 text-[11px] font-semibold leading-relaxed text-[#8a6824]">
+                <Info size={13} className="mt-0.5 shrink-0" />
+                Finish setting up your profile to unlock all features.
+              </p>
+            </div>
+          )}
+
+          {featuresLocked && profileLink && (
+            <SidebarNavLink
+              to={profileLink.path}
+              icon={profileLink.icon}
+              label={profileLink.label}
+              active={isActive(profileLink.path)}
+              onNavigate={onNavigate}
+              {...linkStatus(profileLink.path)}
+            />
+          )}
+
           {memberLinks.map((link) => (
             <SidebarNavLink
               key={link.path}
@@ -146,41 +187,57 @@ function MemberSidebarNav({
               label={link.label}
               active={isActive(link.path)}
               onNavigate={onNavigate}
+              disabled={featuresLocked}
               {...linkStatus(link.path)}
             />
           ))}
 
           {NAV_GROUPS.map((group) => {
-            const open = openGroups[group.key] ?? true;
-            const groupActive = group.links.some((link) => isActive(link.path));
+            const open = featuresLocked ? false : (openGroups[group.key] ?? true);
+            const groupActive = !featuresLocked && group.links.some((link) => isActive(link.path));
+            const groupLinks = featuresLocked
+              ? group.links.filter((link) => link.path !== '/profile')
+              : group.links;
 
             return (
-              <div key={group.key} className="mt-3 first:mt-0">
+              <div key={group.key} className={`mt-3 first:mt-0${featuresLocked ? ' opacity-60' : ''}`}>
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.key)}
+                  disabled={featuresLocked}
                   aria-expanded={open}
+                  aria-disabled={featuresLocked}
                   aria-label={`${open ? 'Collapse' : 'Expand'} ${group.label}`}
-                  className="group/nav mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-[#EDE8D8]/50"
+                  className={`group/nav mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors ${
+                    featuresLocked
+                      ? 'cursor-not-allowed'
+                      : 'hover:bg-[#EDE8D8]/50'
+                  }`}
                 >
                   <span
                     className={`text-[11px] font-bold uppercase tracking-[0.12em] transition-colors ${
-                      groupActive
-                        ? 'text-[#745b3c] group-hover/nav:text-[#5F4A32]'
-                        : 'text-[#8A7E6E] group-hover/nav:text-[#5A5048]'
+                      featuresLocked
+                        ? 'text-[#B0A898]'
+                        : groupActive
+                          ? 'text-[#745b3c] group-hover/nav:text-[#5F4A32]'
+                          : 'text-[#8A7E6E] group-hover/nav:text-[#5A5048]'
                     }`}
                   >
                     {group.label}
                   </span>
-                  <span className="h-px min-w-0 flex-1 bg-[#D4CDB5]/60 transition-colors group-hover/nav:bg-[#C4B8A0]" />
+                  <span className={`h-px min-w-0 flex-1 ${featuresLocked ? 'bg-[#D4CDB5]/40' : 'bg-[#D4CDB5]/60 transition-colors group-hover/nav:bg-[#C4B8A0]'}`} />
                   <ChevronDown
                     size={12}
-                    className={`shrink-0 text-[#C4B8A0] transition-all group-hover/nav:text-[#8A7E6E] ${open ? 'rotate-180' : ''}`}
+                    className={`shrink-0 transition-all ${
+                      featuresLocked
+                        ? 'text-[#D4CDB5]'
+                        : `text-[#C4B8A0] group-hover/nav:text-[#8A7E6E] ${open ? 'rotate-180' : ''}`
+                    }`}
                   />
                 </button>
                 {open && (
                   <div className="flex flex-col gap-0.5 pl-2.5">
-                    {group.links.map((link) => (
+                    {groupLinks.map((link) => (
                       <SidebarNavLink
                         key={link.path}
                         to={link.path}
@@ -188,6 +245,7 @@ function MemberSidebarNav({
                         label={link.label}
                         active={isActive(link.path)}
                         onNavigate={onNavigate}
+                        disabled={featuresLocked}
                         {...linkStatus(link.path)}
                       />
                     ))}
@@ -204,6 +262,7 @@ function MemberSidebarNav({
               label={communityBulletinLink.label}
               active={isActive(communityBulletinLink.path)}
               onNavigate={onNavigate}
+              disabled={featuresLocked}
             />
           </div>
         </div>
@@ -216,6 +275,7 @@ function MemberSidebarNav({
           label="System Feedback"
           active={isActive('/feedback')}
           onNavigate={onNavigate}
+          disabled={featuresLocked}
         />
       </div>
     </div>

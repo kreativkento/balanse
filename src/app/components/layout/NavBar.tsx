@@ -28,6 +28,7 @@ export const classesLinks = [
 export const memberClassLinks = [
   { label: 'Class Schedules', path: '/class-schedule', icon: <CalendarDays size={18} /> },
   { label: 'My Classes', path: '/my-classes', icon: <Bookmark size={18} /> },
+  { label: 'Studio Guidelines', path: '/studio-guidelines', icon: <ClipboardList size={18} /> },
 ];
 
 export const studioLinks = [

@@ -15,6 +15,8 @@ interface MemberPageShellProps {
   /** Replace the default greeting header (e.g. custom logout confirm). */
   header?: ReactNode;
   className?: string;
+  /** Fill the sidebar main pane so the page itself does not scroll. */
+  fill?: boolean;
 }
 
 function DocumentReacceptBanner() {
@@ -57,18 +59,31 @@ export function MemberPageShell({
   onSearch,
   header,
   className = '',
+  fill = false,
 }: MemberPageShellProps) {
   return (
-    <div className="bg-[#F8F3E8] min-h-full">
-      <div className={`${MEMBER_PAGE_COLUMN}${className ? ` ${className}` : ''}`}>
-        {header ?? (
-          <MemberGreetingHeader
-            searchPlaceholder={searchPlaceholder}
-            onSearch={onSearch}
-          />
+    <div className={fill ? 'flex h-full min-h-0 flex-col overflow-hidden bg-[#F8F3E8]' : 'bg-[#F8F3E8] min-h-full'}>
+      <div
+        className={
+          fill
+            ? `mx-auto flex h-full min-h-0 w-full min-w-0 max-w-6xl flex-1 flex-col overflow-hidden px-4 pb-4 md:px-8${className ? ` ${className}` : ''}`
+            : `${MEMBER_PAGE_COLUMN}${className ? ` ${className}` : ''}`
+        }
+      >
+        <div className={fill ? 'shrink-0' : undefined}>
+          {header ?? (
+            <MemberGreetingHeader
+              searchPlaceholder={searchPlaceholder}
+              onSearch={onSearch}
+            />
+          )}
+          <DocumentReacceptBanner />
+        </div>
+        {fill ? (
+          <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        ) : (
+          children
         )}
-        <DocumentReacceptBanner />
-        {children}
       </div>
     </div>
   );

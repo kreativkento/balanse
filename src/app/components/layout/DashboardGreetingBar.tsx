@@ -100,12 +100,12 @@ export function MemberGreetingHeader({
 }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const firstName = user?.name?.split(' ')[0] || 'Member';
+  const displayName = (user?.profile.nickname ?? '').trim() || 'User';
 
   return (
     <DashboardGreetingBar
       greeting={getPhilippinesGreeting()}
-      firstName={firstName}
+      firstName={displayName}
       searchPlaceholder={searchPlaceholder}
       onSearch={onSearch}
       accountMenu={<AccountMenu onLogout={() => { logout(); navigate('/'); }} />}

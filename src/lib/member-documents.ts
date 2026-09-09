@@ -23,6 +23,7 @@ import {
   parseHealthDeclaration,
   type HealthDeclarationFields,
 } from './health-declaration';
+import { formatPhilippinesSignedFileStamp } from './philippines-time';
 import { supabase } from './supabase';
 
 export const MEMBER_DOCUMENTS_BUCKET = 'member_documents';
@@ -66,16 +67,28 @@ export function memberDocumentObjectPath(
   kind: MemberDocumentKind,
   version: string,
 ): string {
-  return `${authUserId}/${kind}-${version}.pdf`;
+  return `${authUserId}/${kind}/${kind}-${version}.pdf`;
 }
 
-export function memberDocumentFileName(kind: MemberDocumentKind, version: string): string {
+export function memberDocumentFileName(
+  kind: MemberDocumentKind,
+  version: string,
+  signedAt?: Date | string | null,
+): string {
   const titles: Record<MemberDocumentKind, string> = {
     terms: 'Balanse-Terms',
     privacy: 'Balanse-Privacy',
     health: 'Balanse-Health-Declaration',
   };
-  return `${titles[kind]}-${version}.pdf`;
+  const when = signedAt instanceof Date
+    ? signedAt
+    : signedAt
+      ? new Date(signedAt)
+      : new Date();
+  const stamp = Number.isNaN(when.getTime())
+    ? formatPhilippinesSignedFileStamp()
+    : formatPhilippinesSignedFileStamp(when);
+  return `${titles[kind]}-v${version}-Signed-${stamp}.pdf`;
 }
 
 export function documentStatus(
@@ -186,6 +199,36 @@ export async function loadMemberSignatureUrl(path?: string | null): Promise<stri
   return data.signedUrl;
 }
 
+export async function loadMemberSignatureDataUrl(path?: string | null): Promise<string> {
+  const url = await loadMemberSignatureUrl(path);
+  if (!url) return '';
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return '';
+    const blob = await response.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
+}
+
+export async function createMemberDocumentViewUrl(path: string): Promise<string> {
+  const trimmed = path.trim();
+  if (!trimmed) throw new Error('This signed PDF is not on file.');
+  const { data, error } = await supabase.storage
+    .from(MEMBER_DOCUMENTS_BUCKET)
+    .createSignedUrl(trimmed, 3600);
+  if (error || !data?.signedUrl) {
+    throw new Error(error?.message || 'Could not open the signed PDF.');
+  }
+  return data.signedUrl;
+}
+
 export async function downloadMemberDocument(path: string, fileName: string): Promise<void> {
   const { data, error } = await supabase.storage
     .from(MEMBER_DOCUMENTS_BUCKET)
@@ -201,6 +244,18 @@ export async function downloadMemberDocument(path: string, fileName: string): Pr
   document.body.appendChild(link);
   link.click();
   link.remove();
+}
+
+export async function deleteMemberDocument(path: string): Promise<void> {
+  const trimmed = path.trim();
+  if (!trimmed) return;
+  const { error } = await supabase.storage
+    .from(MEMBER_DOCUMENTS_BUCKET)
+    .remove([trimmed]);
+  if (error) {
+    console.error('Failed to delete member document:', error.message);
+    throw new Error(error.message);
+  }
 }
 
 type PdfBuildInput = {
@@ -446,21 +501,22 @@ async function generateAndUpload(
   kind: MemberDocumentKind,
   version: string,
   blob: Blob,
+  signedAt: Date,
 ): Promise<SignedUploadResult> {
   const uploaded = await uploadMemberPdf(kind, version, blob);
   if (!uploaded.ok) throw new Error(uploaded.error);
   return {
     path: uploaded.path,
     version,
-    signedAt: new Date().toISOString(),
-    fileName: memberDocumentFileName(kind, version),
+    signedAt: signedAt.toISOString(),
+    fileName: memberDocumentFileName(kind, version, signedAt),
   };
 }
 
 export async function generateAndUploadSignedTermsPdf(input: {
   email: string;
   signerName: string;
-  signatureDataUrl: string;
+  signatureDataUrl?: string;
   signedAt?: Date;
 }): Promise<SignedUploadResult> {
   const signedAt = input.signedAt ?? new Date();
@@ -472,10 +528,9 @@ export async function generateAndUploadSignedTermsPdf(input: {
     signedAt,
     signatureDataUrl: input.signatureDataUrl,
     blocks: TERMS_BLOCKS,
-    attest: `Electronically signed by ${input.signerName} (${input.email}) on ${signedAt.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}. This document is the signed Balansé Terms & Conditions, Waiver & Release, and Media Release & Consent Statement.`,
+    attest: `Electronically acknowledged by ${input.signerName} (${input.email}) on ${signedAt.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}. This document is the accepted Balansé Terms & Conditions, Waiver & Release, and Media Release & Consent Statement.`,
   });
-  const result = await generateAndUpload('terms', TERMS_VERSION, blob);
-  return { ...result, signedAt: signedAt.toISOString() };
+  return generateAndUpload('terms', TERMS_VERSION, blob, signedAt);
 }
 
 export async function generateAndUploadSignedPrivacyPdf(input: {
@@ -493,8 +548,7 @@ export async function generateAndUploadSignedPrivacyPdf(input: {
     blocks: PRIVACY_BLOCKS,
     attest: `Electronically acknowledged by ${input.signerName} (${input.email}) on ${signedAt.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}. This document is the Privacy Policy accepted by the member.`,
   });
-  const result = await generateAndUpload('privacy', PRIVACY_VERSION, blob);
-  return { ...result, signedAt: signedAt.toISOString() };
+  return generateAndUpload('privacy', PRIVACY_VERSION, blob, signedAt);
 }
 
 export async function generateAndUploadHealthDeclarationPdf(input: {
@@ -522,8 +576,7 @@ export async function generateAndUploadHealthDeclarationPdf(input: {
           : '—',
     })),
     details: input.fields.details.trim(),
-    attest: `Electronically signed by ${input.signerName} (${input.email}) on ${signedAt.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}. This snapshot records the health declaration answers on file for schema ${version}.`,
+    attest: `${input.signatureDataUrl ? 'Electronically signed' : 'Electronically acknowledged'} by ${input.signerName} (${input.email}) on ${signedAt.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}. This snapshot records the health declaration answers on file for schema ${version}.`,
   });
-  const result = await generateAndUpload('health', version, blob);
-  return { ...result, signedAt: signedAt.toISOString() };
+  return generateAndUpload('health', version, blob, signedAt);
 }

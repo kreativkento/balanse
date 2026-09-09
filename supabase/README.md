@@ -76,9 +76,13 @@ Postgres rejects using new enum values in the same transaction that adds them (`
 
 **Health declaration column:** after `027`, run `028_profiles_client_health_declaration.sql`. Renames `medical_history` → `health_declaration` and drops `health_declaration_signed`, `share_availability`, and `profile_complete`.
 
-**Signed member documents:** after `028`, run `029_member_documents.sql`. Adds Terms / Privacy / Health PDF path + version + signed_at columns on `profiles_client`, and the private `member_documents` bucket (`{auth_user_id}/{kind}-{version}.pdf`). Template edits do not overwrite existing files.
+**Signed member documents:** after `028`, run `029_member_documents.sql`. Adds Terms / Privacy / Health PDF path + version + signed_at columns on `profiles_client`, and the private `member_documents` bucket. Template edits do not overwrite existing files.
 
 **E-signature PNGs:** if `029` was already applied, run `030_member_documents_signature_png.sql` so the bucket also accepts `image/png` (`{auth_user_id}/e-signature.png`). Skip `030` on a fresh install that used the updated `029`.
+
+**Document kind folders:** after `029` and `030`, run `031_member_documents_kind_folders.sql`. Moves existing PDFs from `{auth_user_id}/{kind}-{version}.pdf` into `{auth_user_id}/{terms|privacy|health}/{kind}-{version}.pdf` and updates profile path columns. Leaves `e-signature.png` in the user root. Downloads use `Balanse-{Doc}-v{version}-Signed-{PH-timestamp}.pdf`.
+
+**Document review flags:** after `031`, run `032_profiles_client_document_valid.sql`. Adds non-null `health_valid`, `terms_valid`, and `privacy_valid` on `profiles_client` (default `false`). Member updates to that document reset its flag to `false`.
 
 This creates or syncs:
 
@@ -91,7 +95,7 @@ This creates or syncs:
 | `storage.profile_images` | Public bucket for profile photos + cover images (`018`) |
 | `storage.disciplines_images` | Public bucket for discipline logo/cover options (`020`) |
 | `public.feedback_system` | User feedback tickets (`023` / `026`). `id` is the ticket id; `ticket_level` defaults to 1 |
-| `storage.member_documents` | Private signed Terms / Privacy / Health PDFs per member and version (`029`) |
+| `storage.member_documents` | Private signed PDFs in `{user}/{terms|privacy|health}/` plus `{user}/e-signature.png` (`029`–`031`) |
 | `public.coach_disciplines` | Multi-tags: coach account ↔ `disciplines` (`015`) |
 | `public.disciplines` | Dynamic discipline list for event/class tagging (`008_disciplines.sql`) |
 | `public.classes` | Class shell: name, discipline tag, date, capacity, status, creator (`013`) |
