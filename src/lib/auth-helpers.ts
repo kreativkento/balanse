@@ -100,6 +100,7 @@ export function profileRowToCoachProfile(row: ProfileStaffRow, email: string): C
     experience: row.experience ?? '',
     classes: row.classes ?? [],
     nationality: row.nationality ?? '',
+    phone: row.phone ?? '',
   };
 }
 
@@ -207,6 +208,7 @@ export function coachProfileToDbUpdate(data: Partial<CoachProfileData>): Record<
   if (data.experience !== undefined) update.experience = data.experience;
   if (data.classes !== undefined) update.classes = data.classes;
   if (data.nationality !== undefined) update.nationality = data.nationality;
+  if (data.phone !== undefined) update.phone = data.phone;
 
   return update;
 }

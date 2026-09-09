@@ -1,40 +1,38 @@
 import { useNavigate } from 'react-router';
-import { LogIn, UserPlus, Leaf, ArrowLeft } from 'lucide-react';
+import { LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 
 export default function LoginChoicePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F8F3E8] flex flex-col">
-      {/* Mobile back button */}
-      <div className="md:hidden px-5 pt-5 pb-2">
+    <div className="flex-1 bg-[#F8F3E8] flex flex-col">
+      <div className="md:hidden px-5 pt-5 pb-1 shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors active:opacity-70 min-h-[44px]"
         >
           <ArrowLeft size={18} />
-          <span className="text-sm font-medium">Go Back</span>
+          <span className="text-sm font-medium">Back</span>
         </button>
       </div>
 
-      {/* Content — centered card on desktop */}
-      <div className="flex-1 flex items-center justify-center px-5 py-8">
+      <div className="flex-1 flex items-center justify-center px-5 py-4 md:py-5">
         <div className="w-full max-w-md">
-          {/* Desktop back link */}
-          <button
-            onClick={() => navigate(-1)}
-            className="hidden md:flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors mb-6 text-sm font-medium"
-          >
-            <ArrowLeft size={16} />
-            Go Back
-          </button>
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 md:p-8">
+            <button
+              onClick={() => navigate(-1)}
+              className="hidden md:flex items-center gap-2 text-[#8A7E6E] hover:text-[#1E2A35] transition-colors mb-4 text-sm font-medium"
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
 
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-8 md:p-10">
-            {/* Logo / Icon */}
-            <div className="flex flex-col items-center mb-8">
-              <div className="w-20 h-20 bg-[#c49a3c]/10 border border-[#c49a3c]/30 rounded-3xl flex items-center justify-center mb-5">
-                <Leaf size={36} className="text-[#c49a3c]" />
-              </div>
+            <div className="flex flex-col items-center mb-5">
+              <img
+                src="/favicon_32x32.svg"
+                alt="BALANSÉ"
+                className="h-24 w-24 mb-3 object-contain"
+              />
               <h1
                 className="text-[#1E2A35] text-center leading-tight mb-2"
                 style={{
@@ -50,7 +48,6 @@ export default function LoginChoicePage() {
               </p>
             </div>
 
-            {/* Buttons */}
             <div className="flex flex-col gap-4">
               <button
                 onClick={() => navigate('/login')}
@@ -79,15 +76,7 @@ export default function LoginChoicePage() {
               </button>
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-[#D4CDB5]" />
-              <span className="text-[#B0A898] text-xs">or</span>
-              <div className="flex-1 h-px bg-[#D4CDB5]" />
-            </div>
-
-            {/* Guest note */}
-            <p className="text-[#A09080] text-xs text-center leading-relaxed">
+            <p className="text-[#A09080] text-xs text-center leading-relaxed mt-5">
               By continuing, you agree to BALANSÉ's{' '}
               <span className="text-[#8A7E6E] underline cursor-pointer">Terms of Service</span>{' '}
               and{' '}

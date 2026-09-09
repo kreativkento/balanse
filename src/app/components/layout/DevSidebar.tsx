@@ -10,7 +10,7 @@ import { ProfileAvatar } from '../ProfileImages';
 
 const NAV_LINKS = [
   { label: 'Ticket Management', path: '/development/tickets', icon: Ticket },
-  { label: 'Feedback', path: '/development/feedback', icon: MessageSquare },
+  { label: 'System Feedback', path: '/development/feedback', icon: MessageSquare },
   { label: 'AI Setup', path: '/development/ai-setup', icon: Bot },
 ];
 

@@ -60,7 +60,7 @@ const CARD =
   'bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 transition-[box-shadow,border-color] duration-500 ease-in-out delay-100 hover:border-[#c49a3c] hover:shadow-[inset_0_0_0_3px_#c49a3c]';
 const SLIM_SCROLL =
   'overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#C4B8A0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C4B8A0] [&::-webkit-scrollbar-thumb:hover]:bg-[#c49a3c]/55';
-const SLIM_SCROLL_OUTSET = `${SLIM_SCROLL} pr-3 -mr-3`;
+const SLIM_SCROLL_OUTSET = SLIM_SCROLL;
 const SECTION_TITLE: React.CSSProperties = {
   fontFamily: "'Bebas Neue', sans-serif",
   fontSize: '1.2rem',
@@ -325,7 +325,7 @@ function SectionNavButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all ${
+      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all ${
         danger
           ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
           : active
@@ -1217,10 +1217,10 @@ export default function MemberProfilePage() {
   const ActiveIcon = activeTab.Icon;
 
   return (
-    <MemberPageShell searchPlaceholder="Search profile…" fill>
-      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-6 overflow-hidden pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0">
+    <MemberPageShell searchPlaceholder="Search profile…">
+      <div className="grid min-w-0 gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:items-start lg:gap-0">
         {/* ── Left: selected section title + forms ── */}
-        <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden order-2 lg:order-1 lg:pr-6">
+        <div className="order-2 flex min-w-0 flex-col lg:order-1 lg:pr-6">
           <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#D4CDB5]/60 pb-5">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
@@ -1259,7 +1259,7 @@ export default function MemberProfilePage() {
             </div>
           </div>
 
-          <div className={tab === 'medical' ? 'flex min-h-0 flex-1 flex-col pb-4' : `min-h-0 flex-1 pb-4 ${SLIM_SCROLL_OUTSET}`}>
+          <div className={tab === 'medical' ? 'flex flex-col pb-4' : `pb-4 ${SLIM_SCROLL_OUTSET}`}>
 
           {/* ══ PERSONAL INFO ══ */}
           {tab === 'personal' && (
@@ -1609,7 +1609,7 @@ export default function MemberProfilePage() {
 
           {/* ══ HEALTH DECLARATION ══ */}
           {tab === 'medical' && (
-            <div className="flex min-h-0 flex-1 flex-col gap-4">
+            <div className="flex flex-col gap-4">
             <DocumentDetailsBar
               submitted={hasHealthRecord}
               submittedLabel={healthSignedLabel}
@@ -1619,7 +1619,7 @@ export default function MemberProfilePage() {
               onUpdate={editingCard === 'health' ? cancelEdit : () => startEdit('health')}
               updateMode={editingCard === 'health' ? 'cancel' : 'update'}
             />
-            <div className={`min-h-0 flex-1 ${SLIM_SCROLL_OUTSET}`}>
+            <div className={SLIM_SCROLL_OUTSET}>
             <EditableCard
               title="Health Declaration Form"
               description="Welcome to Balansé Wellness! Your safety and well-being are our top priorities. Please complete this health declaration accurately before participating in any of our movement sessions."
@@ -2106,17 +2106,18 @@ export default function MemberProfilePage() {
         </div>
 
         {/* ── Right: profile card + section selection ── */}
-        <aside className="order-1 flex min-h-0 flex-col gap-4 lg:order-2 lg:h-full lg:overflow-y-auto lg:border-l lg:border-[#D4CDB5]/50 lg:pl-6">
-          <div className="overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+        <aside className="order-1 flex min-w-0 max-w-full flex-col gap-3 lg:sticky lg:top-6 lg:order-2 lg:self-start lg:border-l lg:border-[#D4CDB5]/50 lg:pl-6">
+          <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
             <ProfileImageHero
               photoUrl={user?.profile.photo || ''}
               coverUrl={user?.profile.coverImage || ''}
               initials={initials}
               editable
+              coverClassName="h-28 md:h-32"
               onPhotoUploaded={(url) => updateProfile({ photo: url })}
               onCoverUploaded={(url) => updateProfile({ coverImage: url })}
             />
-            <div className="px-5 pb-5 pt-14 md:px-6 md:pt-16">
+            <div className="px-5 pb-4 pt-12 md:px-6 md:pt-14">
               <h2
                 className="text-[#1E2A35] leading-tight truncate"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.04em' }}
@@ -2124,14 +2125,11 @@ export default function MemberProfilePage() {
                 {user?.name || 'Member'}
               </h2>
               <p className="text-[#8A7E6E] text-sm truncate">{user?.email}</p>
-              <span className="hidden inline-flex items-center gap-1.5 bg-[#c49a3c]/10 text-[#a67f2e] text-xs font-bold px-2.5 py-1 rounded-full border border-[#c49a3c]/25 mt-1.5">
-                <Shield size={10} /> Gold Membership · Active
-              </span>
             </div>
           </div>
 
           <nav
-            className="overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white p-3 shadow-sm"
+            className="w-full min-w-0 shrink-0 rounded-3xl border border-[#D4CDB5]/60 bg-white px-4 py-3 shadow-sm"
             aria-label="Profile sections"
           >
             <div className="flex flex-col gap-1">
@@ -2151,7 +2149,7 @@ export default function MemberProfilePage() {
           </nav>
 
           <nav
-            className="overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white p-3 shadow-sm"
+            className="w-full min-w-0 shrink-0 rounded-3xl border border-[#D4CDB5]/60 bg-white px-4 py-3 shadow-sm"
             aria-label="Account"
           >
             <div className="flex flex-col gap-1">

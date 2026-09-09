@@ -12,11 +12,15 @@ interface MemberPageShellProps {
   children: ReactNode;
   searchPlaceholder?: string;
   onSearch?: (query: string) => void;
-  /** Replace the default greeting header (e.g. custom logout confirm). */
+  /** Override default immediate logout (e.g. show a confirm modal). */
+  onLogout?: () => void;
   header?: ReactNode;
   className?: string;
-  /** Fill the sidebar main pane so the page itself does not scroll. */
-  fill?: boolean;
+  /**
+   * Dashboard only: fill viewport below the header on md+.
+   * Header markup is identical to other pages — it is NOT placed inside a flex column with the body.
+   */
+  viewportBody?: 'desktop';
 }
 
 function DocumentReacceptBanner() {
@@ -49,6 +53,26 @@ function DocumentReacceptBanner() {
   );
 }
 
+function PageHeader({
+  header,
+  searchPlaceholder,
+  onSearch,
+  onLogout,
+}: Pick<MemberPageShellProps, 'header' | 'searchPlaceholder' | 'onSearch' | 'onLogout'>) {
+  return (
+    <div>
+      {header ?? (
+        <MemberGreetingHeader
+          searchPlaceholder={searchPlaceholder}
+          onSearch={onSearch}
+          onLogout={onLogout}
+        />
+      )}
+      <DocumentReacceptBanner />
+    </div>
+  );
+}
+
 /**
  * Standard chrome for MemberSidebar pages:
  * `bg` + `max-w-6xl mx-auto px-4 md:px-8 pb-16` + greeting bar.
@@ -57,33 +81,42 @@ export function MemberPageShell({
   children,
   searchPlaceholder,
   onSearch,
+  onLogout,
   header,
   className = '',
-  fill = false,
+  viewportBody,
 }: MemberPageShellProps) {
-  return (
-    <div className={fill ? 'flex h-full min-h-0 flex-col overflow-hidden bg-[#F8F3E8]' : 'bg-[#F8F3E8] min-h-full'}>
-      <div
-        className={
-          fill
-            ? `mx-auto flex h-full min-h-0 w-full min-w-0 max-w-6xl flex-1 flex-col overflow-hidden px-4 pb-4 md:px-8${className ? ` ${className}` : ''}`
-            : `${MEMBER_PAGE_COLUMN}${className ? ` ${className}` : ''}`
-        }
-      >
-        <div className={fill ? 'shrink-0' : undefined}>
-          {header ?? (
-            <MemberGreetingHeader
-              searchPlaceholder={searchPlaceholder}
-              onSearch={onSearch}
-            />
-          )}
-          <DocumentReacceptBanner />
+  if (viewportBody === 'desktop') {
+    return (
+      <div className="min-h-full bg-[#F8F3E8] md:flex md:h-0 md:min-h-0 md:flex-1 md:flex-col">
+        {/* Same MEMBER_PAGE_COLUMN wrapper as every other page — only the children slot fills on desktop */}
+        <div
+          className={`${MEMBER_PAGE_COLUMN} md:grid md:h-full md:min-h-0 md:flex-1 md:grid-rows-[auto_minmax(0,1fr)] md:pb-3${className ? ` ${className}` : ''}`}
+        >
+          <PageHeader
+            header={header}
+            searchPlaceholder={searchPlaceholder}
+            onSearch={onSearch}
+            onLogout={onLogout}
+          />
+          <div className="min-h-0 md:h-full">
+            {children}
+          </div>
         </div>
-        {fill ? (
-          <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
-        ) : (
-          children
-        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[#F8F3E8] min-h-full">
+      <div className={`${MEMBER_PAGE_COLUMN}${className ? ` ${className}` : ''}`}>
+        <PageHeader
+          header={header}
+          searchPlaceholder={searchPlaceholder}
+          onSearch={onSearch}
+          onLogout={onLogout}
+        />
+        {children}
       </div>
     </div>
   );

@@ -7,17 +7,14 @@ export default function MemberServicesPage() {
 
   return (
     <MemberPageShell searchPlaceholder="Search services…">
-      <div className="pt-6 mb-6">
-        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Studio</p>
+      <div className="mb-6 pt-6">
+        <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">Studio</p>
         <h2
-          className="text-[#1E2A35] leading-tight"
+          className="leading-tight text-[#1E2A35]"
           style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
         >
           Services
         </h2>
-        <p className="text-[#8A7E6E] text-sm mt-1 max-w-xl">
-          One-on-one coaching, private sessions, and recovery treatments tailored to you.
-        </p>
       </div>
 
       <ServicesOfferings onAction={() => navigate('/dashboard')} />

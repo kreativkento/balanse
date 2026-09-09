@@ -12,6 +12,7 @@ interface DashboardGreetingBarProps {
   onSearch?: (query: string) => void;
   accountMenu: ReactNode;
   leadingExtra?: ReactNode;
+  compact?: boolean;
 }
 
 /**
@@ -26,6 +27,7 @@ export function DashboardGreetingBar({
   onSearch,
   accountMenu,
   leadingExtra,
+  compact = false,
 }: DashboardGreetingBarProps) {
   const [query, setQuery] = useState('');
   const searchId = useId();
@@ -36,16 +38,16 @@ export function DashboardGreetingBar({
   };
 
   return (
-    <div className="pt-6 pb-5 border-b border-[#D4CDB5]/60">
-      <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-4 items-start lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-4">
+    <div className={`border-b border-[#D4CDB5]/60 ${compact ? 'pt-4 pb-3' : 'pt-6 pb-5'}`}>
+      <div className={`grid grid-cols-[1fr_auto] items-start lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-4 ${compact ? 'gap-x-3 gap-y-2' : 'gap-x-3 gap-y-4'}`}>
         <div className="min-w-0 col-start-1 row-start-1">
           {leadingExtra}
-          <p className="text-[#8A7E6E] text-sm">{greeting},</p>
+          <p className={`text-[#8A7E6E] ${compact ? 'text-xs' : 'text-sm'}`}>{greeting},</p>
           <h1
             className="text-[#1E2A35] leading-tight"
             style={{
               fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.45rem, 3.4vw, 2.1rem)',
+              fontSize: compact ? 'clamp(1.25rem, 2.8vw, 1.75rem)' : 'clamp(1.45rem, 3.4vw, 2.1rem)',
               letterSpacing: '0.04em',
             }}
           >
@@ -76,7 +78,7 @@ export function DashboardGreetingBar({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full h-11 rounded-xl border border-[#D4CDB5]/60 bg-white pl-9 pr-[4.75rem] text-sm text-[#1E2A35] placeholder:text-[#B0A898] shadow-sm outline-none transition-colors focus:border-[#c49a3c]/50 focus:ring-2 focus:ring-[#c49a3c]/25"
+            className={`w-full rounded-xl border border-[#D4CDB5]/60 bg-white pl-9 pr-[4.75rem] text-sm text-[#1E2A35] placeholder:text-[#B0A898] shadow-sm outline-none transition-colors focus:border-[#c49a3c]/50 focus:ring-2 focus:ring-[#c49a3c]/25 ${compact ? 'h-9' : 'h-11'}`}
           />
           <button
             type="submit"
@@ -94,13 +96,21 @@ export function DashboardGreetingBar({
 export function MemberGreetingHeader({
   searchPlaceholder = 'Search…',
   onSearch,
+  onLogout,
 }: {
   searchPlaceholder?: string;
   onSearch?: (query: string) => void;
+  /** Override default immediate logout (e.g. show a confirm modal). */
+  onLogout?: () => void;
 }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const displayName = (user?.profile.nickname ?? '').trim() || 'User';
+
+  const handleLogout = onLogout ?? (() => {
+    logout();
+    navigate('/');
+  });
 
   return (
     <DashboardGreetingBar
@@ -108,7 +118,7 @@ export function MemberGreetingHeader({
       firstName={displayName}
       searchPlaceholder={searchPlaceholder}
       onSearch={onSearch}
-      accountMenu={<AccountMenu onLogout={() => { logout(); navigate('/'); }} />}
+      accountMenu={<AccountMenu onLogout={handleLogout} />}
     />
   );
 }

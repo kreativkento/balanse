@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import studio01Main from '@/assets/studio-01-main.jpg';
+import studio01Accent from '@/assets/studio-01-accent.jpg';
+import practice02Main from '@/assets/practice-02-main.jpg';
+import practice02Accent from '@/assets/practice-02-accent.jpg';
+import community03Main from '@/assets/community-03-main.jpg';
+import community03Accent from '@/assets/community-03-accent.jpg';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 const STORY_CHAPTERS = [
@@ -9,13 +15,11 @@ const STORY_CHAPTERS = [
     kicker: 'The studio',
     title: 'Arrive. Breathe. Restore.',
     body: 'BALANSÉ is a wellness hub devoted to helping people maintain balance through movement, mindfulness, and whole-body well-being. We believe that true wellness is holistic — not a single workout or a passing trend, but a way of living that honors both body and mind. Every detail of our studio is designed to help you arrive, breathe deeply, and leave feeling restored.',
-    image:
-      'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1400',
-    imageAlt: 'Morning light filling the BALANSÉ studio',
-    caption: 'Studio 1 · Morning light',
-    accent:
-      'https://images.unsplash.com/photo-1699378281595-0d75e9e6a05a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',
-    accentAlt: 'The reception lounge at BALANSÉ',
+    image: studio01Accent,
+    imageAlt: 'Mat class setup at BALANSÉ',
+    caption: 'Studio · Class in session',
+    accent: studio01Main,
+    accentAlt: 'BALANSÉ Wellness Hub studio interior',
   },
   {
     id: 'move',
@@ -23,13 +27,11 @@ const STORY_CHAPTERS = [
     kicker: 'The practice',
     title: 'Presence over perfection.',
     body: 'From yoga and mat pilates to calisthenics, kickboxing, and mindful floor work, our disciplines are curated to meet you wherever you are in your journey. Expert coaches guide each session with care and intention, creating a space where beginners feel welcome and seasoned movers feel challenged. Here, movement is never about perfection — it is about presence, progress, and finding your own rhythm.',
-    image:
-      'https://images.unsplash.com/photo-1767611120077-3697335ec748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1400',
-    imageAlt: 'A yoga morning session at BALANSÉ',
-    caption: 'Yoga · Flow & breathe',
-    accent:
-      'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',
-    accentAlt: 'Mat pilates core work',
+    image: practice02Accent,
+    imageAlt: 'Calisthenics coaching at BALANSÉ',
+    caption: 'Calisthenics · Coach-guided',
+    accent: practice02Main,
+    accentAlt: 'Mat pilates session with rings at BALANSÉ',
   },
   {
     id: 'belong',
@@ -37,13 +39,11 @@ const STORY_CHAPTERS = [
     kicker: 'The community',
     title: 'Move together.',
     body: 'Whether you are stepping through our doors for the very first time or returning to deepen your practice, you will find a community that moves together and supports one another along the way. Explore the studio below — from sessions in motion to the everyday moments that define life at BALANSÉ — and discover what balance means for you.',
-    image:
-      'https://images.unsplash.com/photo-1717500252780-036bfd89f810?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1400',
-    imageAlt: 'A community movement session at BALANSÉ',
-    caption: 'Community · Animal Flow',
-    accent:
-      'https://images.unsplash.com/photo-1759352856072-985a4ddab82d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',
-    accentAlt: 'Capoeira in motion at the studio',
+    image: community03Main,
+    imageAlt: 'Members connecting after class at BALANSÉ',
+    caption: 'Community · After class',
+    accent: community03Accent,
+    accentAlt: 'Friends sharing a laugh during session at BALANSÉ',
   },
 ] as const;
 

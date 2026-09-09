@@ -21,6 +21,7 @@ export interface CoachProfileData {
   experience: string;
   classes: string[];
   nationality: string;
+  phone: string;
 }
 
 interface StaffUser {

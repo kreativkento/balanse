@@ -44,6 +44,7 @@ export function ProfileImageHero({
   initials,
   accent = '#c49a3c',
   editable = false,
+  coverClassName = 'h-36 md:h-40',
   onPhotoUploaded,
   onCoverUploaded,
 }: {
@@ -52,6 +53,7 @@ export function ProfileImageHero({
   initials: string;
   accent?: string;
   editable?: boolean;
+  coverClassName?: string;
   onPhotoUploaded?: (url: string) => void;
   onCoverUploaded?: (url: string) => void;
 }) {
@@ -102,8 +104,11 @@ export function ProfileImageHero({
   const showPhoto = Boolean(photoUrl) && !photoFailed;
 
   return (
-    <div className="relative">
-      <div className="relative h-36 md:h-40 overflow-hidden" style={{ backgroundColor: `${accent}20` }}>
+    <div className="relative w-full max-w-full overflow-x-clip">
+      <div
+        className={`relative w-full max-w-full overflow-hidden rounded-t-3xl ${coverClassName}`}
+        style={{ backgroundColor: `${accent}20` }}
+      >
         {showCover ? (
           <img
             src={coverUrl}
@@ -118,7 +123,7 @@ export function ProfileImageHero({
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
-        <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ backgroundColor: accent }} />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]" style={{ backgroundColor: accent }} />
 
         {editable && (
           <>

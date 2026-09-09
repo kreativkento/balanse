@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Upload, Images, X, Check, Pencil, Trash2, Tag } from 'lucide-react';
+import { Upload, Images, X, Check, Pencil, Trash2, Tag } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 
@@ -197,7 +197,7 @@ export default function StaffGalleryPage() {
   const handleDelete = (id: number) => { setPhotos(prev => prev.filter(p => p.id !== id)); setConfirmDeleteId(null); };
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
+    <div className="min-h-full bg-[#F8F3E8]">
       {showModal && (
         <PhotoModal
           initial={editingPhoto ? { url: editingPhoto.url, caption: editingPhoto.caption, category: editingPhoto.category, taggedStudents: editingPhoto.taggedStudents } : null}
@@ -224,20 +224,12 @@ export default function StaffGalleryPage() {
       <div className="max-w-6xl mx-auto px-4 md:px-8">
 
         {/* ── Header ── */}
-        <div className="pt-6 pb-5 border-b border-[#D4CDB5]/60 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/staff-dashboard')}
-              className="w-10 h-10 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all shrink-0"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <h1 className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '0.05em' }}>
-                Studio Gallery
-              </h1>
-              <p className="text-[#8A7E6E] text-xs mt-0.5">Post photos and tag enrolled students</p>
-            </div>
+        <div className="flex items-center justify-between gap-4 border-b border-[#D4CDB5]/60 pb-5 pt-6">
+          <div>
+            <h1 className="leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '0.05em' }}>
+              Studio Gallery
+            </h1>
+            <p className="mt-0.5 text-xs text-[#8A7E6E]">Post photos and tag enrolled students</p>
           </div>
           <button
             onClick={openUpload}

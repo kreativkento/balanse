@@ -1,24 +1,22 @@
 import { useMemo, useState } from 'react';
 import { Newspaper, Tag } from 'lucide-react';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
+import { BULLETIN_CATEGORIES, useBulletinPosts, type BulletinCategory, type BulletinPost } from '../../lib/bulletin';
 import {
-  BULLETIN_CATEGORIES,
-  BULLETIN_POSTS,
   BulletinCard,
   BulletinDetailModal,
   BulletinSocialButtons,
-  type BulletinCategory,
-  type BulletinPost,
 } from './BulletinPage';
 
 export default function MemberBulletinPage() {
+  const posts = useBulletinPosts();
   const [activeCategory, setActiveCategory] = useState<BulletinCategory>('All');
   const [search, setSearch] = useState('');
   const [selectedPost, setSelectedPost] = useState<BulletinPost | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return BULLETIN_POSTS.filter((n) => {
+    return posts.filter((n) => {
       const matchCat = activeCategory === 'All' || n.category === activeCategory;
       const matchSearch =
         !query ||
@@ -26,7 +24,7 @@ export default function MemberBulletinPage() {
         n.excerpt.toLowerCase().includes(query);
       return matchCat && matchSearch;
     });
-  }, [activeCategory, search]);
+  }, [activeCategory, posts, search]);
 
   const pinned = filtered.filter((n) => n.pinned);
   const regular = filtered.filter((n) => !n.pinned);

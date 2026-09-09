@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Check, X,
+  ChevronLeft, ChevronRight, Check, X,
   CalendarDays, Clock, Plus, Trash2, ToggleLeft, ToggleRight,
   Pencil, CheckCircle, AlarmClock,
 } from 'lucide-react';
@@ -254,7 +254,7 @@ export default function StaffAvailabilityPage() {
     || editorPeriods.some(p => isValidRange(p.start, p.end));
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
+    <div className="min-h-full bg-[#F8F3E8]">
       {deletingId !== null && (() => {
         const entry = entries.find(e => e.id === deletingId);
         return entry ? (
@@ -269,20 +269,12 @@ export default function StaffAvailabilityPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Header ── */}
-        <div className="pt-5 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => navigate('/staff-dashboard')}
-              className="w-9 h-9 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all shrink-0"
-            >
-              <ArrowLeft size={17} />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-[#1E2A35] leading-none truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', letterSpacing: '0.05em' }}>
-                My Availability
-              </h1>
-              <p className="text-[#9A8E7E] text-xs mt-0.5 hidden sm:block">Set dates and time ranges you're available to coach</p>
-            </div>
+        <div className="flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 pb-4 pt-5">
+          <div className="min-w-0">
+            <h1 className="truncate leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', letterSpacing: '0.05em' }}>
+              My Availability
+            </h1>
+            <p className="mt-0.5 hidden text-xs text-[#9A8E7E] sm:block">Set dates and time ranges you're available to coach</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 bg-[#1E2A35]/10 border border-[#1E2A35]/20 rounded-full flex items-center justify-center">

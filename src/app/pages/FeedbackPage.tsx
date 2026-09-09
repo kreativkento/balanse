@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import {
+  ArrowUpRight,
   Bug,
   Check,
   ChevronDown,
@@ -10,6 +11,7 @@ import {
   Copy,
   Film,
   ImagePlus,
+  Inbox,
   Lightbulb,
   Loader2,
   MessageSquare,
@@ -29,18 +31,24 @@ import {
   FEEDBACK_MAX_VIDEO_SECONDS,
   FEEDBACK_STATUSES,
   FEEDBACK_TITLE_MAX,
+  canDeleteOwnFeedback,
   createFeedbackAttachmentUrl,
   deleteOwnFeedback,
+  escalateFeedbackTicket,
+  feedbackLevelLabel,
+  fetchFeedbackInbox,
   fetchFeedbackSubmitter,
   fetchOwnFeedback,
   formatFeedbackFileSize,
   isFeedbackVideo,
   isFeedbackVideoMime,
+  openFeedbackTicket,
   submitFeedback,
   validateFeedbackAttachment,
   type FeedbackDisplay,
   type FeedbackLabel,
   type FeedbackStatus,
+  type FeedbackTicketLevel,
 } from '../../lib/feedback-service';
 
 const LABEL_OPTIONS: {
@@ -62,6 +70,64 @@ const INP =
 
 /** Keep the feedback list short enough to fit without page scroll. */
 const PAGE_SIZE = 4;
+
+type FeedbackPortal = 'member' | 'staff' | 'admin' | 'dev';
+
+const PORTAL_PAGE_WRAP = 'min-h-full bg-[#F8F3E8]';
+const PORTAL_PAGE_INNER = 'mx-auto w-full min-w-0 max-w-6xl px-4 pb-16 md:px-8';
+
+function feedbackPortalFromPath(pathname: string): FeedbackPortal {
+  if (pathname === '/staff-feedback') return 'staff';
+  if (pathname === '/admin-feedback') return 'admin';
+  if (pathname.startsWith('/development')) return 'dev';
+  return 'member';
+}
+
+function loginPathForPortal(portal: FeedbackPortal): string {
+  switch (portal) {
+    case 'staff':
+      return '/staff-login';
+    case 'admin':
+      return '/admin-login';
+    case 'dev':
+      return '/development';
+    default:
+      return '/login';
+  }
+}
+
+function portalLabel(portal: FeedbackPortal): string {
+  switch (portal) {
+    case 'staff':
+      return 'Staff Portal';
+    case 'admin':
+      return 'Admin Portal';
+    case 'dev':
+      return 'Development';
+    default:
+      return 'Account';
+  }
+}
+
+type FeedbackListMode = 'inbox' | 'mine';
+
+function inboxLevelsForPortal(portal: FeedbackPortal): FeedbackTicketLevel[] {
+  if (portal === 'staff') return [0, 1];
+  if (portal === 'admin') return [2];
+  if (portal === 'dev') return [3];
+  return [];
+}
+
+function portalHasInbox(portal: FeedbackPortal): boolean {
+  return inboxLevelsForPortal(portal).length > 0;
+}
+
+function levelTone(level: number): string {
+  if (level === 0) return 'bg-amber-50 text-amber-800 border-amber-200';
+  if (level === 1) return 'bg-sky-50 text-sky-700 border-sky-200';
+  if (level === 2) return 'bg-violet-50 text-violet-700 border-violet-200';
+  return 'bg-[#1E2A35]/10 text-[#1E2A35] border-[#D4CDB5]';
+}
 
 function labelMeta(value: FeedbackLabel) {
   return LABEL_OPTIONS.find((option) => option.value === value) ?? LABEL_OPTIONS[0];
@@ -177,15 +243,17 @@ function FeedbackRowCard({
   item,
   onOpen,
   onDelete,
+  showDelete = true,
 }: {
   item: FeedbackDisplay;
   onOpen: (item: FeedbackDisplay) => void;
   onDelete: (item: FeedbackDisplay) => void;
+  showDelete?: boolean;
 }) {
   const meta = labelMeta(item.label);
   const Icon = meta.icon;
   const shortId = item.id.slice(0, 8).toUpperCase();
-  const canDelete = item.status === 'unresolved';
+  const canDelete = showDelete && canDeleteOwnFeedback(item);
 
   return (
     <article
@@ -205,6 +273,9 @@ function FeedbackRowCard({
             <h3 className="truncate text-sm font-semibold text-[#1E2A35]">{item.title}</h3>
             <span className="rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A5048]">
               {meta.label}
+            </span>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${levelTone(item.ticketLevel)}`}>
+              {feedbackLevelLabel(item.ticketLevel)}
             </span>
             {item.attachmentPath && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#8A7E6E]">
@@ -226,16 +297,18 @@ function FeedbackRowCard({
         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(item.status)}`}>
           {statusLabel(item.status)}
         </span>
-        <button
-          type="button"
-          disabled={!canDelete}
-          title={canDelete ? 'Delete ticket' : 'Only unresolved tickets can be deleted'}
-          onClick={() => onDelete(item)}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-[#C4B8A0] disabled:hover:bg-transparent"
-          aria-label={canDelete ? 'Delete feedback' : 'Delete unavailable'}
-        >
-          <Trash2 size={14} />
-        </button>
+        {showDelete && (
+          <button
+            type="button"
+            disabled={!canDelete}
+            title={canDelete ? 'Delete ticket' : 'Only unopened tickets can be deleted'}
+            onClick={() => onDelete(item)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-[#C4B8A0] disabled:hover:bg-transparent"
+            aria-label={canDelete ? 'Delete feedback' : 'Delete unavailable'}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
     </article>
   );
@@ -245,10 +318,20 @@ function FeedbackDetailModal({
   item,
   onClose,
   onDelete,
+  showDelete = true,
+  canEscalate = false,
+  onEscalate,
+  escalating = false,
+  actionError = '',
 }: {
   item: FeedbackDisplay;
   onClose: () => void;
   onDelete: (item: FeedbackDisplay) => void;
+  showDelete?: boolean;
+  canEscalate?: boolean;
+  onEscalate?: () => void;
+  escalating?: boolean;
+  actionError?: string;
 }) {
   const meta = labelMeta(item.label);
   const Icon = meta.icon;
@@ -346,6 +429,9 @@ function FeedbackDetailModal({
             <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(item.status)}`}>
               {statusLabel(item.status)}
             </span>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${levelTone(item.ticketLevel)}`}>
+              {feedbackLevelLabel(item.ticketLevel)}
+            </span>
           </div>
 
           <label className="flex flex-col gap-1.5">
@@ -413,21 +499,43 @@ function FeedbackDetailModal({
             </div>
           </div>
 
+          {actionError && (
+            <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {actionError}
+            </p>
+          )}
+
           <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              disabled={item.status !== 'unresolved'}
-              title={item.status === 'unresolved' ? 'Delete ticket' : 'Only unresolved tickets can be deleted'}
-              onClick={() => onDelete(item)}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:border-[#D4CDB5]/70 disabled:bg-[#F8F3E8] disabled:text-[#C4B8A0] disabled:hover:bg-[#F8F3E8]"
-            >
-              <Trash2 size={14} />
-              Delete
-            </button>
-            {item.status !== 'unresolved' && (
-              <p className="text-center text-xs leading-relaxed text-[#8A7E6E]">
-                The ticket is being processed, and can&apos;t be deleted anymore. Thank you for your feedback!
-              </p>
+            {canEscalate && onEscalate && (
+              <button
+                type="button"
+                disabled={escalating}
+                onClick={onEscalate}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {escalating ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
+                {item.ticketLevel === 1 ? 'Pass to admin' : 'Pass to dev'}
+              </button>
+            )}
+
+            {showDelete && (
+              <>
+                <button
+                  type="button"
+                  disabled={!canDeleteOwnFeedback(item)}
+                  title={canDeleteOwnFeedback(item) ? 'Delete ticket' : 'Only unopened tickets can be deleted'}
+                  onClick={() => onDelete(item)}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:border-[#D4CDB5]/70 disabled:bg-[#F8F3E8] disabled:text-[#C4B8A0] disabled:hover:bg-[#F8F3E8]"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+                {!canDeleteOwnFeedback(item) && (
+                  <p className="text-center text-xs leading-relaxed text-[#8A7E6E]">
+                    Staff have opened this ticket, so it can&apos;t be deleted anymore. Thank you for your feedback!
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -438,9 +546,17 @@ function FeedbackDetailModal({
 
 export default function FeedbackPage() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const portal = feedbackPortalFromPath(pathname);
+  const loginPath = loginPathForPortal(portal);
+
+  const hasInbox = portalHasInbox(portal);
+  const inboxLevels = inboxLevelsForPortal(portal);
 
   const [ready, setReady] = useState(false);
+  const [listMode, setListMode] = useState<FeedbackListMode>(hasInbox ? 'inbox' : 'mine');
   const [items, setItems] = useState<FeedbackDisplay[]>([]);
+  const [inboxItems, setInboxItems] = useState<FeedbackDisplay[]>([]);
   const [listError, setListError] = useState('');
   const [listLoading, setListLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<FeedbackLabel | 'all'>('all');
@@ -449,6 +565,8 @@ export default function FeedbackPage() {
   const [pendingDelete, setPendingDelete] = useState<FeedbackDisplay | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [escalating, setEscalating] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [label, setLabel] = useState<FeedbackLabel>('positive');
@@ -466,9 +584,13 @@ export default function FeedbackPage() {
 
   const loadItems = async () => {
     setListLoading(true);
-    const result = await fetchOwnFeedback();
-    setListError(result.error ?? '');
-    setItems(result.data);
+    const [ownResult, inboxResult] = await Promise.all([
+      fetchOwnFeedback(),
+      hasInbox ? fetchFeedbackInbox(inboxLevels) : Promise.resolve({ data: [], error: null }),
+    ]);
+    setListError(ownResult.error ?? inboxResult.error ?? '');
+    setItems(ownResult.data);
+    setInboxItems(inboxResult.data);
     setListLoading(false);
   };
 
@@ -477,7 +599,7 @@ export default function FeedbackPage() {
     fetchFeedbackSubmitter().then((submitter) => {
       if (cancelled) return;
       if (!submitter) {
-        navigate('/login');
+        navigate(loginPath);
         return;
       }
       setReady(true);
@@ -486,7 +608,7 @@ export default function FeedbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [navigate, loginPath]);
 
   useEffect(() => {
     return () => {
@@ -595,7 +717,7 @@ export default function FeedbackPage() {
   };
 
   const confirmDelete = async () => {
-    if (!pendingDelete || pendingDelete.status !== 'unresolved') return;
+    if (!pendingDelete || !canDeleteOwnFeedback(pendingDelete)) return;
 
     setDeleting(true);
     setDeleteError('');
@@ -612,9 +734,52 @@ export default function FeedbackPage() {
     setPendingDelete(null);
   };
 
+  const handleOpenItem = async (item: FeedbackDisplay) => {
+    setActionError('');
+    if (portal === 'staff' && listMode === 'inbox' && item.ticketLevel === 0) {
+      const result = await openFeedbackTicket(item.id);
+      if (result.error) {
+        setActionError(result.error);
+        setViewing(item);
+        return;
+      }
+      if (result.data) {
+        setInboxItems((prev) => prev.map((row) => (row.id === item.id ? result.data! : row)));
+        setViewing(result.data);
+        return;
+      }
+    }
+    setViewing(item);
+  };
+
+  const handleEscalate = async () => {
+    if (!viewing) return;
+    setEscalating(true);
+    setActionError('');
+    const result = await escalateFeedbackTicket(viewing.id);
+    setEscalating(false);
+
+    if (result.error) {
+      setActionError(result.error);
+      return;
+    }
+
+    setViewing(null);
+    await loadItems();
+  };
+
+  const activeItems = listMode === 'inbox' ? inboxItems : items;
+  const showDeleteControls = listMode === 'mine';
+
   const filteredItems = useMemo(
-    () => (typeFilter === 'all' ? items : items.filter((item) => item.label === typeFilter)),
-    [items, typeFilter],
+    () => (typeFilter === 'all' ? activeItems : activeItems.filter((item) => item.label === typeFilter)),
+    [activeItems, typeFilter],
+  );
+
+  const canEscalateViewing = Boolean(
+    viewing
+    && listMode === 'inbox'
+    && ((portal === 'staff' && viewing.ticketLevel === 1) || (portal === 'admin' && viewing.ticketLevel === 2)),
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
@@ -631,6 +796,13 @@ export default function FeedbackPage() {
     setPage(1);
   };
 
+  const setListModeAndReset = (next: FeedbackListMode) => {
+    setListMode(next);
+    setTypeFilter('all');
+    setPage(1);
+    setViewing(null);
+  };
+
   if (!ready) {
     return (
       <div className="flex min-h-full min-h-dvh items-center justify-center bg-[#F8F3E8]">
@@ -643,11 +815,12 @@ export default function FeedbackPage() {
   const descriptionCount = description.length;
   const descriptionNearLimit = descriptionCount > FEEDBACK_DESCRIPTION_MAX * 0.9;
 
-  return (
-    <>
-    <MemberPageShell searchPlaceholder="Search feedback…">
+  const feedbackPageContent = (
+        <>
         <div className="pt-6 mb-6">
-          <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">Account</p>
+          <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">
+            {portalLabel(portal)}
+          </p>
           <h2
             className="leading-tight text-[#1E2A35]"
             style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
@@ -655,16 +828,57 @@ export default function FeedbackPage() {
             System Feedback
           </h2>
           <p className="mt-1 max-w-xl text-sm text-[#8A7E6E]">
-            Review your tickets and send a new note anytime. Every submission gets a ticket id.
+            {hasInbox
+              ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
+              : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
           </p>
         </div>
 
+        {hasInbox && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setListModeAndReset('inbox')}
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                listMode === 'inbox'
+                  ? 'bg-[#1E2A35] text-white'
+                  : 'border border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/40'
+              }`}
+            >
+              <Inbox size={14} />
+              Inbox
+              {!listLoading && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${listMode === 'inbox' ? 'bg-white/15' : 'bg-[#EDE8D8]'}`}>
+                  {inboxItems.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setListModeAndReset('mine')}
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                listMode === 'mine'
+                  ? 'bg-[#1E2A35] text-white'
+                  : 'border border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/40'
+              }`}
+            >
+              <Send size={14} />
+              My submissions
+              {!listLoading && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${listMode === 'mine' ? 'bg-white/15' : 'bg-[#EDE8D8]'}`}>
+                  {items.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#8A7E6E]">
-            Your submissions
+            {listMode === 'inbox' ? 'Incoming queue' : 'Your submissions'}
             {!listLoading && (
               <span className="ml-2 normal-case tracking-normal text-[#B0A898]">
-                {filteredItems.length} of {items.length} {items.length === 1 ? 'ticket' : 'tickets'}
+                {filteredItems.length} of {activeItems.length} {activeItems.length === 1 ? 'ticket' : 'tickets'}
               </span>
             )}
           </p>
@@ -734,23 +948,29 @@ export default function FeedbackPage() {
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">
                 {listError}
               </div>
-            ) : items.length === 0 ? (
+            ) : activeItems.length === 0 ? (
               <div className="flex flex-col items-center px-4 py-14 text-center">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#c49a3c] shadow-sm">
-                  <MessageSquare size={22} />
+                  {listMode === 'inbox' ? <Inbox size={22} /> : <MessageSquare size={22} />}
                 </div>
-                <p className="text-sm font-semibold text-[#1E2A35]">No feedback yet</p>
-                <p className="mt-1 max-w-sm text-sm text-[#8A7E6E]">
-                  Submit your first note and it will show up here with its ticket id.
+                <p className="text-sm font-semibold text-[#1E2A35]">
+                  {listMode === 'inbox' ? 'Inbox is clear' : 'No feedback yet'}
                 </p>
-                <button
-                  type="button"
-                  onClick={openModal}
-                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263545]"
-                >
-                  <Plus size={14} />
-                  Submit a Feedback
-                </button>
+                <p className="mt-1 max-w-sm text-sm text-[#8A7E6E]">
+                  {listMode === 'inbox'
+                    ? 'No tickets are waiting in this queue right now.'
+                    : 'Submit your first note and it will show up here with its ticket id.'}
+                </p>
+                {listMode === 'mine' && (
+                  <button
+                    type="button"
+                    onClick={openModal}
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263545]"
+                  >
+                    <Plus size={14} />
+                    Submit a Feedback
+                  </button>
+                )}
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="flex flex-col items-center px-4 py-14 text-center">
@@ -773,8 +993,9 @@ export default function FeedbackPage() {
                 <FeedbackRowCard
                   key={item.id}
                   item={item}
-                  onOpen={setViewing}
+                  onOpen={(row) => { void handleOpenItem(row); }}
                   onDelete={setPendingDelete}
+                  showDelete={showDeleteControls}
                 />
               ))
             )}
@@ -823,13 +1044,36 @@ export default function FeedbackPage() {
             </div>
           )}
         </div>
-    </MemberPageShell>
+        </>
+  );
+
+  return (
+    <>
+    {portal === 'member' ? (
+      <MemberPageShell searchPlaceholder="Search feedback…">
+        {feedbackPageContent}
+      </MemberPageShell>
+    ) : (
+      <div className={PORTAL_PAGE_WRAP}>
+        <div className={PORTAL_PAGE_INNER}>
+          {feedbackPageContent}
+        </div>
+      </div>
+    )}
 
       {viewing && (
         <FeedbackDetailModal
           item={viewing}
-          onClose={() => setViewing(null)}
+          onClose={() => {
+            setViewing(null);
+            setActionError('');
+          }}
           onDelete={setPendingDelete}
+          showDelete={showDeleteControls}
+          canEscalate={canEscalateViewing}
+          onEscalate={() => { void handleEscalate(); }}
+          escalating={escalating}
+          actionError={actionError}
         />
       )}
 
@@ -850,7 +1094,7 @@ export default function FeedbackPage() {
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-[#8A7E6E]">
               This will permanently remove <span className="font-semibold text-[#1E2A35]">{pendingDelete.title}</span>.
-              You can only do this while the ticket is still unresolved.
+              You can only do this before staff opens the ticket.
             </p>
             {deleteError && (
               <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

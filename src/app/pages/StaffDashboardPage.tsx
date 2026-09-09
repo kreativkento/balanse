@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router';
 import {
   LogOut, CalendarDays, ChevronRight,
   ShieldCheck, LayoutGrid, Clock, Users,
-  Images, KeyRound, SendHorizonal, CalendarCheck,
-  MessageSquare,
+  SendHorizonal,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { AccountMenu } from '../components/layout/AccountMenu';
@@ -163,7 +162,7 @@ export default function StaffDashboardPage() {
   const greeting = getPhilippinesGreeting();
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen">
+    <div className="min-h-full bg-[#F8F3E8]">
       {viewingClass && <EnrolledModal cls={viewingClass} onClose={() => setViewingClass(null)} />}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
@@ -293,86 +292,26 @@ export default function StaffDashboardPage() {
             </div>
           </div>
 
-          {/* ── Row 1 Right: Quick Actions ── */}
-          <div className={`md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
-            <div className="px-5 py-4 border-b border-[#D4CDB5]/50 shrink-0">
-              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }} className="text-[#1E2A35]">Quick Actions</h2>
-            </div>
-            <div className="p-4 flex flex-col gap-3">
-              <button
-                onClick={() => navigate('/staff-schedule')}
-                className="w-full flex items-center gap-3 bg-[#1E2A35] text-white rounded-2xl px-4 py-4 hover:bg-[#263545] active:scale-[0.98] transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                  <CalendarDays size={18} />
+          {/* ── Row 1 Right: Today at a Glance ── */}
+          <div className={`md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 flex flex-col ${CARD_HOVER_GROW}`}>
+            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4 shrink-0">Today at a Glance</p>
+            <div className="flex flex-col gap-3">
+              {[
+                { label: 'Total Classes',  value: '3',   color: 'text-[#1E2A35]' },
+                { label: 'Total Students', value: '26',  color: 'text-[#1E2A35]' },
+                { label: 'Open Spots',     value: '13',  color: 'text-amber-600'  },
+                { label: 'Active Members', value: '200', color: 'text-[#c49a3c]'  },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[#5A5048] text-sm">{label}</span>
+                  <span className={`font-semibold ${color}`} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem' }}>{value}</span>
                 </div>
-                <div className="text-left flex-1">
-                  <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.06em' }}>Staff Calendar</p>
-                  <p className="text-white/50 text-xs">View schedule & request blocks</p>
-                </div>
-                <ChevronRight size={16} className="opacity-40 group-hover:opacity-100 transition-opacity" />
-              </button>
-
-              <button
-                onClick={() => navigate('/staff-availability')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
-                  <CalendarCheck size={16} className="text-[#8A7E6E]" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="text-sm font-semibold">My Availability</p>
-                  <p className="text-[#8A7E6E] text-xs">Set dates & time slots</p>
-                </div>
-                <ChevronRight size={16} className="text-[#c49a3c] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-
-              <button
-                onClick={() => navigate('/staff-gallery')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
-                  <Images size={16} className="text-[#8A7E6E]" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="text-sm font-semibold">Post to Gallery</p>
-                  <p className="text-[#8A7E6E] text-xs">Upload photos & tag students</p>
-                </div>
-                <ChevronRight size={16} className="text-[#c49a3c] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-
-              <button
-                onClick={() => navigate('/staff-account')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
-                  <KeyRound size={16} className="text-[#8A7E6E]" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="text-sm font-semibold">Account Settings</p>
-                  <p className="text-[#8A7E6E] text-xs">Change password</p>
-                </div>
-                <ChevronRight size={16} className="text-[#c49a3c] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-
-              <button
-                onClick={() => navigate('/staff-feedback')}
-                className="w-full flex items-center gap-3 bg-[#F8F3E8] border border-[#D4CDB5]/60 text-[#1E2A35] rounded-2xl px-4 py-3.5 hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] active:scale-[0.98] transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0">
-                  <MessageSquare size={16} className="text-[#8A7E6E]" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="text-sm font-semibold">Send Feedback</p>
-                  <p className="text-[#8A7E6E] text-xs">Report a bug or share an idea</p>
-                </div>
-                <ChevronRight size={16} className="text-[#c49a3c] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
+              ))}
             </div>
           </div>
 
-          {/* ── Row 2 Left: Schedule Requests ── */}
-          <div className={`md:col-span-3 bg-white rounded-3xl border border-amber-200/50 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
+          {/* ── Row 2: Schedule Requests ── */}
+          <div className={`md:col-span-5 bg-white rounded-3xl border border-amber-200/50 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
             <div className="px-5 py-4 border-b border-amber-100 bg-amber-50/40 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <SendHorizonal size={15} className="text-amber-600" />
@@ -401,24 +340,6 @@ export default function StaffDashboardPage() {
                     </span>
                     <span className="text-[#C0B8A8] text-xs">{req.submitted}</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Row 2 Right: Today at a Glance ── */}
-          <div className={`md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 flex flex-col ${CARD_HOVER_GROW}`}>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4 shrink-0">Today at a Glance</p>
-            <div className="flex flex-col gap-3">
-              {[
-                { label: 'Total Classes',  value: '3',   color: 'text-[#1E2A35]' },
-                { label: 'Total Students', value: '26',  color: 'text-[#1E2A35]' },
-                { label: 'Open Spots',     value: '13',  color: 'text-amber-600'  },
-                { label: 'Active Members', value: '200', color: 'text-[#c49a3c]'  },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[#5A5048] text-sm">{label}</span>
-                  <span className={`font-semibold ${color}`} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem' }}>{value}</span>
                 </div>
               ))}
             </div>

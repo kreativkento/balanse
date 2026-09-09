@@ -7,9 +7,7 @@ import { HelpSupportFab } from '../components/layout/HelpSupportFab';
 import { HomeStorySection } from '../components/home/HomeStorySection';
 import { HomeCoachesSection } from '../components/home/HomeCoachesSection';
 import { ICON_HOVER_GROW } from '../../lib/motion-classes';
-
-const HERO_IMG =
-  'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
+import heroAboutImg from '@/assets/hero-about.jpg';
 
 const STUDIO_VIDEOS = [
   {
@@ -65,9 +63,9 @@ export default function HomePage() {
       {/* ─── HERO ─── */}
       <section className="relative h-[72vh] md:h-[88vh] overflow-hidden">
         <img
-          src={HERO_IMG}
-          alt="BALANSÉ wellness studio"
-          className="w-full h-full object-cover"
+          src={heroAboutImg}
+          alt="Yoga session outdoors at BALANSÉ"
+          className="h-full w-full object-cover object-[center_35%]"
         />
 
         {/* Subtle global scrim — keeps image visible while lifting overall contrast */}

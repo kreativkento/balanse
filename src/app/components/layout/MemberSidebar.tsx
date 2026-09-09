@@ -10,6 +10,7 @@ import {
 } from '../../../lib/profile-completion';
 import { AppSidebarLayout } from './AppSidebarLayout';
 import { HelpSupportFab } from './HelpSupportFab';
+import { SidebarNavLink } from './SidebarNavLink';
 import {
   memberClassLinks,
   isPublicNavActive,
@@ -58,65 +59,6 @@ const communityBulletinLink = {
   path: '/member-bulletin',
   icon: <Newspaper size={16} />,
 };
-
-function SidebarNavLink({
-  to,
-  icon,
-  label,
-  active,
-  onNavigate,
-  statusDotClass,
-  statusLabel,
-  disabled = false,
-}: {
-  to: string;
-  icon: ReactNode;
-  label: string;
-  active: boolean;
-  onNavigate: () => void;
-  statusDotClass?: string;
-  statusLabel?: string;
-  disabled?: boolean;
-}) {
-  const content = (
-    <>
-      <span className={disabled ? 'text-[#C4B8A0]' : active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'}>{icon}</span>
-      <span className="flex-1">{label}</span>
-      {statusDotClass && (
-        <span
-          className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass}`}
-          aria-label={statusLabel || 'Incomplete'}
-        />
-      )}
-    </>
-  );
-
-  if (disabled) {
-    return (
-      <span
-        aria-disabled="true"
-        title="Finish setting up your profile to unlock this"
-        className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#B0A898] opacity-60"
-      >
-        {content}
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      to={to}
-      onClick={onNavigate}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-        active
-          ? 'bg-[#1E2A35] text-white shadow-sm'
-          : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
-      }`}
-    >
-      {content}
-    </Link>
-  );
-}
 
 function MemberSidebarNav({
   onNavigate,
@@ -285,14 +227,22 @@ function MemberSidebarNav({
 interface MemberSidebarProps {
   children: React.ReactNode;
   lockScroll?: boolean;
+  /** Lock main-pane scroll on md+ only (mobile keeps page scroll). */
+  lockScrollDesktop?: boolean;
 }
 
 /** Logged-in member dashboard chrome (sidebar + help FAB). */
-export function MemberSidebar({ children, lockScroll = false }: MemberSidebarProps) {
+export function MemberSidebar({ children, lockScroll = false, lockScrollDesktop = false }: MemberSidebarProps) {
+  const mainOverflow = lockScroll
+    ? 'hidden'
+    : lockScrollDesktop
+      ? 'desktop-hidden'
+      : 'auto';
+
   return (
     <>
       <AppSidebarLayout
-        mainOverflow={lockScroll ? 'hidden' : 'auto'}
+        mainOverflow={mainOverflow}
         renderSidebar={(closeMobile) => (
           <MemberSidebarNav onNavigate={closeMobile} />
         )}

@@ -3,6 +3,7 @@ import { Root } from './Root';
 import { RouteErrorBoundary } from './components/error/RouteErrorBoundary';
 import { PublicSiteLayout } from './components/layout/PublicSiteLayout';
 import { MemberSiteLayout } from './components/layout/MemberSiteLayout';
+import { StaffSiteLayout } from './components/layout/StaffSiteLayout';
 import HomePage from './pages/HomePage';
 import StudioPage from './pages/StudioPage';
 import GuidelinesPage from './pages/GuidelinesPage';
@@ -31,7 +32,6 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
 import StaffSchedulePage from './pages/StaffSchedulePage';
 import StaffGalleryPage from './pages/StaffGalleryPage';
-import StaffAccountPage from './pages/StaffAccountPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminStaffPage from './pages/AdminStaffPage';
@@ -124,12 +124,17 @@ export const router = createBrowserRouter([
             ],
           },
           { path: 'staff-login', Component: StaffLoginPage },
-          { path: 'staff-dashboard', Component: StaffDashboardPage },
-          { path: 'staff-schedule',   Component: StaffSchedulePage },
-          { path: 'staff-gallery',    Component: StaffGalleryPage },
-          { path: 'staff-account',      Component: StaffAccountPage },
-          { path: 'staff-availability', Component: StaffAvailabilityPage },
-          { path: 'staff-profile',      Component: StaffProfilePage },
+          {
+            Component: StaffSiteLayout,
+            children: [
+              { path: 'staff-dashboard', Component: StaffDashboardPage },
+              { path: 'staff-schedule', Component: StaffSchedulePage },
+              { path: 'staff-gallery', Component: StaffGalleryPage },
+              { path: 'staff-availability', Component: StaffAvailabilityPage },
+              { path: 'staff-profile', Component: StaffProfilePage },
+              { path: 'staff-feedback', Component: FeedbackPage },
+            ],
+          },
           { path: 'admin-login', Component: AdminLoginPage },
           {
             Component: AdminLayout,
@@ -157,7 +162,6 @@ export const router = createBrowserRouter([
           },
           { path: 'admin-absence', Component: AdminAbsenceTrackerPage },
           { path: 'admin-coach-availability', Component: AdminCoachAvailabilityPage },
-          { path: 'staff-feedback', Component: FeedbackPage },
           { path: 'development', Component: DevelopmentLoginPage },
           { path: 'development/dashboard', Component: DevDashboardPage },
           { path: 'development/account', Component: DevAccountPage },

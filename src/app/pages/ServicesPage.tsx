@@ -1,7 +1,19 @@
-import { Check } from 'lucide-react';
+import {
+  Check,
+  Grid3X3,
+  HeartPulse,
+  Tag,
+  UserRoundCheck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
+import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+
+const SERVICE_CARD =
+  `rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col ${CARD_HOVER_GROW}`;
 
 const COACHING_TIERS = [
   { label: '1 Month', note: '6 sessions', price: '₱4,500' },
@@ -10,8 +22,8 @@ const COACHING_TIERS = [
 ];
 
 const COACHING_INCLUSIONS = [
-  'Free wellness assessment',
-  'Active member event discount',
+  'Wellness assessment',
+  'Member event discounts',
 ];
 
 const PRIVATE_TIERS = [
@@ -32,11 +44,39 @@ const RECOVERY_TIERS = [
   { label: 'All-in-One Therapy', price: '₱2,500', highlight: true },
 ];
 
-function SectionLabel({ children }: { children: string }) {
+function SectionLabel({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
   return (
-    <p className="text-[#c49a3c] text-[10px] font-semibold uppercase tracking-[0.14em] mb-2">
+    <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#c49a3c]">
+      <Icon size={11} strokeWidth={2.25} />
       {children}
     </p>
+  );
+}
+
+function ServiceCardHeader({
+  icon: Icon,
+  title,
+  tagline,
+}: {
+  icon: LucideIcon;
+  title: string;
+  tagline: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 px-4 pb-3 pt-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
+        <Icon size={18} strokeWidth={2} />
+      </div>
+      <div className="min-w-0 pt-0.5">
+        <h2
+          className="leading-none text-[#1E2A35]"
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
+        >
+          {title}
+        </h2>
+        <p className="mt-1 text-[11px] leading-snug text-[#8A7E6E]">{tagline}</p>
+      </div>
+    </div>
   );
 }
 
@@ -89,20 +129,14 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
     <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-stretch">
 
-          <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
-            <div className="px-4 pt-4 pb-3">
-              <h2
-                className="text-[#1E2A35] leading-none mb-1"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
-              >
-                Personal Coaching
-              </h2>
-              <p className="text-[#8A7E6E] text-xs leading-relaxed">
-                One-on-one guidance with customized programs and expert support.
-              </p>
-            </div>
+          <article className={SERVICE_CARD}>
+            <ServiceCardHeader
+              icon={UserRoundCheck}
+              title="Personal Coaching"
+              tagline="1-on-1 programs & coach support"
+            />
             <div className="px-4 py-3 border-t border-[#D4CDB5]/35">
-              <SectionLabel>Pricing</SectionLabel>
+              <SectionLabel icon={Tag}>Pricing</SectionLabel>
               <div className="flex flex-col gap-1.5">
                 {COACHING_TIERS.map((tier) => (
                   <PriceRow key={`${tier.label}-${tier.note}`} label={tier.label} note={tier.note} price={tier.price} />
@@ -110,7 +144,7 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
               </div>
             </div>
             <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
-              <SectionLabel>Inclusions</SectionLabel>
+              <SectionLabel icon={Check}>Included</SectionLabel>
               <ul className="flex flex-col gap-1.5">
                 {COACHING_INCLUSIONS.map((item) => (
                   <li key={item} className="flex items-start gap-2">
@@ -134,20 +168,14 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
             </div>
           </article>
 
-          <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
-            <div className="px-4 pt-4 pb-3">
-              <h2
-                className="text-[#1E2A35] leading-none mb-1"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
-              >
-                Private Class
-              </h2>
-              <p className="text-[#8A7E6E] text-xs leading-relaxed">
-                An exclusive session — one-on-one or a small group, at your pace.
-              </p>
-            </div>
+          <article className={SERVICE_CARD}>
+            <ServiceCardHeader
+              icon={Users}
+              title="Private Class"
+              tagline="Solo or small group sessions"
+            />
             <div className="px-4 py-3 border-t border-[#D4CDB5]/35">
-              <SectionLabel>Pricing</SectionLabel>
+              <SectionLabel icon={Tag}>Pricing</SectionLabel>
               <div className="flex flex-col gap-1.5">
                 {PRIVATE_TIERS.map((tier) => (
                   <PriceRow key={tier.label} label={tier.label} note={tier.note} price={tier.price} />
@@ -155,7 +183,7 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
               </div>
             </div>
             <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
-              <SectionLabel>Applicable Classes</SectionLabel>
+              <SectionLabel icon={Grid3X3}>Classes</SectionLabel>
               <div className="flex flex-wrap gap-1">
                 {PRIVATE_CLASSES.map((name) => (
                   <span
@@ -179,20 +207,14 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
             </div>
           </article>
 
-          <article className="rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col">
-            <div className="px-4 pt-4 pb-3">
-              <h2
-                className="text-[#1E2A35] leading-none mb-1"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
-              >
-                Sports Recovery
-              </h2>
-              <p className="text-[#8A7E6E] text-xs leading-relaxed">
-                Targeted treatments to ease tension, restore mobility, and speed recovery.
-              </p>
-            </div>
+          <article className={SERVICE_CARD}>
+            <ServiceCardHeader
+              icon={HeartPulse}
+              title="Sports Recovery"
+              tagline="Mobility & recovery treatments"
+            />
             <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
-              <SectionLabel>Treatments</SectionLabel>
+              <SectionLabel icon={HeartPulse}>Treatments</SectionLabel>
               <div className="flex flex-col gap-1.5">
                 {RECOVERY_TIERS.map((tier) => (
                   <PriceRow key={tier.label} label={tier.label} price={tier.price} highlight={tier.highlight} plain />
@@ -212,8 +234,8 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
           </article>
         </div>
 
-        <p className="text-[#8A7E6E] text-[11px] text-center pt-4">
-          All rates are in Philippine Peso (₱). Prices are subject to change — confirm with our team for the latest rates.
+        <p className="pt-4 text-center text-[11px] text-[#8A7E6E]">
+          Rates in ₱ · confirm with our team for latest pricing.
         </p>
     </>
   );
@@ -226,17 +248,24 @@ export default function ServicesPage() {
 
   return (
     <div className="bg-[#F8F3E8] flex-1 flex flex-col">
-      <header className="max-w-6xl mx-auto w-full px-4 md:px-8 pt-4 md:pt-5 pb-3">
+      <header className="mx-auto w-full max-w-6xl px-4 pb-3 pt-4 md:px-8 md:pt-5">
         <PublicBreadcrumb parent="Our Rates" current="Services" parentTo="/pricing" />
-        <h1
-          className="text-[#1E2A35] leading-none"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.05em' }}
-        >
-          Services
-        </h1>
-        <p className="text-[#8A7E6E] text-sm mt-1.5 max-w-xl">
-          One-on-one coaching, private sessions, and recovery treatments tailored to you.
-        </p>
+        <div className="mt-1 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
+            <UserRoundCheck size={16} />
+          </span>
+          <div>
+            <h1
+              className="leading-none text-[#1E2A35]"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.05em' }}
+            >
+              Services
+            </h1>
+            <p className="mt-1 text-sm text-[#8A7E6E]">
+              Coaching, private classes, and recovery.
+            </p>
+          </div>
+        </div>
       </header>
 
       <div className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-8 pb-5">

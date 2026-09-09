@@ -58,7 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Payments', path: '/admin-payments', icon: CreditCard },
       { label: 'Subscriptions', path: '/admin-subscriptions', icon: CreditCard },
       { label: 'Policies', path: '/admin-policies', icon: ShieldCheck },
-      { label: 'Feedback', path: '/admin-feedback', icon: MessageSquare },
+      { label: 'System Feedback', path: '/admin-feedback', icon: MessageSquare },
     ],
   },
 ];

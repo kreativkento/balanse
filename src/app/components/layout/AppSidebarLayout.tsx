@@ -6,7 +6,8 @@ interface AppSidebarLayoutProps {
   children: ReactNode;
   renderSidebar: (closeMobile: () => void) => ReactNode;
   mobileBrand: ReactNode;
-  mainOverflow?: 'auto' | 'hidden';
+  /** `desktop-hidden`: scroll on mobile, locked on md+ */
+  mainOverflow?: 'auto' | 'hidden' | 'desktop-hidden';
 }
 
 /**
@@ -58,8 +59,12 @@ export function AppSidebarLayout({
         </div>
 
         <main
-          className={`flex min-h-0 min-w-0 flex-1 flex-col ${
-            mainOverflow === 'hidden' ? 'overflow-hidden' : 'overflow-y-auto'
+          className={`flex min-h-0 min-w-0 flex-1 flex-col [scrollbar-gutter:stable] ${
+            mainOverflow === 'hidden'
+              ? 'overflow-hidden'
+              : mainOverflow === 'desktop-hidden'
+                ? 'overflow-y-auto md:overflow-y-hidden'
+                : 'overflow-y-auto'
           }`}
         >
           {children}

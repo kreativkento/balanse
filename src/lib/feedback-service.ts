@@ -4,6 +4,7 @@ import type {
   FeedbackPriority,
   FeedbackRow,
   FeedbackStatus,
+  UserRole,
 } from './database.types';
 
 export type { FeedbackLabel, FeedbackPriority, FeedbackStatus };
@@ -34,6 +35,33 @@ export const FEEDBACK_PRIORITIES: { value: FeedbackPriority; label: string }[] =
   { value: 'high', label: 'High' },
   { value: 'urgent', label: 'Urgent' },
 ];
+
+export type FeedbackTicketLevel = 0 | 1 | 2 | 3;
+
+export const FEEDBACK_TICKET_LEVELS: FeedbackTicketLevel[] = [0, 1, 2, 3];
+
+/** Member-facing queue labels. */
+export const FEEDBACK_LEVEL_LABELS: Record<FeedbackTicketLevel, string> = {
+  0: 'Sent to staff',
+  1: 'Staff reviewing',
+  2: 'With admin',
+  3: 'With dev',
+};
+
+export function feedbackLevelLabel(level: number): string {
+  if (level in FEEDBACK_LEVEL_LABELS) {
+    return FEEDBACK_LEVEL_LABELS[level as FeedbackTicketLevel];
+  }
+  return `Level ${level}`;
+}
+
+export function initialTicketLevelForRole(role: UserRole): FeedbackTicketLevel {
+  return role === 'user' ? 0 : 3;
+}
+
+export function canDeleteOwnFeedback(item: FeedbackDisplay): boolean {
+  return item.ticketLevel === 0;
+}
 
 const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
@@ -67,6 +95,7 @@ export interface FeedbackSubmitter {
   accountId: string;
   authUserId: string;
   email: string;
+  role: UserRole;
 }
 
 export interface SubmitFeedbackInput {
@@ -194,7 +223,7 @@ export async function fetchFeedbackSubmitter(): Promise<FeedbackSubmitter | null
 
   const { data } = await supabase
     .from('accounts')
-    .select('id, email, auth_user_id')
+    .select('id, email, auth_user_id, role')
     .eq('auth_user_id', user.id)
     .maybeSingle();
 
@@ -204,6 +233,7 @@ export async function fetchFeedbackSubmitter(): Promise<FeedbackSubmitter | null
     accountId: data.id,
     authUserId: data.auth_user_id,
     email: data.email,
+    role: data.role,
   };
 }
 
@@ -258,6 +288,7 @@ export async function submitFeedback(
     return { data: null, error: 'You must be signed in to send feedback.' };
   }
 
+  const ticketLevel = initialTicketLevelForRole(submitter.role);
   const ticketId = crypto.randomUUID();
   let attachmentPath: string | null = null;
   let attachmentName: string | null = null;
@@ -283,7 +314,7 @@ export async function submitFeedback(
       label: input.label,
       status: 'unresolved',
       priority: null,
-      ticket_level: 1,
+      ticket_level: ticketLevel,
       attachment_path: attachmentPath,
       attachment_name: attachmentName,
       attachment_mime: attachmentMime,
@@ -320,6 +351,52 @@ export async function fetchOwnFeedback(): Promise<{ data: FeedbackDisplay[]; err
   return { data: (data ?? []).map(mapFeedback), error: null };
 }
 
+export async function fetchFeedbackInbox(
+  levels: FeedbackTicketLevel[],
+): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
+  if (levels.length === 0) {
+    return { data: [], error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('feedback_system')
+    .select('*')
+    .in('ticket_level', levels)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return { data: [], error: error.message };
+  }
+
+  return { data: (data ?? []).map(mapFeedback), error: null };
+}
+
+export async function openFeedbackTicket(
+  ticketId: string,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_open_ticket', { p_id: ticketId });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
+}
+
+export async function escalateFeedbackTicket(
+  ticketId: string,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_escalate_ticket', { p_id: ticketId });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
+}
+
 export async function deleteOwnFeedback(
   ticketId: string,
 ): Promise<{ error: string | null }> {
@@ -330,15 +407,15 @@ export async function deleteOwnFeedback(
 
   const { data: row, error: fetchError } = await supabase
     .from('feedback_system')
-    .select('id, status, attachment_path, account_id')
+    .select('id, ticket_level, attachment_path, account_id')
     .eq('id', ticketId)
     .eq('account_id', submitter.accountId)
     .maybeSingle();
 
   if (fetchError) return { error: fetchError.message };
   if (!row) return { error: 'Ticket not found.' };
-  if (row.status !== 'unresolved') {
-    return { error: 'Only unresolved tickets can be deleted.' };
+  if (row.ticket_level !== 0) {
+    return { error: 'Only tickets that staff have not opened yet can be deleted.' };
   }
 
   const { error } = await supabase.from('feedback_system').delete().eq('id', ticketId);
