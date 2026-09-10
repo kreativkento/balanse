@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Newspaper, Tag, Calendar, ChevronRight, Search, Facebook, Instagram, X } from 'lucide-react';
+import { Newspaper, Tag, Calendar, ChevronRight, Search, Facebook, Instagram, X, Paperclip } from 'lucide-react';
 import {
   BULLETIN_CATEGORIES,
+  bulletinDisplayImageUrl,
   type BulletinCategory,
   type BulletinPost,
   useBulletinPosts,
@@ -49,33 +50,66 @@ export function BulletinSocialButtons() {
 }
 
 export function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onClose: () => void }) {
+  const previewImage = bulletinDisplayImageUrl(post);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="px-7 pt-6 pb-5 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-4">
-          <div>
-            <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-2 ${post.badgeColor}`}>{post.badgeText}</span>
-            <h2 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}>{post.title}</h2>
-            <p className="text-[#9A8E7E] text-xs mt-1 flex items-center gap-1"><Calendar size={11} /> {post.date}</p>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {previewImage && (
+          <div className="relative h-56 w-full shrink-0 overflow-hidden sm:h-72 md:h-80">
+            <img src={previewImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0">
+        )}
+        <div className="flex items-start justify-between gap-4 border-b border-[#D4CDB5]/50 px-7 pb-5 pt-6">
+          <div className="min-w-0">
+            <span className={`mb-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${post.badgeColor}`}>
+              {post.badgeText}
+            </span>
+            <h2
+              className="leading-tight text-[#1E2A35]"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3vw, 2.2rem)', letterSpacing: '0.04em' }}
+            >
+              {post.title}
+            </h2>
+            <p className="mt-1 flex items-center gap-1 text-xs text-[#9A8E7E]">
+              <Calendar size={11} /> {post.date}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[#8A7E6E] transition-all hover:bg-[#EDE8D8]"
+          >
             <X size={15} />
           </button>
         </div>
-        <div className="px-7 py-6">
-          {post.imageUrl && (
-            <img
-              src={post.imageUrl}
-              alt=""
-              className="mb-5 h-44 w-full rounded-2xl object-cover"
-            />
+        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#5A5048] sm:text-base">{post.body}</p>
+          {post.attachmentUrl && (
+            <a
+              href={post.attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex items-center gap-2 rounded-2xl border border-[#D4CDB5]/60 bg-[#F8F3E8] px-4 py-3 text-sm font-semibold text-[#1E2A35] transition-colors hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8]"
+            >
+              <Paperclip size={14} className="text-[#c49a3c]" />
+              {post.attachmentName || 'Download attachment'}
+            </a>
           )}
-          <p className="text-[#5A5048] text-sm leading-relaxed">{post.body}</p>
         </div>
         <div className="px-7 pb-7">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full py-3 bg-[#1E2A35] text-white rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all"
+            className="w-full rounded-full bg-[#1E2A35] py-3 text-white transition-all hover:bg-[#263545] active:scale-[0.97]"
             style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
           >
             Close
@@ -87,7 +121,7 @@ export function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onC
 }
 
 export default function BulletinPage() {
-  const posts = useBulletinPosts();
+  const { posts, loading } = useBulletinPosts({ publicOnly: true, approvedOnly: true });
   const [activeCategory, setActiveCategory] = useState<BulletinCategory>('All');
   const [search, setSearch] = useState('');
   const [selectedPost, setSelectedPost] = useState<BulletinPost | null>(null);
@@ -181,7 +215,9 @@ export default function BulletinPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16">
             <Newspaper size={32} className="text-[#c49a3c]/40 mx-auto mb-3" />
-            <p className="text-[#9A8E7E]">No bulletin posts found matching your filters.</p>
+            <p className="text-[#9A8E7E]">
+              {loading ? 'Loading bulletin posts…' : 'No bulletin posts found matching your filters.'}
+            </p>
           </div>
         )}
       </div>
@@ -203,9 +239,9 @@ export function BulletinCard({
       onClick={onClick}
       className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#c49a3c]/30 active:scale-[0.98] group ${CARD_HOVER_GROW} ${featured ? 'ring-1 ring-[#c49a3c]/20' : ''}`}
     >
-      {post.imageUrl ? (
+      {bulletinDisplayImageUrl(post) ? (
         <div className="h-36 w-full overflow-hidden">
-          <img src={post.imageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={bulletinDisplayImageUrl(post)} alt="" className="h-full w-full object-cover" />
         </div>
       ) : (
         <div className="h-2 w-full" style={{ backgroundColor: post.imageColor }} />

@@ -13,6 +13,7 @@ import ClassesPage from './pages/ClassesPage';
 import DisciplinesPage from './pages/DisciplinesPage';
 import MemberDisciplinesPage from './pages/MemberDisciplinesPage';
 import MemberBulletinPage from './pages/MemberBulletinPage';
+import StaffBulletinPage from './pages/StaffBulletinPage';
 import MemberServicesPage from './pages/MemberServicesPage';
 import LoginChoicePage from './pages/LoginChoicePage';
 import LoginPage from './pages/LoginPage';
@@ -24,6 +25,7 @@ import MemberGuidelinesPage from './pages/MemberGuidelinesPage';
 import MemberSubscription from './pages/MemberSubscription';
 import PerformancePage from './pages/PerformancePage';
 import FeedbackPage from './pages/FeedbackPage';
+import AdminFeedbackPage from './pages/AdminFeedbackPage';
 import BookClassPage from './pages/BookClassPage';
 import PaymentPage from './pages/PaymentPage';
 import BookingPendingPage from './pages/BookingPendingPage';
@@ -65,6 +67,9 @@ import DevAccountLogsPage from './pages/DevAccountLogsPage';
 import DevProfileLogsPage from './pages/DevProfileLogsPage';
 import DevTransactionLogsPage from './pages/DevTransactionLogsPage';
 import DevSupportLogsPage from './pages/DevSupportLogsPage';
+import DevDisciplineLogsPage from './pages/DevDisciplineLogsPage';
+import DevClassLogsPage from './pages/DevClassLogsPage';
+import DevBulletinLogsPage from './pages/DevBulletinLogsPage';
 import DevAccountPage from './pages/DevAccountPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -132,6 +137,7 @@ export const router = createBrowserRouter([
               { path: 'staff-gallery', Component: StaffGalleryPage },
               { path: 'staff-availability', Component: StaffAvailabilityPage },
               { path: 'staff-profile', Component: StaffProfilePage },
+              { path: 'staff-bulletin', Component: StaffBulletinPage },
               { path: 'staff-feedback', Component: FeedbackPage },
             ],
           },
@@ -157,7 +163,7 @@ export const router = createBrowserRouter([
               { path: 'admin-bulletin', Component: AdminBulletinPage },
               { path: 'admin-news', element: <Navigate to="/admin-bulletin" replace /> },
               { path: 'admin-policies', Component: AdminPoliciesPage },
-              { path: 'admin-feedback', Component: FeedbackPage },
+              { path: 'admin-feedback', Component: AdminFeedbackPage },
             ],
           },
           { path: 'admin-absence', Component: AdminAbsenceTrackerPage },
@@ -170,6 +176,9 @@ export const router = createBrowserRouter([
           { path: 'development/ai-setup', Component: DevAiSetupPage },
           { path: 'development/logs/accounts', Component: DevAccountLogsPage },
           { path: 'development/logs/profiles', Component: DevProfileLogsPage },
+          { path: 'development/logs/disciplines', Component: DevDisciplineLogsPage },
+          { path: 'development/logs/classes', Component: DevClassLogsPage },
+          { path: 'development/logs/bulletin', Component: DevBulletinLogsPage },
           { path: 'development/logs/transactions', Component: DevTransactionLogsPage },
           { path: 'development/logs/support', Component: DevSupportLogsPage },
         ],

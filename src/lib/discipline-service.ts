@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { CoachDisciplineTag, DisciplineRow, StatusDisciplineRow } from './database.types';
+import type { CoachDisciplineTag, DisciplineRow } from './database.types';
 import {
   getDisciplineFallback,
   getDisciplinePlaceholderImage,
@@ -27,19 +27,15 @@ export interface DisciplineDisplay {
   updatedAt: string;
 }
 
-type DisciplineRowWithStatus = DisciplineRow & {
-  status_discipline: StatusDisciplineRow | StatusDisciplineRow[] | null;
-};
-
-const FALLBACK_ACTIVE_STATUS: DisciplineStatusDisplay = {
-  id: '',
+export const ACTIVE_DISCIPLINE_STATUS: DisciplineStatusDisplay = {
+  id: 'active',
   name: 'Active',
   slug: 'active',
   hue: 142,
 };
 
-const FALLBACK_INACTIVE_STATUS: DisciplineStatusDisplay = {
-  id: '',
+export const INACTIVE_DISCIPLINE_STATUS: DisciplineStatusDisplay = {
+  id: 'inactive',
   name: 'Inactive',
   slug: 'inactive',
   hue: 4,
@@ -49,24 +45,19 @@ export function statusColorFromHue(hue: number, saturation = 68, lightness = 50)
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
-function resolveStatus(row: DisciplineRowWithStatus): DisciplineStatusDisplay {
-  const joined = Array.isArray(row.status_discipline)
-    ? row.status_discipline[0]
-    : row.status_discipline;
+function resolveStatus(row: DisciplineRow): DisciplineStatusDisplay {
+  const slug = row.status?.trim() || (row.is_active ? 'active' : 'inactive');
+  const fallback = slug === 'inactive' ? INACTIVE_DISCIPLINE_STATUS : ACTIVE_DISCIPLINE_STATUS;
 
-  if (joined) {
-    return {
-      id: joined.id,
-      name: joined.name,
-      slug: joined.slug,
-      hue: joined.hue,
-    };
-  }
-
-  return row.is_active ? FALLBACK_ACTIVE_STATUS : FALLBACK_INACTIVE_STATUS;
+  return {
+    id: slug,
+    name: row.status_name?.trim() || fallback.name,
+    slug,
+    hue: Number.isFinite(row.status_hue) ? row.status_hue : fallback.hue,
+  };
 }
 
-function toDisplay(row: DisciplineRowWithStatus): DisciplineDisplay {
+function toDisplay(row: DisciplineRow): DisciplineDisplay {
   const fallback = getDisciplineFallback(row.slug, row.name);
   const name = row.name.trim() || fallback?.name || row.name;
   const description = row.description.trim() || fallback?.description || '';
@@ -86,41 +77,13 @@ function toDisplay(row: DisciplineRowWithStatus): DisciplineDisplay {
   };
 }
 
-const DISCIPLINE_SELECT = `
-  *,
-  status_discipline (
-    id,
-    name,
-    slug,
-    hue
-  )
-`;
-
-export async function fetchDisciplineStatuses(): Promise<{
-  data: DisciplineStatusDisplay[];
-  error: string | null;
-}> {
-  const { data, error } = await supabase
-    .from('status_discipline')
-    .select('id, name, slug, hue')
-    .order('sort_order', { ascending: true })
-    .order('name', { ascending: true });
-
-  if (error) {
-    console.error('Failed to fetch discipline statuses:', error.message);
-    return { data: [], error: error.message };
-  }
-
-  return { data: data ?? [], error: null };
-}
-
 export async function fetchDisciplinesForAdmin(): Promise<{
   data: DisciplineDisplay[];
   error: string | null;
 }> {
   const { data, error } = await supabase
     .from('disciplines')
-    .select(DISCIPLINE_SELECT)
+    .select('*')
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true });
 
@@ -129,7 +92,7 @@ export async function fetchDisciplinesForAdmin(): Promise<{
     return { data: [], error: error.message };
   }
 
-  return { data: (data ?? []).map((row) => toDisplay(row as DisciplineRowWithStatus)), error: null };
+  return { data: (data ?? []).map((row) => toDisplay(row as DisciplineRow)), error: null };
 }
 
 /** Active disciplines only — for the public website (RLS also enforces active). */
@@ -144,21 +107,6 @@ export async function fetchDisciplinesForPublic(): Promise<{
     data: result.data.filter((item) => item.status.slug === 'active'),
     error: null,
   };
-}
-
-async function getActiveStatusId(): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('status_discipline')
-    .select('id')
-    .eq('slug', 'active')
-    .maybeSingle();
-
-  if (error || !data) {
-    console.error('Failed to resolve active discipline status:', error?.message);
-    return null;
-  }
-
-  return data.id;
 }
 
 export async function updateDiscipline(
@@ -224,7 +172,7 @@ export function slugifyDisciplineName(name: string): string {
 }
 
 export function createEmptyDisciplineDraft(
-  defaultStatus: DisciplineStatusDisplay = FALLBACK_ACTIVE_STATUS,
+  defaultStatus: DisciplineStatusDisplay = ACTIVE_DISCIPLINE_STATUS,
 ): DisciplineDisplay {
   const label = 'New Discipline';
   return {
@@ -255,11 +203,6 @@ export async function createDiscipline(
     return { success: false, data: null, error: 'Could not generate a valid slug from the name.' };
   }
 
-  const statusId = await getActiveStatusId();
-  if (!statusId) {
-    return { success: false, data: null, error: 'Active discipline status is not configured.' };
-  }
-
   const { data, error } = await supabase
     .from('disciplines')
     .insert({
@@ -269,9 +212,11 @@ export async function createDiscipline(
       logo_url: input.logoUrl?.trim() ?? '',
       image_url: input.imageUrl?.trim() ?? '',
       sort_order: sortOrder,
-      status_id: statusId,
+      status: ACTIVE_DISCIPLINE_STATUS.slug,
+      status_name: ACTIVE_DISCIPLINE_STATUS.name,
+      status_hue: ACTIVE_DISCIPLINE_STATUS.hue,
     })
-    .select(DISCIPLINE_SELECT)
+    .select('*')
     .single();
 
   if (error) {
@@ -279,7 +224,7 @@ export async function createDiscipline(
     return { success: false, data: null, error: error.message };
   }
 
-  return { success: true, data: toDisplay(data as DisciplineRowWithStatus), error: null };
+  return { success: true, data: toDisplay(data as DisciplineRow), error: null };
 }
 
 export function isDisciplineActive(discipline: DisciplineDisplay): boolean {

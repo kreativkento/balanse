@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
-import { getPhilippinesGreeting } from '../../lib/philippines-time';
 import { formatDateLongFromKey, getTodayDateKey } from '../components/calendar/weekCalendarUtils';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -60,8 +59,6 @@ export default function AdminDashboardPage() {
   useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
   if (!adminUser) return null;
 
-  const greeting = getPhilippinesGreeting();
-
   const saveFeatured = () => {
     setSaved(true);
     setEditing(false);
@@ -80,7 +77,6 @@ export default function AdminDashboardPage() {
         {/* ── Header ── */}
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[#9A8E7E] text-sm mb-1">{greeting}, {adminUser.name.split(' ')[0]}</p>
             <h1 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4vw, 2.8rem)', letterSpacing: '0.04em', lineHeight: 1 }}>
               Admin Dashboard
             </h1>

@@ -4,17 +4,12 @@ import type { LucideIcon } from 'lucide-react';
 import { useDevAuth } from '../context/DevAuthContext';
 import { DevSidebar } from '../components/layout/DevSidebar';
 import { supabase } from '../../lib/supabase';
-
-export type SystemLogTable =
-  | 'account_logs'
-  | 'profile_logs'
-  | 'transaction_logs'
-  | 'customer_support_logs';
+import type { LogSystemTableName } from '../../lib/database.types';
 
 export interface SystemLogPageConfig {
   title: string;
   subtitle: string;
-  table: SystemLogTable;
+  tables: LogSystemTableName[];
   icon: LucideIcon;
   emptyHint: string;
 }
@@ -23,6 +18,7 @@ interface LogRow {
   id: string;
   occurred_at: string;
   action: string;
+  table_name: string;
   actor_email: string | null;
   summary: string;
   detail: string;
@@ -42,70 +38,30 @@ function changedKeys(changed: unknown): string {
   return keys.length ? keys.join(', ') : '—';
 }
 
-async function fetchLogs(table: SystemLogTable): Promise<LogRow[]> {
+async function fetchLogs(tables: LogSystemTableName[]): Promise<LogRow[]> {
+  if (tables.length === 0) return [];
+
   const { data, error } = await supabase
-    .from(table)
+    .from('log_system')
     .select('*')
+    .in('table_name', tables)
     .order('occurred_at', { ascending: false })
     .limit(100);
 
   if (error) throw error;
   if (!data) return [];
 
-  if (table === 'account_logs') {
-    return data.map((row) => {
-      const actor = row.actor_email ?? 'system';
-      return {
-        id: row.id,
-        occurred_at: row.occurred_at,
-        action: row.action,
-        actor_email: row.actor_email,
-        summary: `${row.action} · ${row.account_email || 'account'}`,
-        detail: `Role: ${row.account_role ?? '—'} · Changed: ${changedKeys(row.changed_fields)} · By ${actor}`,
-      };
-    });
-  }
-
-  if (table === 'profile_logs') {
-    return data.map((row) => {
-      const actor = row.actor_email ?? 'system';
-      return {
-        id: row.id,
-        occurred_at: row.occurred_at,
-        action: row.action,
-        actor_email: row.actor_email,
-        summary: `${row.action} · profile ${row.profile_id?.slice(0, 8) || '—'}`,
-        detail: `Account: ${row.account_id?.slice(0, 8) || '—'} · Changed: ${changedKeys(row.changed_fields)} · By ${actor}`,
-      };
-    });
-  }
-
-  if (table === 'transaction_logs') {
-    return data.map((row) => {
-      const actor = row.actor_email ?? 'system';
-      const amount = row.amount_centavos != null
-        ? `₱${(row.amount_centavos / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-        : '—';
-      return {
-        id: row.id,
-        occurred_at: row.occurred_at,
-        action: row.action,
-        actor_email: row.actor_email,
-        summary: `${row.kind} · ${amount}`,
-        detail: `Status ${row.status_from ?? '—'} → ${row.status_to ?? '—'} · Ref ${row.external_ref || row.transaction_ref || '—'} · By ${actor}`,
-      };
-    });
-  }
-
   return data.map((row) => {
     const actor = row.actor_email ?? 'system';
+    const label = row.record_label || row.record_id || row.table_name;
     return {
       id: row.id,
       occurred_at: row.occurred_at,
       action: row.action,
+      table_name: row.table_name,
       actor_email: row.actor_email,
-      summary: `${row.channel} · ${row.subject || row.ticket_ref || 'support'}`,
-      detail: `Status ${row.status_from ?? '—'} → ${row.status_to ?? '—'} · Requester ${row.requester_email || '—'} · By ${actor}`,
+      summary: `${row.action} · ${label}`,
+      detail: `Table ${row.table_name} · Changed: ${changedKeys(row.changed_fields)} · By ${actor}`,
     };
   });
 }
@@ -129,7 +85,7 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
       setLoading(true);
       setError('');
       try {
-        const data = await fetchLogs(config.table);
+        const data = await fetchLogs(config.tables);
         if (mounted) setRows(data);
       } catch (err) {
         if (mounted) {
@@ -143,11 +99,12 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
 
     load();
     return () => { mounted = false; };
-  }, [devUser, config.table]);
+  }, [devUser, config.tables.join('|')]);
 
   if (!devUser) return null;
 
   const Icon = config.icon;
+  const showTableColumn = config.tables.length > 1;
 
   return (
     <DevSidebar>
@@ -190,6 +147,9 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
                   <tr className="border-b border-[#E8E2D2] bg-[#F8F3E8]/60">
                     <th className="px-4 py-3 text-[0.65rem] uppercase tracking-widest text-[#9A8E7E] font-semibold">When</th>
                     <th className="px-4 py-3 text-[0.65rem] uppercase tracking-widest text-[#9A8E7E] font-semibold">Action</th>
+                    {showTableColumn && (
+                      <th className="px-4 py-3 text-[0.65rem] uppercase tracking-widest text-[#9A8E7E] font-semibold">Table</th>
+                    )}
                     <th className="px-4 py-3 text-[0.65rem] uppercase tracking-widest text-[#9A8E7E] font-semibold">Summary</th>
                     <th className="px-4 py-3 text-[0.65rem] uppercase tracking-widest text-[#9A8E7E] font-semibold">Detail</th>
                   </tr>
@@ -203,6 +163,9 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
                           {row.action}
                         </span>
                       </td>
+                      {showTableColumn && (
+                        <td className="px-4 py-3 text-[0.7rem] text-[#8A7E6E] whitespace-nowrap align-top">{row.table_name}</td>
+                      )}
                       <td className="px-4 py-3 text-sm text-[#1E2A35] align-top">{row.summary}</td>
                       <td className="px-4 py-3 text-xs text-[#8A7E6E] align-top">{row.detail}</td>
                     </tr>

@@ -13,11 +13,9 @@ import {
   createDiscipline,
   createEmptyDisciplineDraft,
   deleteDiscipline,
-  fetchDisciplineStatuses,
   fetchDisciplinesForAdmin,
   updateDiscipline,
   type DisciplineDisplay,
-  type DisciplineStatusDisplay,
 } from '../../lib/discipline-service';
 
 const FIT_LAYOUT: Record<DisciplineLayoutMode, FitLayout> = {
@@ -84,7 +82,6 @@ export default function AdminDisciplinesPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineDisplay | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
-  const [defaultStatus, setDefaultStatus] = useState<DisciplineStatusDisplay | null>(null);
   const [search, setSearch] = useState('');
   const [layout, setLayout] = useState<DisciplineLayoutMode>('list');
   const [page, setPage] = useState(1);
@@ -96,15 +93,9 @@ export default function AdminDisciplinesPage() {
 
   const loadDisciplines = useCallback(async () => {
     setLoading(true);
-    const [disciplinesResult, statusesResult] = await Promise.all([
-      fetchDisciplinesForAdmin(),
-      fetchDisciplineStatuses(),
-    ]);
+    const disciplinesResult = await fetchDisciplinesForAdmin();
     setDisciplines(disciplinesResult.data);
     setLoadError(disciplinesResult.error);
-    setDefaultStatus(
-      statusesResult.data.find((status) => status.slug === 'active') ?? statusesResult.data[0] ?? null,
-    );
     setLoading(false);
   }, []);
 
@@ -123,7 +114,7 @@ export default function AdminDisciplinesPage() {
   }, [search, layout]);
 
   const openCreateModal = () => {
-    setSelectedDiscipline(createEmptyDisciplineDraft(defaultStatus ?? undefined));
+    setSelectedDiscipline(createEmptyDisciplineDraft());
     setIsCreateMode(true);
   };
 
@@ -222,7 +213,6 @@ export default function AdminDisciplinesPage() {
               : selectedDiscipline
           }
           isCreateMode={isCreateMode}
-          defaultStatus={defaultStatus ?? undefined}
           onClose={closeModal}
           onSave={handleSave}
           onCreate={handleCreate}

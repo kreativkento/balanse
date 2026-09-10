@@ -3,8 +3,8 @@ import { createSystemLogPage } from './SystemLogPage';
 
 export default createSystemLogPage({
   title: 'Account Logs',
-  subtitle: 'Tracks create, update, and delete activity on accounts (role, email, identity).',
-  table: 'account_logs',
+  subtitle: 'Create, update, and delete activity on accounts (role, email, identity).',
+  tables: ['accounts'],
   icon: UserCog,
-  emptyHint: 'Account changes will appear here automatically once migration 900_system_logs.sql is applied.',
+  emptyHint: 'Account changes appear here automatically after 900_system_logs.sql is applied.',
 });

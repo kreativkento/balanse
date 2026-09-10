@@ -9,7 +9,7 @@ import {
 } from './BulletinPage';
 
 export default function MemberBulletinPage() {
-  const posts = useBulletinPosts();
+  const { posts, loading } = useBulletinPosts({ approvedOnly: true });
   const [activeCategory, setActiveCategory] = useState<BulletinCategory>('All');
   const [search, setSearch] = useState('');
   const [selectedPost, setSelectedPost] = useState<BulletinPost | null>(null);
@@ -96,7 +96,9 @@ export default function MemberBulletinPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16">
             <Newspaper size={32} className="text-[#c49a3c]/40 mx-auto mb-3" />
-            <p className="text-[#9A8E7E]">No bulletin posts found matching your filters.</p>
+            <p className="text-[#9A8E7E]">
+              {loading ? 'Loading bulletin posts…' : 'No bulletin posts found matching your filters.'}
+            </p>
           </div>
         )}
       </MemberPageShell>

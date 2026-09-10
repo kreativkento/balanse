@@ -1,6 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { BulletinPostRow, BulletinPostType, BulletinVisibility } from './database.types';
+import {
+  approveBulletinPost as approveBulletinPostRow,
+  createBulletinPost as createBulletinPostRow,
+  deleteBulletinPost as deleteBulletinPostRow,
+  holdBulletinPost as holdBulletinPostRow,
+  listBulletinPosts,
+  updateBulletinPost as updateBulletinPostRow,
+  bulletinResourcePublicUrl,
+  type BulletinPostInput,
+} from './bulletin-service';
 
-export type BulletinPostType = 'Event' | 'Promo' | 'Announcement' | 'Update';
+export type { BulletinPostInput };
+
+export type { BulletinPostType, BulletinVisibility };
 
 export const BULLETIN_POST_TYPES: BulletinPostType[] = [
   'Event',
@@ -12,8 +25,60 @@ export const BULLETIN_POST_TYPES: BulletinPostType[] = [
 export const BULLETIN_CATEGORIES = ['All', ...BULLETIN_POST_TYPES] as const;
 export type BulletinCategory = (typeof BULLETIN_CATEGORIES)[number];
 
+export const BULLETIN_VISIBILITIES: BulletinVisibility[] = [
+  'public',
+  'private',
+  'staff',
+  'user',
+  'coach',
+  'marketing',
+  'frontdesk',
+];
+
+export const BULLETIN_VISIBILITY_META: Record<
+  BulletinVisibility,
+  { label: string; hint: string; badgeClass: string }
+> = {
+  public: {
+    label: 'Public',
+    hint: 'Everyone, including the public page',
+    badgeClass: 'bg-[#c49a3c]/12 text-[#a67f2e]',
+  },
+  private: {
+    label: 'Private',
+    hint: 'Internal — staff and members',
+    badgeClass: 'bg-[#3A4A5A]/10 text-[#3A4A5A]',
+  },
+  staff: {
+    label: 'Staff',
+    hint: 'Staff only — no members',
+    badgeClass: 'bg-[#6B8E6B]/15 text-[#4A6B4A]',
+  },
+  user: {
+    label: 'User',
+    hint: 'Members only',
+    badgeClass: 'bg-amber-100 text-amber-800',
+  },
+  coach: {
+    label: 'Coach',
+    hint: 'Coaches only',
+    badgeClass: 'bg-orange-100 text-orange-800',
+  },
+  marketing: {
+    label: 'Marketing',
+    hint: 'Marketing only',
+    badgeClass: 'bg-pink-100 text-pink-800',
+  },
+  frontdesk: {
+    label: 'Frontdesk',
+    hint: 'Front desk only',
+    badgeClass: 'bg-[#7A7EBC]/15 text-[#4A4E8C]',
+  },
+};
+
 export interface BulletinPost {
-  id: number;
+  id: string;
+  uid: string;
   title: string;
   category: BulletinPostType;
   excerpt: string;
@@ -23,7 +88,19 @@ export interface BulletinPost {
   badgeColor: string;
   badgeText: string;
   imageUrl?: string;
+  imagePath?: string | null;
+  attachmentUrl?: string;
+  attachmentPath?: string | null;
+  attachmentName?: string | null;
+  attachmentMime?: string | null;
   pinned?: boolean;
+  visibility: BulletinVisibility;
+  isPublic: boolean;
+  adminApproved: boolean;
+  createdAt: string;
+  postedAt: string;
+  activeUntil: string | null;
+  isActive: boolean;
 }
 
 export const BULLETIN_TYPE_STYLES: Record<
@@ -52,132 +129,145 @@ export const BULLETIN_TYPE_STYLES: Record<
   },
 };
 
-export const SEED_BULLETIN_POSTS: BulletinPost[] = [
-  {
-    id: 1,
-    title: 'Summer Grand Open Mat — Free Community Session!',
-    category: 'Event',
-    excerpt: 'Join us this June 21 for a free open mat event celebrating the summer solstice. All fitness levels welcome.',
-    body: `Celebrate summer with BALANSÉ! On June 21, we're opening our studio doors for a free Community Open Mat session from 8:00 AM to 11:00 AM. Expect a fun-filled morning of mixed movement classes, partner drills, and a light refreshment break. Bring a friend and experience BALANSÉ together.`,
-    date: 'Jun 5, 2026',
-    imageColor: '#c49a3c',
-    badgeColor: 'bg-[#c49a3c]/12 text-[#a67f2e]',
-    badgeText: 'Event',
-    pinned: true,
-  },
-  {
-    id: 2,
-    title: 'Referral Promo: Bring a Friend, Get 20% Off',
-    category: 'Promo',
-    excerpt: `Refer a new member this July and both of you get 20% off your next month's membership. Valid until July 31.`,
-    body: `We're celebrating our growing community! When you refer a new member who signs up for a Gold or Silver membership in July 2026, both you and your friend will receive 20% off your next billing cycle. No limits on referrals — the more friends you bring, the more you save!`,
-    date: 'Jul 1, 2026',
-    imageColor: '#6B8E6B',
-    badgeColor: 'bg-green-100 text-green-700',
-    badgeText: 'Promo',
-    pinned: true,
-  },
-  {
-    id: 3,
-    title: 'New Class: Capoeira Beginners — Starting August',
-    category: 'Announcement',
-    excerpt: `We're launching a dedicated Capoeira Beginners track this August, coached by Rex. Sign up now to reserve your spot.`,
-    body: 'Exciting news! Starting August 4, we are introducing a beginner-friendly Capoeira track every Monday and Thursday at 6:00 PM. Coach Rex will guide new students through the fundamentals of movement, music, and Ginga. Class size is limited to 10 — reserve your spot through the booking system.',
-    date: 'Jul 15, 2026',
-    imageColor: '#A07050',
-    badgeColor: 'bg-amber-100 text-amber-700',
-    badgeText: 'Announcement',
-  },
-  {
-    id: 4,
-    title: 'Studio Renovation: Temporary Schedule Adjustments',
-    category: 'Update',
-    excerpt: 'Studio 2 will be temporarily unavailable July 28–30 for flooring upgrades. Some classes will move to Studio 1.',
-    body: `We're investing in a better experience for you! Studio 2 will undergo flooring upgrades from July 28 to July 30, 2026. During this period, all affected classes will be rescheduled to Studio 1 or the outdoor courtyard. Specific schedule adjustments will be reflected on the class calendar. We apologize for the inconvenience and appreciate your patience.`,
-    date: 'Jul 20, 2026',
-    imageColor: '#3A4A5A',
-    badgeColor: 'bg-[#3A4A5A]/10 text-[#3A4A5A]',
-    badgeText: 'Update',
-  },
-  {
-    id: 5,
-    title: 'Silver Membership Flash Sale — This Weekend Only',
-    category: 'Promo',
-    excerpt: 'Get the Silver Membership at ₱2,800/month (save ₱800!) when you sign up July 26–27. Limited slots.',
-    body: 'This weekend only — July 26 and 27 — sign up for a Silver Membership at the special rate of ₱2,800/month instead of the regular ₱3,600/month. This offer is available to new members only, and only while slots last. Lock in your rate and start your wellness journey with BALANSÉ today!',
-    date: 'Jul 24, 2026',
-    imageColor: '#9A7A8A',
-    badgeColor: 'bg-pink-100 text-pink-700',
-    badgeText: 'Promo',
-    pinned: true,
-  },
-  {
-    id: 6,
-    title: 'Coach Jodi Returns from International Yoga Retreat',
-    category: 'Announcement',
-    excerpt: 'Coach Jodi is back! She spent three weeks training in Bali and will be bringing new sequences to our Yoga program.',
-    body: `We're thrilled to welcome Coach Jodi back! She recently completed a 21-day immersive yoga teacher training retreat in Ubud, Bali. Expect fresh flows, deeper breath-work techniques, and new restorative sequences in her upcoming Yoga classes. Her first class back is Monday, August 3 at 8:00 AM.`,
-    date: 'Jul 27, 2026',
-    imageColor: '#8B6F5A',
-    badgeColor: 'bg-orange-100 text-orange-700',
-    badgeText: 'Announcement',
-  },
-];
-
-let posts: BulletinPost[] = [...SEED_BULLETIN_POSTS];
-const listeners = new Set<() => void>();
-
-function notify() {
-  listeners.forEach((listener) => listener());
+export function excerptFromBody(body: string) {
+  const text = body.trim();
+  return text.length > 140 ? `${text.slice(0, 137).trim()}…` : text;
 }
 
-export function getBulletinPosts() {
-  return posts;
+export function formatBulletinDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
-export function addBulletinPost(input: {
-  title: string;
-  description: string;
-  category: BulletinPostType;
-  imageUrl?: string;
-}) {
-  const styles = BULLETIN_TYPE_STYLES[input.category];
-  const description = input.description.trim();
-  const excerpt =
-    description.length > 140 ? `${description.slice(0, 137).trim()}…` : description;
+export function formatBulletinDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
-  const post: BulletinPost = {
-    id: Date.now(),
-    title: input.title.trim(),
-    category: input.category,
-    excerpt,
-    body: description,
-    date: new Date().toLocaleDateString('en-PH', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }),
+export function isImageAttachment(mime?: string | null, name?: string | null) {
+  if (mime?.startsWith('image/')) return true;
+  return /\.(jpe?g|png|webp|gif)$/i.test(name ?? '');
+}
+
+export function bulletinDisplayImageUrl(post: Pick<BulletinPost, 'imageUrl' | 'attachmentUrl' | 'attachmentMime' | 'attachmentName'>) {
+  if (post.imageUrl) return post.imageUrl;
+  if (post.attachmentUrl && isImageAttachment(post.attachmentMime, post.attachmentName)) {
+    return post.attachmentUrl;
+  }
+  return undefined;
+}
+
+export function isBulletinPostActive(
+  post: Pick<BulletinPost, 'adminApproved' | 'isActive' | 'postedAt' | 'activeUntil'>,
+  now = new Date(),
+) {
+  if (!post.adminApproved || !post.isActive) return false;
+  const posted = new Date(post.postedAt).getTime();
+  if (Number.isNaN(posted) || posted > now.getTime()) return false;
+  if (!post.activeUntil) return true;
+  const until = new Date(post.activeUntil).getTime();
+  return !Number.isNaN(until) && until > now.getTime();
+}
+
+export function bulletinScheduleState(
+  post: Pick<BulletinPost, 'adminApproved' | 'isActive' | 'postedAt' | 'activeUntil'>,
+  now = new Date(),
+): 'pending' | 'scheduled' | 'active' | 'inactive' {
+  const posted = new Date(post.postedAt).getTime();
+  if (!Number.isNaN(posted) && posted > now.getTime()) return 'scheduled';
+  if (isBulletinPostActive(post, now)) return 'active';
+  if (!post.adminApproved) return 'pending';
+  return 'inactive';
+}
+
+export function mapBulletinRow(row: BulletinPostRow): BulletinPost {
+  const styles = BULLETIN_TYPE_STYLES[row.category];
+  return {
+    id: row.id,
+    uid: row.uid,
+    title: row.title,
+    category: row.category,
+    excerpt: excerptFromBody(row.body),
+    body: row.body,
+    date: formatBulletinDate(row.posted_at || row.created_at),
     imageColor: styles.imageColor,
     badgeColor: styles.badgeColor,
     badgeText: styles.badgeText,
-    imageUrl: input.imageUrl,
+    imageUrl: row.image_path ? bulletinResourcePublicUrl(row.image_path) : undefined,
+    imagePath: row.image_path,
+    attachmentUrl: row.attachment_path ? bulletinResourcePublicUrl(row.attachment_path) : undefined,
+    attachmentPath: row.attachment_path,
+    attachmentName: row.attachment_name,
+    attachmentMime: row.attachment_mime,
+    pinned: row.pinned,
+    visibility: row.visibility,
+    isPublic: row.is_public,
+    adminApproved: row.admin_approved,
+    createdAt: row.created_at,
+    postedAt: row.posted_at || row.created_at,
+    activeUntil: row.active_until,
+    isActive: row.is_active !== false,
   };
-
-  posts = [post, ...posts];
-  notify();
-  return post;
 }
 
-export function useBulletinPosts() {
-  const [, setTick] = useState(0);
+export function useBulletinPosts(options?: {
+  publicOnly?: boolean;
+  approvedOnly?: boolean;
+  pendingOnly?: boolean;
+}) {
+  const [posts, setPosts] = useState<BulletinPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const publicOnly = Boolean(options?.publicOnly);
+  const approvedOnly = Boolean(options?.approvedOnly);
+  const pendingOnly = Boolean(options?.pendingOnly);
+
+  const refresh = useCallback(async () => {
+    const result = await listBulletinPosts({ publicOnly, approvedOnly, pendingOnly });
+    setPosts(result.data.map(mapBulletinRow));
+    setError(result.error);
+    setLoading(false);
+  }, [publicOnly, approvedOnly, pendingOnly]);
 
   useEffect(() => {
-    const listener = () => setTick((value) => value + 1);
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
+    void refresh();
+  }, [refresh]);
 
-  return posts;
+  return { posts, loading, error, refresh };
+}
+
+export async function createBulletinPost(input: BulletinPostInput) {
+  const result = await createBulletinPostRow(input);
+  return { data: result.data ? mapBulletinRow(result.data) : null, error: result.error };
+}
+
+export async function updateBulletinPost(
+  id: string,
+  input: BulletinPostInput,
+  current?: Pick<BulletinPost, 'imagePath' | 'attachmentPath'>,
+) {
+  const result = await updateBulletinPostRow(id, input, current);
+  return { data: result.data ? mapBulletinRow(result.data) : null, error: result.error };
+}
+
+export async function deleteBulletinPost(post: Pick<BulletinPost, 'id' | 'imagePath' | 'attachmentPath'>) {
+  return deleteBulletinPostRow(post);
+}
+
+export async function approveBulletinPost(id: string) {
+  const result = await approveBulletinPostRow(id);
+  return { data: result.data ? mapBulletinRow(result.data) : null, error: result.error };
+}
+
+export async function holdBulletinPost(id: string) {
+  const result = await holdBulletinPostRow(id);
+  return { data: result.data ? mapBulletinRow(result.data) : null, error: result.error };
 }

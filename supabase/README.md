@@ -40,6 +40,8 @@ This file is **safe on existing `accounts` + `profiles` tables** — it skips ob
 
 **Disciplines catalog (event tags):** after `001_profiles.sql`, run `008_disciplines.sql`. This creates `public.disciplines` and seeds the gym’s discipline list (Calisthenics, Yoga, kids classes, etc.). Admins/devs can add or deactivate rows later; tag events by `discipline.id` (stable), not by name.
 
+**Inline discipline status:** if `009_status_discipline.sql` was already applied, run `037_disciplines_inline_status.sql`. Copies `status` / `status_name` / `status_hue` onto `disciplines` and drops `status_discipline`.
+
 **Events / classes:** after `008_disciplines.sql`, run `009_events.sql`, then **`013_rename_events_to_classes.sql`** which renames `events` → `classes`, `event_coaches` → `class_coaches`, `event_enrollments` → `class_students` (`event_id` → `class_id`). Admin UI: `/admin-classes`.
 
 **Split profiles + ops roles:** after the above (and `900` if installed), run **in two separate SQL Editor executions**:
@@ -84,6 +86,10 @@ Postgres rejects using new enum values in the same transaction that adds them (`
 
 **Document review flags:** after `031`, run `032_profiles_client_document_valid.sql`. Adds non-null `health_valid`, `terms_valid`, and `privacy_valid` on `profiles_client` (default `false`). Member updates to that document reset its flag to `false`.
 
+**Community bulletin:** after `001_profiles.sql`, run `036_bulletin.sql`. Creates `public.bulletin_posts`, audience tags (`public` / `private` / `staff` / role), derived `is_public`, and the public `bulletin_resources` bucket. Admin portal CRUD; other roles read only. Feature notes: `docs/bulletin.md`.
+
+**System logs:** after the domain tables exist, run `900_system_logs.sql`. Creates append-only `public.log_system` and CUD triggers on `accounts`, `profiles_client`, `profiles_staff`, `disciplines`, `coach_disciplines`, `classes`, `class_students`, `class_coaches`, `bulletin_posts`, and `feedback_system`. Dev portal: `/development/logs/*`. Replaces the unused draft `account_logs` / `profile_logs` tables.
+
 This creates or syncs:
 
 | Table | Purpose |
@@ -96,8 +102,11 @@ This creates or syncs:
 | `storage.disciplines_images` | Public bucket for discipline logo/cover options (`020`) |
 | `public.feedback_system` | User feedback tickets (`023` / `026`). `id` is the ticket id; `ticket_level` defaults to 1 |
 | `storage.member_documents` | Private signed PDFs in `{user}/{terms|privacy|health}/` plus `{user}/e-signature.png` (`029`–`031`) |
+| `public.bulletin_posts` | Community bulletin with audience tags + derived `is_public` (`036`) |
+| `public.log_system` | Append-only CUD audit for accounts, profiles, disciplines, classes, bulletin, feedback (`900`) |
+| `storage.bulletin_resources` | Public bucket for bulletin covers and attachments (`036`) |
 | `public.coach_disciplines` | Multi-tags: coach account ↔ `disciplines` (`015`) |
-| `public.disciplines` | Dynamic discipline list for event/class tagging (`008_disciplines.sql`) |
+| `public.disciplines` | Dynamic discipline list for event/class tagging (`008`). Status lives on the row (`037`) |
 | `public.classes` | Class shell: name, discipline tag, date, capacity, status, creator (`013`) |
 | `public.class_coaches` | Coaches assigned to a class (min 1) |
 | `public.class_students` | Students enrolled in a class (capped by `class_limit`) |

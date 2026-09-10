@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Code2, LogOut, Ticket, Bot, Menu, ChevronDown, ScrollText,
-  UserCog, UserRound, Landmark, Headphones, MessageSquare,
+  UserCog, UserRound, Headphones, MessageSquare, Dumbbell, CalendarDays, Megaphone,
 } from 'lucide-react';
 import { useDevAuth } from '../../context/DevAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
@@ -16,9 +16,11 @@ const NAV_LINKS = [
 
 const SYSTEM_LOG_LINKS = [
   { label: 'Account Logs', path: '/development/logs/accounts', icon: UserCog, desc: 'Account create/role/email changes' },
-  { label: 'Profile Logs', path: '/development/logs/profiles', icon: UserRound, desc: 'Profile field changes' },
-  { label: 'Transaction Logs', path: '/development/logs/transactions', icon: Landmark, desc: 'Payments & money movement' },
-  { label: 'Customer Support Logs', path: '/development/logs/support', icon: Headphones, desc: 'Tickets & support activity' },
+  { label: 'Profile Logs', path: '/development/logs/profiles', icon: UserRound, desc: 'Client and staff profile changes' },
+  { label: 'Discipline Logs', path: '/development/logs/disciplines', icon: Dumbbell, desc: 'Catalog and coach tags' },
+  { label: 'Class Logs', path: '/development/logs/classes', icon: CalendarDays, desc: 'Classes, enrollments, coaches' },
+  { label: 'Bulletin Logs', path: '/development/logs/bulletin', icon: Megaphone, desc: 'Bulletin create/edit/approve' },
+  { label: 'Feedback Logs', path: '/development/logs/support', icon: Headphones, desc: 'feedback_system CUD' },
 ];
 
 interface DevSidebarProps {

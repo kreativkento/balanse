@@ -3,8 +3,8 @@ import { createSystemLogPage } from './SystemLogPage';
 
 export default createSystemLogPage({
   title: 'Profile Logs',
-  subtitle: 'Tracks profile field changes. Medical history values are redacted in stored snapshots.',
-  table: 'profile_logs',
+  subtitle: 'Tracks profiles_client and profiles_staff. Health declaration values are redacted in stored snapshots.',
+  tables: ['profiles_client', 'profiles_staff'],
   icon: UserRound,
-  emptyHint: 'Profile edits will appear here automatically once migration 900_system_logs.sql is applied.',
+  emptyHint: 'Profile edits appear here automatically after 900_system_logs.sql is applied.',
 });

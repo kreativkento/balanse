@@ -10,6 +10,7 @@ export function SidebarNavLink({
   statusDotClass,
   statusLabel,
   disabled = false,
+  disabledTitle = 'Finish setting up your profile to unlock this',
 }: {
   to: string;
   icon: ReactNode;
@@ -19,6 +20,7 @@ export function SidebarNavLink({
   statusDotClass?: string;
   statusLabel?: string;
   disabled?: boolean;
+  disabledTitle?: string;
 }) {
   const content = (
     <>
@@ -37,7 +39,7 @@ export function SidebarNavLink({
     return (
       <span
         aria-disabled="true"
-        title="Finish setting up your profile to unlock this"
+        title={disabledTitle}
         className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#B0A898] opacity-60"
       >
         {content}

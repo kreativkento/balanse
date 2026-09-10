@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getPhilippinesGreeting } from '../../../lib/philippines-time';
 import { AccountMenu } from './AccountMenu';
 
@@ -119,6 +120,40 @@ export function MemberGreetingHeader({
       searchPlaceholder={searchPlaceholder}
       onSearch={onSearch}
       accountMenu={<AccountMenu onLogout={handleLogout} />}
+    />
+  );
+}
+
+/** Shared admin chrome: greeting, search, and account menu. */
+export function AdminGreetingHeader({
+  searchPlaceholder = 'Search…',
+  onSearch,
+}: {
+  searchPlaceholder?: string;
+  onSearch?: (query: string) => void;
+}) {
+  const navigate = useNavigate();
+  const { adminUser, adminLogout } = useAdminAuth();
+  const firstName = adminUser?.name.trim().split(/\s+/)[0] || 'Admin';
+
+  return (
+    <DashboardGreetingBar
+      greeting={getPhilippinesGreeting()}
+      firstName={firstName}
+      searchPlaceholder={searchPlaceholder}
+      onSearch={onSearch}
+      accountMenu={
+        <AccountMenu
+          onLogout={() => {
+            void adminLogout();
+            navigate('/admin-login');
+          }}
+          name={adminUser?.name}
+          email={adminUser?.email}
+          photo={adminUser?.photo}
+          profilePath="/admin-account"
+        />
+      }
     />
   );
 }

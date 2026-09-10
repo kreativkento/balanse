@@ -358,17 +358,27 @@ export async function fetchFeedbackInbox(
     return { data: [], error: null };
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('feedback_system')
     .select('*')
-    .in('ticket_level', levels)
     .order('created_at', { ascending: false });
+
+  query = levels.length === 1
+    ? query.eq('ticket_level', levels[0])
+    : query.in('ticket_level', levels);
+
+  const { data, error } = await query;
 
   if (error) {
     return { data: [], error: error.message };
   }
 
   return { data: (data ?? []).map(mapFeedback), error: null };
+}
+
+/** Admin inbox: tickets escalated to ticket_level = 2. */
+export async function fetchAdminFeedbackInbox(): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
+  return fetchFeedbackInbox([2]);
 }
 
 export async function openFeedbackTicket(

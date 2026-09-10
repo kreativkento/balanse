@@ -8,7 +8,8 @@ export type FitLayout =
   | 'staff-card'
   | 'discipline-list'
   | 'discipline-compact'
-  | 'discipline-large';
+  | 'discipline-large'
+  | 'bulletin-card';
 
 export type FitPageSizeOptions = {
   fallback?: number;
@@ -35,6 +36,11 @@ const LAYOUT_METRICS: Record<
     itemHeight: 320,
     gap: 20,
     columns: (width) => (width >= 1024 ? 3 : width >= 768 ? 2 : 1),
+  },
+  'bulletin-card': {
+    itemHeight: 92,
+    gap: 10,
+    columns: () => 1,
   },
 };
 

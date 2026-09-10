@@ -8,6 +8,7 @@ import {
   Images,
   LayoutDashboard,
   MessageSquare,
+  Newspaper,
   ShieldCheck,
   User,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import { SidebarNavLink } from './SidebarNavLink';
 
 const staffLinks: { label: string; path: string; icon: ReactNode }[] = [
   { label: 'Dashboard', path: '/staff-dashboard', icon: <LayoutDashboard size={16} /> },
+  { label: 'Bulletin', path: '/staff-bulletin', icon: <Newspaper size={16} /> },
 ];
 
 const quickActionLinks: { label: string; path: string; icon: ReactNode }[] = [

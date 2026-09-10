@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check, Pencil, Trash2, LayoutGrid, List, Newspaper } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { NATIONALITIES } from '../data/nationalities';
@@ -19,6 +19,11 @@ import {
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
 import type { StaffUserRole } from '../../lib/database.types';
 import { STAFF_USER_ROLES } from '../../lib/database.types';
+import {
+  approveBulletinPost,
+  BULLETIN_VISIBILITY_META,
+  useBulletinPosts,
+} from '../../lib/bulletin';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -473,7 +478,11 @@ export default function AdminStaffPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
-  const [pageTab, setPageTab]           = useState<'staff' | 'logs'>('staff');
+  const [pageTab, setPageTab]           = useState<'staff' | 'approvals' | 'logs'>('staff');
+  const pendingBulletin = useBulletinPosts({ pendingOnly: true });
+  const [approvingUid, setApprovingUid] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState('');
+  const canApproveBulletin = adminUser?.role === 'admin';
   const [logTab, setLogTab]             = useState<'passwords' | 'deactivations' | 'deletions'>('passwords');
   const [deletionReqs, setDeletionReqs] = useState<DeletionRequest[]>(INITIAL_DELETION_REQS);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -703,7 +712,7 @@ export default function AdminStaffPage() {
 
         {/* ── Page Tabs ── */}
         <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit shrink-0">
-          {([['staff', 'Staffing Accounts'], ['logs', 'Account Logs']] as const).map(([id, label]) => (
+          {([['staff', 'Staffing Accounts'], ['approvals', 'Bulletin Approvals'], ['logs', 'Account Logs']] as const).map(([id, label]) => (
             <button
               key={id}
               onClick={() => setPageTab(id)}
@@ -986,6 +995,90 @@ export default function AdminStaffPage() {
               noun="staff"
               onPageChange={setPage}
             />
+          </div>
+        )}
+
+        {pageTab === 'approvals' && (
+          <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
+            <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Newspaper size={14} className="text-[#c49a3c]" />
+                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>
+                  Pending Bulletin Posts
+                </h2>
+              </div>
+              <span className="text-[#8A7E6E] text-xs">{pendingBulletin.posts.length} pending</span>
+            </div>
+
+            {approvalError && (
+              <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {approvalError}
+              </div>
+            )}
+
+            {!canApproveBulletin && (
+              <p className="px-6 pt-4 text-xs text-[#8A7E6E]">
+                Only an admin can approve a post. Dev, frontend, and marketing submissions wait here until then.
+              </p>
+            )}
+
+            <div className="hidden md:grid grid-cols-[7rem_minmax(0,2fr)_7rem_7rem_8rem_7.5rem] gap-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
+              {['UID', 'Title', 'Type', 'Audience', 'Submitted', 'Action'].map((heading) => (
+                <p key={heading} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{heading}</p>
+              ))}
+            </div>
+
+            {pendingBulletin.loading ? (
+              <p className="px-6 py-10 text-sm text-[#8A7E6E]">Loading pending posts…</p>
+            ) : pendingBulletin.posts.length === 0 ? (
+              <p className="px-6 py-10 text-sm text-[#8A7E6E]">No bulletin posts are waiting for approval.</p>
+            ) : (
+              <div className="divide-y divide-[#D4CDB5]/30">
+                {pendingBulletin.posts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="grid grid-cols-1 md:grid-cols-[7rem_minmax(0,2fr)_7rem_7rem_8rem_7.5rem] gap-2 md:gap-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors"
+                  >
+                    <p className="text-[#1E2A35] text-sm font-semibold tracking-wide">{post.uid}</p>
+                    <div className="min-w-0">
+                      <p className="text-[#1E2A35] text-sm font-semibold truncate">{post.title}</p>
+                      <p className="text-[#8A7E6E] text-xs line-clamp-1">{post.excerpt}</p>
+                    </div>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${post.badgeColor}`}>{post.badgeText}</span>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${BULLETIN_VISIBILITY_META[post.visibility].badgeClass}`}>
+                      {BULLETIN_VISIBILITY_META[post.visibility].label}
+                    </span>
+                    <p className="text-[#8A7E6E] text-sm">{post.date}</p>
+                    <div>
+                      {canApproveBulletin ? (
+                        <button
+                          type="button"
+                          disabled={approvingUid === post.uid}
+                          onClick={async () => {
+                            setApprovalError('');
+                            setApprovingUid(post.uid);
+                            const result = await approveBulletinPost(post.id);
+                            setApprovingUid(null);
+                            if (result.error) {
+                              setApprovalError(result.error);
+                              return;
+                            }
+                            await pendingBulletin.refresh();
+                          }}
+                          className="h-8 px-3 rounded-lg bg-[#1E2A35] text-white text-xs font-bold hover:bg-[#263545] active:scale-95 transition-all disabled:opacity-60"
+                        >
+                          {approvingUid === post.uid ? 'Approving…' : 'Approve'}
+                        </button>
+                      ) : (
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
