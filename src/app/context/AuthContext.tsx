@@ -236,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      const mapped = mapAuthError(error, 'Sign up failed. Please try again.');
+      const mapped = mapAuthError(error, 'Sign up failed. Please try again.', 'signup');
       return { success: false, error: mapped };
     }
 

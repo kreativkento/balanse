@@ -1,259 +1,40 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
-  User, Award, Lock, Eye, EyeOff, LogOut, ShieldCheck,
-  Check, AlertTriangle, Save, Pencil, X,
+  Eye, EyeOff, LogOut, ShieldCheck,
+  Check, AlertTriangle, Lock,
 } from 'lucide-react';
-import { useStaffAuth, type CoachProfileData } from '../context/StaffAuthContext';
+import { useStaffAuth } from '../context/StaffAuthContext';
+import { toastSaved } from '../../lib/operation-toast';
 import { ProfileImageHero } from '../components/ProfileImages';
-import { DashboardGreetingBar } from '../components/layout/DashboardGreetingBar';
-import { AccountMenu } from '../components/layout/AccountMenu';
 import { CountryFlag, CountrySelect } from '../components/CountrySelect';
 import { ClearableInput, ClearableTextarea } from '../components/FieldClearButton';
-import { getPhilippinesGreeting } from '../../lib/philippines-time';
+import { STAFF_PAGE_CONTAINER_PADDED } from '../lib/staff-page-meta';
 import { profileScoreBarClasses } from '../../lib/profile-completion';
 import { toCountryName } from '../data/nationalities';
+import {
+  ACCOUNT_TAB,
+  CARD,
+  DisplayField,
+  EditableCard,
+  Field,
+  INPUT,
+  INPUT_ERROR,
+  SECTION_TITLE,
+  SLIM_SCROLL_OUTSET,
+  TABS,
+  TEXTAREA,
+  computeOpsStaffProfileScore,
+  displayText,
+  isFilled,
+  parseProfileTab,
+  requiredErrors,
+  SectionNavButton,
+  type EditableCardId,
+  type TabId,
+} from '../components/staff/staffProfileShared';
 
-const INPUT =
-  'w-full rounded-xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] px-4 py-3 text-sm placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all';
-const INPUT_ERROR =
-  'border-red-400 focus:border-red-400 focus:ring-red-200/80';
-const TEXTAREA = `${INPUT} resize-none`;
-const CARD =
-  'bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 transition-[box-shadow,border-color] duration-500 ease-in-out delay-100 hover:border-[#c49a3c] hover:shadow-[inset_0_0_0_3px_#c49a3c]';
-const SLIM_SCROLL_OUTSET =
-  'overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#C4B8A0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C4B8A0] [&::-webkit-scrollbar-thumb:hover]:bg-[#c49a3c]/55';
-const SECTION_TITLE: React.CSSProperties = {
-  fontFamily: "'Bebas Neue', sans-serif",
-  fontSize: '1.2rem',
-  letterSpacing: '0.06em',
-};
-
-const TABS = [
-  { id: 'personal' as const, label: 'Personal Information', Icon: User },
-  { id: 'credentials' as const, label: 'Credentials', Icon: Award },
-];
-const ACCOUNT_TAB = { id: 'account' as const, label: 'Account Settings', Icon: Lock };
-type TabId = typeof TABS[number]['id'] | typeof ACCOUNT_TAB['id'];
-type EditableCardId = 'basic' | 'contact' | 'professional' | 'classes';
-
-const ALL_CLASSES = [
-  'Yoga', 'Mat Pilates', 'Calisthenics', 'Animal Flow',
-  'Kickboxing', 'Groundworks', 'Circuit Training', 'Capoeira', 'Personal Coaching',
-];
-
-const REQUIRED_MSG = 'This field is required.';
-
-function displayText(value?: string | null, suffix = ''): string {
-  const trimmed = (value ?? '').trim();
-  if (!trimmed) return '--';
-  return suffix ? `${trimmed}${suffix}` : trimmed;
-}
-
-function isFilled(value?: string | null): boolean {
-  return Boolean((value ?? '').trim());
-}
-
-function requiredErrors<K extends string>(checks: Record<K, boolean>): Partial<Record<K, string>> {
-  const errors: Partial<Record<K, string>> = {};
-  for (const key of Object.keys(checks) as K[]) {
-    if (checks[key]) errors[key] = REQUIRED_MSG;
-  }
-  return errors;
-}
-
-function computeStaffProfileScore(profile: CoachProfileData | null): number {
-  if (!profile) return 0;
-  const checks = [
-    profile.displayName?.trim(),
-    profile.nationality?.trim(),
-    profile.phone?.trim(),
-    profile.photo?.trim(),
-    profile.bio?.trim(),
-    profile.experience?.trim(),
-    profile.classes?.length > 0,
-  ];
-  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-}
-
-function parseProfileTab(value: string | null): TabId | null {
-  if (!value) return null;
-  if (value === ACCOUNT_TAB.id) return ACCOUNT_TAB.id;
-  return TABS.find((tab) => tab.id === value)?.id ?? null;
-}
-
-function Field({
-  label,
-  optional,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  optional?: boolean;
-  hint?: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-xs uppercase tracking-widest text-[#8A7E6E]">
-        {label}
-        {optional ? (
-          <span className="ml-1.5 normal-case tracking-normal italic text-[#B0A898]">optional</span>
-        ) : (
-          <span className="ml-0.5 text-red-500" aria-hidden="true">*</span>
-        )}
-      </label>
-      {children}
-      {error ? (
-        <p className="mt-1 text-xs text-red-500">{error}</p>
-      ) : hint ? (
-        <p className="mt-1 text-xs italic text-[#B0A898]">{hint}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function DisplayField({
-  label,
-  optional,
-  value,
-  multiline,
-  leading,
-}: {
-  label: string;
-  optional?: boolean;
-  value: string;
-  multiline?: boolean;
-  leading?: ReactNode;
-}) {
-  const empty = value === '--';
-  return (
-    <div>
-      <p className="mb-1.5 text-xs uppercase tracking-widest text-[#8A7E6E]">
-        {label}
-        {optional && (
-          <span className="ml-1.5 normal-case tracking-normal italic text-[#B0A898]">optional</span>
-        )}
-      </p>
-      <div className="flex items-start gap-2">
-        {!empty && leading}
-        <p
-          className={`text-sm ${empty ? 'text-[#B0A898]' : 'text-[#1E2A35]'} ${
-            multiline ? 'whitespace-pre-wrap leading-relaxed' : ''
-          }`}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function EditableCard({
-  title,
-  description,
-  editing,
-  onEdit,
-  onCancel,
-  onSave,
-  saved,
-  children,
-  display,
-}: {
-  title: string;
-  description?: string;
-  editing: boolean;
-  onEdit: () => void;
-  onCancel: () => void;
-  onSave: () => void;
-  saved?: boolean;
-  children: ReactNode;
-  display: ReactNode;
-}) {
-  return (
-    <div className={CARD}>
-      <div className={`flex items-start justify-between gap-3 ${description ? 'mb-1' : 'mb-5'}`}>
-        <h3 className="min-w-0 text-[#1E2A35]" style={SECTION_TITLE}>{title}</h3>
-        {!editing && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1.5 text-xs font-semibold text-[#5A5048] transition-all hover:border-[#c49a3c]/40 hover:text-[#a67f2e]"
-          >
-            <Pencil size={12} /> Edit
-          </button>
-        )}
-      </div>
-      {description && <p className="mb-5 text-xs text-[#8A7E6E]">{description}</p>}
-      {editing ? (
-        <>
-          {children}
-          <div className="mt-5 flex gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#D4CDB5]/80 bg-white py-3.5 text-[#5A5048] transition-all hover:bg-[#EDE8D8] active:scale-[0.97]"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
-            >
-              <X size={16} /> Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-full py-3.5 text-white transition-all active:scale-[0.97] ${
-                saved
-                  ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
-                  : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
-              }`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
-            >
-              {saved ? <><Check size={16} /> Saved!</> : <><Save size={16} /> Save</>}
-            </button>
-          </div>
-        </>
-      ) : (
-        display
-      )}
-    </div>
-  );
-}
-
-function SectionNavButton({
-  active,
-  icon,
-  label,
-  onClick,
-  tone = 'default',
-}: {
-  active?: boolean;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  tone?: 'default' | 'danger';
-}) {
-  const danger = tone === 'danger';
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all ${
-        danger
-          ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-          : active
-            ? 'bg-[#1E2A35] text-white shadow-sm'
-            : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
-      }`}
-    >
-      <span className={danger ? 'text-red-500' : active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'}>
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-    </button>
-  );
-}
-
+/** Staff portal profile for ops (`profiles_staff.staff_type` = Administrator). */
 export default function StaffProfilePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -268,7 +49,6 @@ export default function StaffProfilePage() {
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [experience, setExperience] = useState('');
-  const [classes, setClasses] = useState<string[]>([]);
   const [basicErrors, setBasicErrors] = useState<{ displayName?: string; nationality?: string }>({});
   const [contactErrors, setContactErrors] = useState<{ phone?: string }>({});
 
@@ -296,7 +76,6 @@ export default function StaffProfilePage() {
     setPhone(staffProfile.phone || '');
     setBio(staffProfile.bio || '');
     setExperience(staffProfile.experience || '');
-    setClasses(staffProfile.classes || []);
   };
 
   useEffect(() => {
@@ -314,7 +93,7 @@ export default function StaffProfilePage() {
     .slice(0, 2)
     .toUpperCase();
 
-  const profileScore = computeStaffProfileScore(staffProfile);
+  const profileScore = computeOpsStaffProfileScore(staffProfile);
   const profileScoreBar = profileScoreBarClasses(profileScore);
   const activeTab = tab === ACCOUNT_TAB.id
     ? ACCOUNT_TAB
@@ -329,7 +108,8 @@ export default function StaffProfilePage() {
     hydrateFromProfile();
   };
 
-  const markSaved = (card: EditableCardId) => {
+  const markSaved = (card: EditableCardId, subject = 'Profile') => {
+    toastSaved(subject);
     setCardSaved(card);
     setTimeout(() => {
       setCardSaved((current) => (current === card ? null : current));
@@ -391,17 +171,6 @@ export default function StaffProfilePage() {
     markSaved('professional');
   };
 
-  const saveClasses = () => {
-    updateStaffProfile({ classes });
-    markSaved('classes');
-  };
-
-  const toggleClass = (cls: string) => {
-    setClasses((current) =>
-      current.includes(cls) ? current.filter((item) => item !== cls) : [...current, cls],
-    );
-  };
-
   const changePassword = () => {
     setPwError('');
     if (!curPw) return setPwError('Please enter your current password.');
@@ -420,32 +189,8 @@ export default function StaffProfilePage() {
   };
 
   return (
-    <div className="min-h-full bg-[#F8F3E8]">
-      <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-16 md:px-8">
-        <DashboardGreetingBar
-          greeting={getPhilippinesGreeting()}
-          firstName={staffProfile.displayName || staffUser.name}
-          searchPlaceholder="Search profile…"
-          leadingExtra={
-            <span className="mb-1 inline-flex items-center gap-1.5">
-              <ShieldCheck size={12} className="text-[#c49a3c]" />
-              <span className="rounded-full border border-[#c49a3c]/25 bg-[#c49a3c]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#a67f2e]">
-                {staffUser.role}
-              </span>
-            </span>
-          }
-          accountMenu={
-            <AccountMenu
-              onLogout={handleLogout}
-              name={staffProfile.displayName || staffUser.name}
-              email={staffUser.email}
-              photo={staffProfile.photo}
-              profilePath="/staff-profile?tab=account"
-            />
-          }
-        />
-
-        <div className="grid min-w-0 gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:items-start lg:gap-0">
+    <div className={`${STAFF_PAGE_CONTAINER_PADDED} pb-16`}>
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:items-start lg:gap-0">
           <div className="order-2 flex min-w-0 flex-col lg:order-1 lg:pr-6">
             <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#D4CDB5]/60 pb-5">
               <div className="flex min-w-0 items-center gap-2.5">
@@ -635,49 +380,6 @@ export default function StaffProfilePage() {
                       </Field>
                     </div>
                   </EditableCard>
-
-                  <EditableCard
-                    title="Classes Taught"
-                    description="Select all classes you coach at BALANSÉ."
-                    editing={editingCard === 'classes'}
-                    onEdit={() => startEdit('classes')}
-                    onCancel={cancelEdit}
-                    onSave={saveClasses}
-                    saved={cardSaved === 'classes'}
-                    display={
-                      <div className="flex flex-wrap gap-2">
-                        {staffProfile.classes.length > 0 ? (
-                          staffProfile.classes.map((cls) => (
-                            <span
-                              key={cls}
-                              className="rounded-full border border-[#1E2A35] bg-[#1E2A35] px-3 py-1.5 text-xs font-semibold text-white"
-                            >
-                              {cls}
-                            </span>
-                          ))
-                        ) : (
-                          <p className="text-sm text-[#B0A898]">--</p>
-                        )}
-                      </div>
-                    }
-                  >
-                    <div className="flex flex-wrap gap-2">
-                      {ALL_CLASSES.map((cls) => (
-                        <button
-                          key={cls}
-                          type="button"
-                          onClick={() => toggleClass(cls)}
-                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
-                            classes.includes(cls)
-                              ? 'border-[#1E2A35] bg-[#1E2A35] text-white'
-                              : 'border-[#D4CDB5]/70 bg-white text-[#8A7E6E] hover:border-[#c49a3c]/40'
-                          }`}
-                        >
-                          {cls}
-                        </button>
-                      ))}
-                    </div>
-                  </EditableCard>
                 </div>
               )}
 
@@ -757,8 +459,8 @@ export default function StaffProfilePage() {
                     <button
                       type="button"
                       onClick={changePassword}
-                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#1E2A35] py-3.5 text-white transition-all hover:bg-[#263545] active:scale-[0.97]"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                      className="action-button mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#1E2A35] py-3.5 text-white transition-all hover:bg-[#263545] active:scale-[0.97]"
+                     
                     >
                       <Lock size={15} /> Update Password
                     </button>
@@ -800,8 +502,14 @@ export default function StaffProfilePage() {
                 initials={initials}
                 editable
                 coverClassName="h-28 md:h-32"
-                onPhotoUploaded={(url) => updateStaffProfile({ photo: url })}
-                onCoverUploaded={(url) => updateStaffProfile({ coverImage: url })}
+                onPhotoUploaded={(url) => {
+                  updateStaffProfile({ photo: url });
+                  toastSaved('Profile photo');
+                }}
+                onCoverUploaded={(url) => {
+                  updateStaffProfile({ coverImage: url });
+                  toastSaved('Cover image');
+                }}
               />
               <div className="px-5 pb-4 pt-12 md:px-6 md:pt-14">
                 <h2
@@ -861,7 +569,6 @@ export default function StaffProfilePage() {
             </nav>
           </aside>
         </div>
-      </div>
     </div>
   );
 }

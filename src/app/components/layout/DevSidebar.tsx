@@ -5,12 +5,12 @@ import {
   UserCog, UserRound, Headphones, MessageSquare, Dumbbell, CalendarDays, Megaphone,
 } from 'lucide-react';
 import { useDevAuth } from '../../context/DevAuthContext';
+import { SidebarNavLink } from './SidebarNavLink';
 import logoMain from 'figma:asset/logo_main.svg';
 import { ProfileAvatar } from '../ProfileImages';
 
 const NAV_LINKS = [
   { label: 'Ticket Management', path: '/development/tickets', icon: Ticket },
-  { label: 'System Feedback', path: '/development/feedback', icon: MessageSquare },
   { label: 'AI Setup', path: '/development/ai-setup', icon: Bot },
 ];
 
@@ -109,6 +109,17 @@ export function DevSidebar({ children }: DevSidebarProps) {
           </div>
         </div>
       </nav>
+
+      <div className="border-t border-[#D4CDB5]/30 px-3 py-4">
+        <SidebarNavLink
+          to="/development/feedback"
+          icon={<MessageSquare size={16} />}
+          label="System Feedback"
+          active={location.pathname === '/development/feedback'}
+          onNavigate={() => setMobileOpen(false)}
+          appearance="gold"
+        />
+      </div>
 
       <div className="px-4 py-4 border-t border-[#D4CDB5]/30">
         <Link

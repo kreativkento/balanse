@@ -6,6 +6,7 @@ import {
   Phone, Weight, Ruler, Eraser, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { toastCreated } from '../../lib/operation-toast';
 import { NATIONALITIES } from '../data/nationalities';
 import { ProfileImageHero } from '../components/ProfileImages';
 import { PrivacyModal, TermsModal } from '../components/documents/PolicyAcceptModals';
@@ -161,8 +162,7 @@ function HealthDeclarationModal({
               }, signatureDataUrl);
             }}
             disabled={!canSubmit}
-            className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${canSubmit ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+            className={`action-button flex-1 py-3 rounded-full text-sm transition-all flex items-center justify-center gap-2 ${canSubmit ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
           >
             <Check size={14} /> I Declare
           </button>
@@ -247,6 +247,7 @@ export default function ProfileSetupPage() {
       privacyAcceptedVersion: privacyUpload?.version ?? '',
       privacySignedAt: privacyUpload?.signedAt ?? '',
     });
+    toastCreated('Profile');
     navigate('/dashboard');
   };
 
@@ -634,7 +635,7 @@ export default function ProfileSetupPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-base rounded-full py-4 min-h-[56px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                className="action-button w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-base rounded-full py-4 min-h-[56px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e] disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               >
                 {loading ? (
                   <>

@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ImagePlus, Loader2 } from 'lucide-react';
 import {
+  isDefaultAssetPublicUrl,
+  listDefaultAssetCoverImages,
+  listDefaultAssetLogoImages,
+  type DefaultAssetImage,
+} from '../../../lib/default-assets';
+import {
   isDisciplineBucketImageUrl,
-  listDisciplineCoverImages,
-  listDisciplineLogoImages,
   uploadDisciplineCover,
   uploadDisciplineLogo,
-  type DisciplineBucketImage,
 } from '../../../lib/discipline-images';
 
 export function DisciplineImagePicker({
@@ -28,7 +31,7 @@ export function DisciplineImagePicker({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<DisciplineBucketImage[]>([]);
+  const [images, setImages] = useState<DefaultAssetImage[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +43,7 @@ export function DisciplineImagePicker({
     let cancelled = false;
     setLoading(true);
     setError('');
-    const load = kind === 'logo' ? listDisciplineLogoImages : listDisciplineCoverImages;
+    const load = kind === 'logo' ? listDefaultAssetLogoImages : listDefaultAssetCoverImages;
     void load().then((rows) => {
       if (cancelled) return;
       setImages(rows);
@@ -72,8 +75,6 @@ export function DisciplineImagePicker({
       setError(result.error);
       return;
     }
-    const rows = kind === 'logo' ? await listDisciplineLogoImages() : await listDisciplineCoverImages();
-    setImages(rows);
     onSelect(result.url);
   };
 
@@ -98,7 +99,7 @@ export function DisciplineImagePicker({
           <div className="grid grid-cols-4 gap-1.5">
             <button
               type="button"
-              aria-label={`Upload ${folderLabel} to disciplines_images/${folderLabel}`}
+              aria-label={`Upload ${folderLabel} to disciplines_images bucket`}
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
               className="aspect-square overflow-hidden rounded-lg border border-dashed border-[#c49a3c]/50 bg-[#c49a3c]/08 text-[#a67f2e] transition-all hover:border-[#c49a3c] hover:bg-[#c49a3c]/12 disabled:opacity-60"
@@ -113,7 +114,10 @@ export function DisciplineImagePicker({
               )}
             </button>
             {images.map((image) => {
-              const selected = isDisciplineBucketImageUrl(currentUrl) && currentUrl.split('?')[0] === image.url;
+              const normalizedCurrent = currentUrl.split('?')[0];
+              const selected =
+                (isDisciplineBucketImageUrl(currentUrl) || isDefaultAssetPublicUrl(currentUrl))
+                && normalizedCurrent === image.url.split('?')[0];
               return (
                 <button
                   key={image.path}

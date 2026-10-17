@@ -6,8 +6,12 @@ interface AppSidebarLayoutProps {
   children: ReactNode;
   renderSidebar: (closeMobile: () => void) => ReactNode;
   mobileBrand: ReactNode;
+  /** Tailwind width class for desktop + mobile drawer (default `w-56`). */
+  sidebarWidthClass?: string;
   /** `desktop-hidden`: scroll on mobile, locked on md+ */
   mainOverflow?: 'auto' | 'hidden' | 'desktop-hidden';
+  /** Marks the main pane so member class schedule can lock overflow. */
+  memberMainScroll?: boolean;
 }
 
 /**
@@ -19,7 +23,9 @@ export function AppSidebarLayout({
   children,
   renderSidebar,
   mobileBrand,
+  sidebarWidthClass = 'w-56',
   mainOverflow = 'auto',
+  memberMainScroll = false,
 }: AppSidebarLayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -32,14 +38,18 @@ export function AppSidebarLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8F3E8]">
-      <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-[#D4CDB5]/60 bg-white shadow-sm z-30">
+      <aside
+        className={`hidden md:flex ${sidebarWidthClass} shrink-0 flex-col border-r border-[#D4CDB5]/60 bg-white shadow-sm z-30`}
+      >
         {renderSidebar(closeMobile)}
       </aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-[#1E2A35]/40 backdrop-blur-sm" onClick={closeMobile} />
-          <aside className="absolute left-0 top-0 z-50 flex h-full w-56 flex-col bg-white shadow-2xl">
+          <aside
+            className={`absolute left-0 top-0 z-50 flex h-full ${sidebarWidthClass} flex-col bg-white shadow-2xl`}
+          >
             {renderSidebar(closeMobile)}
           </aside>
         </div>
@@ -59,6 +69,7 @@ export function AppSidebarLayout({
         </div>
 
         <main
+          {...(memberMainScroll ? { 'data-member-main-scroll': true } : {})}
           className={`flex min-h-0 min-w-0 flex-1 flex-col [scrollbar-gutter:stable] ${
             mainOverflow === 'hidden'
               ? 'overflow-hidden'

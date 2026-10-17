@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check, Pencil, Trash2, LayoutGrid, List, Newspaper } from 'lucide-react';
+import { SearchableIdSelect } from '../components/SearchableIdSelect';
+import { SearchableSelect } from '../components/SearchableSelect';
+import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { NATIONALITIES } from '../data/nationalities';
@@ -45,10 +48,25 @@ interface StaffMember {
   nationality: string;
 }
 
+const DELETE_CONFIRM_WORD = 'delete';
+
+function staffDeleteDialogCopy(member: Pick<StaffMember, 'accountRole'>) {
+  if (member.accountRole === 'coach') {
+    return { title: 'Delete coach account?', removedFrom: 'coaches' as const };
+  }
+  return { title: 'Delete staff account?', removedFrom: 'staffing' as const };
+}
+
 const STAFF_TYPE_OPTIONS: { value: StaffUserRole; label: string }[] = [
   { value: 'coach', label: 'Coach' },
   { value: 'admin', label: 'Admin' },
-  { value: 'dev', label: 'Dev' },
+  { value: 'frontdesk', label: 'Front Desk' },
+  { value: 'marketing', label: 'Marketing' },
+];
+
+/** Roles admins may assign when editing (matches DB RLS in 065_admin_edit_staff_directory). */
+const STAFF_TYPE_OPTIONS_ADMIN_EDIT: { value: StaffUserRole; label: string }[] = [
+  { value: 'coach', label: 'Coach' },
   { value: 'frontdesk', label: 'Front Desk' },
   { value: 'marketing', label: 'Marketing' },
 ];
@@ -497,7 +515,9 @@ export default function AdminStaffPage() {
   });
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [disciplines, setDisciplines] = useState<DisciplineDisplay[]>([]);
@@ -563,6 +583,13 @@ export default function AdminStaffPage() {
     setPage(1);
   }, [search, viewMode]);
 
+  useEffect(() => {
+    setDeleteConfirmInput('');
+  }, [deleteTarget?.id]);
+
+  const deleteConfirmReady =
+    deleteConfirmInput.trim().toLowerCase() === DELETE_CONFIRM_WORD;
+
   if (!adminUser) return null;
 
   // Open Add
@@ -602,6 +629,28 @@ export default function AdminStaffPage() {
     });
   };
 
+  const staffTypeOptionsForModal =
+    editingId !== null && adminUser?.role !== 'dev'
+      ? STAFF_TYPE_OPTIONS_ADMIN_EDIT
+      : STAFF_TYPE_OPTIONS;
+
+  const staffTypeSelectOptions = useMemo(
+    () =>
+      staffTypeOptionsForModal.map((option) => ({
+        value: option.value,
+        label: option.label,
+      })),
+    [staffTypeOptionsForModal],
+  );
+
+  const statusSelectOptions = useMemo(
+    () => [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' },
+    ],
+    [],
+  );
+
   // Save
   const handleSave = async () => {
     if (!form.name.trim() || !form.email.trim()) {
@@ -620,6 +669,14 @@ export default function AdminStaffPage() {
       setFormError('Select at least one discipline for coaches.');
       return;
     }
+    if (
+      editingId !== null
+      && adminUser?.role !== 'dev'
+      && (form.staffRole === 'admin' || form.staffRole === 'dev')
+    ) {
+      setFormError('Only a dev can assign Admin or Dev roles when editing.');
+      return;
+    }
 
     setSaving(true);
     setFormError('');
@@ -628,87 +685,98 @@ export default function AdminStaffPage() {
       .map((id) => disciplines.find((item) => item.id === id)?.name)
       .filter((name): name is string => Boolean(name));
     const specialtyLabel = selectedNames[0] ?? '';
+    const savedName = form.name.trim();
 
-    if (editingId !== null) {
-      const result = await updateStaffAccountFromForm(editingId, {
-        name: form.name.trim(),
-        email: form.email.trim(),
-        specialty: specialtyLabel,
-        nationality: form.nationality,
-        staffRole: form.staffRole,
-        disciplineIds: form.disciplineIds,
-      });
-      setSaving(false);
-      if (!result.ok) {
-        setFormError(result.error || 'Failed to update staff account.');
+    try {
+      if (editingId !== null) {
+        const result = await updateStaffAccountFromForm(editingId, {
+          name: savedName,
+          email: form.email.trim(),
+          specialty: specialtyLabel,
+          nationality: form.nationality,
+          staffRole: form.staffRole,
+          disciplineIds: form.disciplineIds,
+          status: form.status,
+        });
+        if (!result.ok) {
+          const message = result.error || 'Failed to update staff account.';
+          setFormError(message);
+          toast.error(message);
+          return;
+        }
+        await loadStaff();
+        setShowModal(false);
+        toast.success(`Staff profile updated for ${savedName}.`);
         return;
       }
-    } else {
+
       const result = await createStaffAccount({
         email: form.email.trim(),
         password: form.password,
-        name: form.name.trim(),
+        name: savedName,
         specialty: specialtyLabel,
         nationality: form.nationality,
         staffRole: form.staffRole,
         disciplineIds: form.disciplineIds,
+        status: form.status,
       });
-      setSaving(false);
       if (!result.ok) {
-        setFormError(result.error || 'Failed to create staff account.');
+        const message = result.error || 'Failed to create staff account.';
+        setFormError(message);
+        toast.error(message);
         return;
       }
+      await loadStaff();
+      setShowModal(false);
+      toast.success(`Staff account created for ${savedName}.`);
+    } catch {
+      const message = 'Something went wrong while saving. Please try again.';
+      setFormError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
     }
-
-    await loadStaff();
-    setShowModal(false);
   };
 
-  // Delete
-  const handleDelete = async (id: string) => {
-    const result = await deleteManagedAccount(id);
+  const openDeleteConfirm = (member: StaffMember) => {
+    if (isStaffMemberLockedForAdmin(member, adminUser?.role)) return;
+    setDeleteTarget(member);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || !deleteConfirmReady || deleting) return;
+
+    const deletedName = deleteTarget.name;
+    const { removedFrom } = staffDeleteDialogCopy(deleteTarget);
+    setDeleting(true);
+    const result = await deleteManagedAccount(deleteTarget.id);
+    setDeleting(false);
+
     if (!result.ok) {
-      setFormError(result.error || 'Failed to delete staff account.');
-      setDeleteId(null);
+      toast.error(
+        result.error
+          || `Could not delete this ${deleteTarget.accountRole === 'coach' ? 'coach' : 'staff'} account. Try again or contact support.`,
+      );
       return;
     }
+
+    if (selectedMember?.id === deleteTarget.id) {
+      setSelectedMember(null);
+    }
+    setDeleteTarget(null);
+    setDeleteConfirmInput('');
     await loadStaff();
-    setDeleteId(null);
+    toast.success(`Account deleted. ${deletedName} was removed from ${removedFrom} and auth.`);
   };
 
-  const inputClass = "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]";
-  const selectClass = `${inputClass} appearance-none cursor-pointer`;
+  const inputClass =
+    'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
+  const selectClass = `${inputClass} appearance-none cursor-pointer bg-white`;
 
   return (
     <>
       <div className={pageTab === 'staff' ? 'h-full min-h-0 overflow-hidden flex flex-col' : undefined}>
       <div className={`max-w-7xl mx-auto px-6 py-8 w-full ${pageTab === 'staff' ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : ''}`}>
-
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6 shrink-0">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <UserCheck size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Staffing</span>
-            </div>
-            <h1
-              className="text-[#1E2A35] leading-tight"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}
-            >
-              Staffing Management
-            </h1>
-          </div>
-          {pageTab === 'staff' && (
-            <button
-              onClick={openAdd}
-              className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-            >
-              <Plus size={16} className="shrink-0" />
-              <span>Add Staff</span>
-            </button>
-          )}
-        </div>
 
         {/* ── Page Tabs ── */}
         <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit shrink-0">
@@ -761,15 +829,28 @@ export default function AdminStaffPage() {
                 >
                   <LayoutGrid size={13} /> Card
                 </button>
-              </div>
-              <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} of {staff.length} staff</span>
             </div>
+              <div className="ml-auto flex shrink-0 items-center gap-3">
+                <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
+                  {filtered.length} of {staff.length} staff
+                </span>
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
+                 
+                >
+                  <Plus size={16} className="shrink-0" />
+                  <span>Add Staff</span>
+                </button>
+              </div>
+              </div>
 
-            {staffLoading ? (
+              {staffLoading ? (
               <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
                 Loading staff accounts…
               </div>
-            ) : filtered.length === 0 ? (
+              ) : filtered.length === 0 ? (
               <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
                 No staff members match your search.
               </div>
@@ -872,25 +953,6 @@ export default function AdminStaffPage() {
                         >
                           {actionsLocked ? (
                             <span className="text-[#B0A898] text-xs italic">Protected</span>
-                          ) : deleteId === member.id ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(member.id)}
-                                aria-label="Confirm delete"
-                                className="h-8 w-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all"
-                              >
-                                <Check size={14} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleteId(null)}
-                                aria-label="Cancel delete"
-                                className="h-8 w-8 rounded-lg bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] flex items-center justify-center hover:bg-[#EDE8D8] active:scale-95 transition-all"
-                              >
-                                <X size={14} />
-                              </button>
-                            </>
                           ) : (
                             <>
                               <button
@@ -903,7 +965,7 @@ export default function AdminStaffPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setDeleteId(member.id)}
+                                onClick={() => openDeleteConfirm(member)}
                                 aria-label={`Delete ${member.name}`}
                                 className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
                               >
@@ -919,7 +981,7 @@ export default function AdminStaffPage() {
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
-                <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
+                <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
                   {['Name', 'Email', 'Role', 'Discipline', 'Status', 'Actions'].map((h) => (
                     <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
                   ))}
@@ -930,8 +992,8 @@ export default function AdminStaffPage() {
                     const actionsLocked = isStaffMemberLockedForAdmin(member, adminUser?.role);
 
                     return (
-                      <div
-                        key={member.id}
+                    <div
+                      key={member.id}
                         role="button"
                         tabIndex={0}
                         onClick={() => setSelectedMember(member)}
@@ -941,50 +1003,62 @@ export default function AdminStaffPage() {
                             setSelectedMember(member);
                           }
                         }}
-                        className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
+                        className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-[#1E2A35]/08 border border-[#1E2A35]/12 flex items-center justify-center shrink-0 overflow-hidden">
                             {member.photo ? (
                               <img src={member.photo} alt="" className="h-full w-full object-cover" />
                             ) : (
                               <span className="text-[#1E2A35] text-xs font-bold">{staffInitials(member.name)}</span>
                             )}
-                          </div>
-                          <span className="text-[#1E2A35] text-sm font-semibold truncate">{member.name}</span>
                         </div>
-                        <span className="text-[#8A7E6E] text-sm truncate">{member.email}</span>
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${
-                          member.role === 'Dev' ? 'bg-violet-50 text-violet-700 border border-violet-200' :
+                        <span className="text-[#1E2A35] text-sm font-semibold truncate">{member.name}</span>
+                      </div>
+                      <span className="text-[#8A7E6E] text-sm truncate">{member.email}</span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${
+                        member.role === 'Dev' ? 'bg-violet-50 text-violet-700 border border-violet-200' :
                           member.role === 'Admin' || member.role === 'Front Desk' || member.role === 'Marketing'
                             ? 'bg-[#1E2A35]/10 text-[#1E2A35] border border-[#1E2A35]/15' :
-                          member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' :
+                        member.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' :
                           'bg-[#c49a3c]/12 text-[#a67f2e]'
-                        }`}>{member.role}</span>
-                        <span className="text-[#5A5048] text-sm truncate">{member.specialty}</span>
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{member.status}</span>
-                        <div className="flex items-center gap-1 w-[150px]" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      }`}>{member.role}</span>
+                      <span className="text-[#5A5048] text-sm truncate">{member.specialty}</span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${member.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-[#EDE8D8] text-[#8A7E6E] border border-[#D4CDB5]/60'}`}>{member.status}</span>
+                        <div
+                          className="flex items-center gap-1.5 w-[100px]"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
                           {actionsLocked ? (
                             <span className="text-[#B0A898] text-xs italic">Protected</span>
-                          ) : deleteId === member.id ? (
-                            <>
-                              <span className="text-red-600 text-xs font-semibold whitespace-nowrap mr-1">Delete?</span>
-                              <button onClick={() => handleDelete(member.id)} className="h-7 px-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 active:scale-95 transition-all whitespace-nowrap">Yes</button>
-                              <button onClick={() => setDeleteId(null)} className="h-7 px-2.5 bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] text-xs rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">No</button>
-                            </>
                           ) : (
                             <>
-                              <button onClick={() => openEdit(member)} className="h-7 px-2.5 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-xs font-medium rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap">Edit</button>
-                              <button onClick={() => setDeleteId(member.id)} className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap">Delete</button>
+                              <button
+                                type="button"
+                                onClick={() => openEdit(member)}
+                                aria-label={`Edit ${member.name}`}
+                                className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openDeleteConfirm(member)}
+                                aria-label={`Delete ${member.name}`}
+                                className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </>
                           )}
                         </div>
-                      </div>
+                    </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
+                </div>
+              )}
 
             <AdminTablePagination
               page={currentPage}
@@ -995,7 +1069,7 @@ export default function AdminStaffPage() {
               noun="staff"
               onPageChange={setPage}
             />
-          </div>
+            </div>
         )}
 
         {pageTab === 'approvals' && (
@@ -1214,6 +1288,78 @@ export default function AdminStaffPage() {
         <StaffSummaryModal member={selectedMember} onClose={() => setSelectedMember(null)} />
       )}
 
+      {deleteTarget && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
+            onClick={() => {
+              if (!deleting) setDeleteTarget(null);
+            }}
+            role="presentation"
+          >
+            <div
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="delete-staff-title"
+              aria-describedby="delete-staff-desc"
+              className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50">
+                <h3
+                  id="delete-staff-title"
+                  className="text-[#1E2A35]"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                >
+                  {staffDeleteDialogCopy(deleteTarget).title}
+                </h3>
+              </div>
+              <div className="px-7 py-5 flex flex-col gap-4">
+                <p id="delete-staff-desc" className="text-[#5A5048] text-sm leading-relaxed">
+                  This permanently removes{' '}
+                  <span className="font-semibold text-[#1E2A35]">{deleteTarget.name}</span>
+                  {' '}({deleteTarget.email}) and their profile data. This cannot be undone.
+                </p>
+                <div>
+                  <label htmlFor="delete-staff-confirm" className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">
+                    Type <span className="font-bold text-[#1E2A35] normal-case tracking-normal">{DELETE_CONFIRM_WORD}</span> to confirm
+                  </label>
+                  <input
+                    id="delete-staff-confirm"
+                    type="text"
+                    value={deleteConfirmInput}
+                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    disabled={deleting}
+                    placeholder={DELETE_CONFIRM_WORD}
+                    className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 transition-all placeholder-[#C0B8A8] disabled:opacity-60"
+                  />
+                </div>
+              </div>
+              <div className="px-7 pb-7 flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteTarget(null)}
+                  className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm font-medium hover:bg-[#EDE8D8] transition-all disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting || !deleteConfirmReady}
+                  onClick={() => void handleConfirmDelete()}
+                  className="flex-1 py-3 rounded-full bg-red-600 text-white text-sm font-bold hover:bg-red-700 active:scale-[0.97] transition-all disabled:opacity-60"
+                >
+                  {deleting ? 'Deleting…' : 'Delete account'}
+                </button>
+              </div>
+            </div>
+          </div>
+      )}
+
       {/* ── Modal ── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
@@ -1261,21 +1407,14 @@ export default function AdminStaffPage() {
               {/* Nationality */}
               <div>
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Nationality</label>
-                <div className="relative">
-                  <select
-                    value={form.nationality}
-                    onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))}
-                    className={`${selectClass} ${!form.nationality ? 'text-[#C0B8A8]' : ''}`}
-                  >
-                    <option value="">Select nationality…</option>
-                    {NATIONALITIES.map((item) => (
-                      <option key={item} value={item} className="text-[#1E2A35]">
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                </div>
+                <SearchableSelect
+                  value={form.nationality}
+                  onChange={(nationality) => setForm((f) => ({ ...f, nationality }))}
+                  options={[...NATIONALITIES]}
+                  placeholder="Select nationality…"
+                  searchPlaceholder="Search country…"
+                  emptyText="No match."
+                />
               </div>
 
               {/* Password (add only) */}
@@ -1296,42 +1435,46 @@ export default function AdminStaffPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Staff Type</label>
-                  <div className="relative">
-                    <select
-                      value={form.staffRole}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          staffRole: e.target.value as StaffUserRole,
-                          disciplineIds: e.target.value === 'coach' ? f.disciplineIds : [],
-                        }))
-                      }
-                      className={selectClass}
-                    >
-                      {STAFF_TYPE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  </div>
+                  <SearchableIdSelect
+                    value={form.staffRole}
+                    onChange={(staffRole) =>
+                      setForm((f) => ({
+                        ...f,
+                        staffRole: staffRole as StaffUserRole,
+                        disciplineIds: staffRole === 'coach' ? f.disciplineIds : [],
+                      }))
+                    }
+                    options={staffTypeSelectOptions}
+                    placeholder="Select type…"
+                    searchable={false}
+                    clearable={false}
+                    emptyText="No roles."
+                  />
                 </div>
                 <div>
                   <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Status</label>
-                  <div className="relative">
-                    <select
-                      value={form.status}
-                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as 'active' | 'inactive' }))}
-                      className={selectClass}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                  </div>
+                  <SearchableIdSelect
+                    value={form.status}
+                    onChange={(status) =>
+                      setForm((f) => ({
+                        ...f,
+                        status: (status || 'active') as 'active' | 'inactive',
+                      }))
+                    }
+                    options={statusSelectOptions}
+                    placeholder="Select status…"
+                    searchable={false}
+                    clearable={false}
+                    emptyText="No options."
+                  />
                 </div>
               </div>
+
+              {editingId === null && (
+                <p className="text-[#8A7E6E] text-xs leading-relaxed -mt-1">
+                  Use an existing client email to promote them to staff (e.g. Front Desk). New emails create a fresh login.
+                </p>
+              )}
 
               {/* Discipline multi-select (coaches only) */}
               {form.staffRole === 'coach' && (
@@ -1370,10 +1513,11 @@ export default function AdminStaffPage() {
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                type="button"
+                onClick={() => void handleSave()}
                 disabled={saving}
-                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+               
               >
                 {saving ? 'Saving…' : editingId !== null ? 'Save Changes' : 'Add Staff Member'}
               </button>

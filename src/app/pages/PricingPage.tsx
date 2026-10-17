@@ -319,8 +319,8 @@ export default function PricingPage() {
               <button
                 type="button"
                 onClick={handleAction}
-                className="flex-1 py-3 rounded-full bg-[#c49a3c] text-white hover:bg-[#a67f2e] active:scale-[0.97] transition-all shadow-[0_4px_20px_rgba(196,154,60,0.35)]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+                className="action-button flex-1 py-3 rounded-full bg-[#c49a3c] text-white hover:bg-[#a67f2e] active:scale-[0.97] transition-all shadow-[0_4px_20px_rgba(196,154,60,0.35)]"
+               
               >
                 Book Now
               </button>
@@ -367,7 +367,7 @@ export default function PricingPage() {
                 type="button"
                 onClick={handleAction}
                 className="flex-1 py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5] hover:bg-[#E3DCC8] active:scale-[0.97] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+               
               >
                 Book Now
               </button>

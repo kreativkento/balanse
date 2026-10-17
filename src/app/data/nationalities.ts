@@ -605,3 +605,14 @@ export function toCountryName(value?: string | null): string {
   if (COUNTRIES.includes(trimmed)) return trimmed;
   return DEMONYM_TO_COUNTRY[trimmed] ?? trimmed;
 }
+
+/** Display label for nationality (e.g. Philippines → Filipino). */
+export function formatNationalityLabel(value?: string | null): string {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) return '';
+  if (/^filipino$/i.test(trimmed)) return 'Filipino';
+  const country = toCountryName(trimmed);
+  if (country === 'Philippines') return 'Filipino';
+  if (/^philippines$/i.test(trimmed) || /^philipines$/i.test(trimmed)) return 'Filipino';
+  return country || trimmed;
+}

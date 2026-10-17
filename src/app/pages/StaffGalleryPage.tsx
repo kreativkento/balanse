@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { toastCreated, toastDeleted, toastUpdated } from '../../lib/operation-toast';
 import { Upload, Images, X, Check, Pencil, Trash2, Tag } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
@@ -149,8 +150,8 @@ function PhotoModal({
           <button onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
           <button
             onClick={handleSave}
-            className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+            className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+           
           >
             {isEdit ? 'Save Changes' : 'Post Photo'}
           </button>
@@ -191,10 +192,19 @@ export default function StaffGalleryPage() {
         uploadedBy: staffUser.name,
       }, ...prev]);
     }
+    if (editingPhoto) {
+      toastUpdated('Photo');
+    } else {
+      toastCreated('Photo');
+    }
     setShowModal(false);
   };
 
-  const handleDelete = (id: number) => { setPhotos(prev => prev.filter(p => p.id !== id)); setConfirmDeleteId(null); };
+  const handleDelete = (id: number) => {
+    setPhotos(prev => prev.filter(p => p.id !== id));
+    setConfirmDeleteId(null);
+    toastDeleted('Photo');
+  };
 
   return (
     <div className="min-h-full bg-[#F8F3E8]">
@@ -233,8 +243,8 @@ export default function StaffGalleryPage() {
           </div>
           <button
             onClick={openUpload}
-            className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
+            className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
+           
           >
             <Upload size={15} /> Post Photo
           </button>
@@ -327,7 +337,7 @@ export default function StaffGalleryPage() {
             {/* Upload placeholder */}
             <button
               onClick={openUpload}
-              className="flex flex-col items-center justify-center h-48 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#c49a3c]/40 hover:text-[#c49a3c] hover:bg-[#c49a3c]/04 transition-all group"
+              className="action-button flex flex-col items-center justify-center h-48 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#c49a3c]/40 hover:text-[#c49a3c] hover:bg-[#c49a3c]/04 transition-all group"
             >
               <Upload size={22} className={`mb-2 ${ICON_HOVER_GROW}`} />
               <span className="text-xs font-medium">Post a Photo</span>

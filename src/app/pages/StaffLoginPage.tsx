@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Eye, EyeOff, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { staffPortalHomePath } from '../../lib/staff-portal-routes';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
 
@@ -9,7 +10,13 @@ const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 export default function StaffLoginPage() {
   const navigate = useNavigate();
-  const { staffLogin } = useStaffAuth();
+  const { staffLogin, staffUser, staffAuthReady } = useStaffAuth();
+
+  useEffect(() => {
+    if (staffAuthReady && staffUser) {
+      navigate(staffPortalHomePath(staffUser.accountRole), { replace: true });
+    }
+  }, [staffAuthReady, staffUser, navigate]);
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +47,7 @@ export default function StaffLoginPage() {
     const result = await staffLogin(email.trim(), password);
     setLoading(false);
     if (result.success) {
-      navigate('/staff-dashboard');
+      navigate(result.redirectTo ?? '/staff-dashboard');
     } else {
       setError(result.error || 'Login failed.');
     }
@@ -84,10 +91,10 @@ export default function StaffLoginPage() {
             className="text-white leading-tight mb-4"
             style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.4rem, 4vw, 3.2rem)', letterSpacing: '0.05em' }}
           >
-            Welcome Back,<br />Coach.
+            Welcome Back,<br />Team.
           </h1>
           <p className="text-white/45 text-sm leading-relaxed max-w-xs">
-            Manage your classes, review student bookings, and keep the studio running at its best.
+            Coaches, front desk, and marketing — sign in to open your staff workspace.
           </p>
 
           {/* Feature list */}
@@ -199,8 +206,7 @@ export default function StaffLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em', fontSize: '1rem' }}
+              className="action-button w-full flex items-center justify-center bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -220,18 +226,6 @@ export default function StaffLoginPage() {
               Return to student site
             </Link>
           </p>
-
-          {/* Admin separator */}
-          <div className="mt-6 pt-6 border-t border-[#D4CDB5]/50">
-            <p className="text-center text-[#B0A898] text-xs mb-3">Need admin-level access?</p>
-            <button
-              onClick={() => navigate('/admin-login')}
-              className="w-full py-3 rounded-full border border-[#D4CDB5]/70 bg-white text-[#1E2A35] hover:border-[#1E2A35]/30 hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.88rem' }}
-            >
-              Log in as Admin
-            </button>
-          </div>
 
         </div>
       </div>

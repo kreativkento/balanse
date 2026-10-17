@@ -151,7 +151,7 @@ export function BottomCTA({ label = 'Book / Schedule' }: BottomCTAProps) {
       <div className="md:hidden sticky bottom-0 z-20 bg-gradient-to-t from-[#F8F3E8] via-[#F8F3E8]/95 to-transparent pt-2 pb-3 px-5 border-t border-[#D4CDB5]/60">
         <button
           onClick={handleClick}
-          className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-sm rounded-full py-3 min-h-[44px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
+          className="action-button w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white text-sm rounded-full py-3 min-h-[44px] shadow-[0_4px_24px_rgba(196,154,60,0.4)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
         >
           <Calendar size={16} />
           {label}

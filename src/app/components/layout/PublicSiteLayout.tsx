@@ -17,16 +17,27 @@ const PAGES_WITH_CTA = [
 
 const LOCK_SCROLL_PATHS = ['/login', '/signup', '/coaches'];
 
+/** Full-height calendar (same flex chain as member class schedule). */
+const FILL_VIEWPORT_PATHS = ['/classes'];
+
 /** Public site chrome: sticky navbar (+ optional footer). Member pages use MemberSiteLayout. */
 export function PublicSiteLayout() {
   const location = useLocation();
-  const showBottomCTA = PAGES_WITH_CTA.includes(location.pathname);
-  const lockScroll = LOCK_SCROLL_PATHS.includes(location.pathname);
+  const fillViewport = FILL_VIEWPORT_PATHS.includes(location.pathname);
+  const showBottomCTA =
+    PAGES_WITH_CTA.includes(location.pathname) && !fillViewport;
+  const lockScroll = LOCK_SCROLL_PATHS.includes(location.pathname) || fillViewport;
 
   return (
-    <div className={`bg-[#F8F3E8] flex flex-col ${lockScroll ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
+    <div
+      className={`bg-[#F8F3E8] flex flex-col ${
+        lockScroll ? 'h-dvh overflow-hidden' : 'min-h-screen'
+      }`}
+    >
       <NavBar />
-      <main className={`flex-1 flex flex-col ${lockScroll ? 'min-h-0 overflow-hidden' : ''}`}>
+      <main
+        className={`flex-1 flex flex-col min-h-0 ${lockScroll ? 'overflow-hidden' : ''}`}
+      >
         <Outlet />
       </main>
       {showBottomCTA && <BottomCTA />}

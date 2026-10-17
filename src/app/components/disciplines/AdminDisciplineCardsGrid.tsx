@@ -192,7 +192,11 @@ function AdminDisciplineList({
 
       <div
         ref={bodyRef}
-        className={fillContainer ? 'flex-1 min-h-0 divide-y divide-[#D4CDB5]/30 overflow-hidden' : 'divide-y divide-[#D4CDB5]/30'}
+        className={
+          fillContainer
+            ? 'flex-1 min-h-0 divide-y divide-[#D4CDB5]/30 overflow-hidden flex flex-col justify-start'
+            : 'divide-y divide-[#D4CDB5]/30'
+        }
       >
         {disciplines.map((discipline) => (
           <div
@@ -206,7 +210,9 @@ function AdminDisciplineList({
                 onSelect(discipline);
               }
             }}
-            className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-x-4 px-5 py-4 items-center hover:bg-[#F8F3E8]/70 cursor-pointer transition-colors min-h-[64px]"
+            className={`grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-x-4 px-5 items-center hover:bg-[#F8F3E8]/70 cursor-pointer transition-colors box-border shrink-0 ${
+              fillContainer ? 'h-[72px]' : 'min-h-[64px] py-4'
+            }`}
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-[#F8F3E8] border border-[#D4CDB5]/60 flex items-center justify-center shrink-0 overflow-hidden">
@@ -217,7 +223,7 @@ function AdminDisciplineList({
                 <p className="text-[#8A7E6E] text-xs mt-0.5 truncate">{discipline.slug}</p>
               </div>
             </div>
-            <p className="text-[#8A7E6E] text-sm line-clamp-2">
+            <p className="text-[#8A7E6E] text-sm line-clamp-2 leading-snug">
               {discipline.description || 'No description yet.'}
             </p>
             <div>

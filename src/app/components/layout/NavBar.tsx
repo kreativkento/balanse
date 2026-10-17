@@ -26,8 +26,8 @@ export const classesLinks = [
 
 /** Member sidebar Class Management — schedules stay on a member page. */
 export const memberClassLinks = [
-  { label: 'Class Schedules', path: '/class-schedule', icon: <CalendarDays size={18} /> },
   { label: 'My Classes', path: '/my-classes', icon: <Bookmark size={18} /> },
+  { label: 'Class Schedules', path: '/class-schedule', icon: <CalendarDays size={18} /> },
   { label: 'Studio Guidelines', path: '/studio-guidelines', icon: <ClipboardList size={18} /> },
 ];
 
@@ -81,7 +81,7 @@ function DesktopDropdown({
             <Link
               key={link.path}
               to={link.path}
-              className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-normal transition-colors ${
                 isActive(link.path)
                   ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
                   : 'text-[#5A5048] hover:text-[#1E2A35] hover:bg-[#EDE8D8]'
@@ -121,7 +121,7 @@ function MobileAccordion({
       <button
         type="button"
         onClick={onToggle}
-        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors min-h-[52px] w-full text-left ${
+        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors min-h-[52px] w-full text-left ${
           groupActive
             ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
             : 'text-[#1E2A35] hover:bg-[#EDE8D8]'
@@ -143,7 +143,7 @@ function MobileAccordion({
               key={link.path}
               to={link.path}
               onClick={onNavigate}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors min-h-[48px] ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-normal transition-colors min-h-[44px] ${
                 isActive(link.path)
                   ? 'bg-[#c49a3c]/10 text-[#c49a3c]'
                   : 'text-[#1E2A35] hover:bg-[#EDE8D8]'

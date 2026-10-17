@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Search, Pencil, Trash2, X, Users,
-  Activity, CalendarDays, Mail, Phone, MapPin, Check, Globe,
+  Search, Pencil, Trash2, X, Plus,
+  Activity, CalendarDays, Mail, Phone, MapPin, Globe,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { toastOperationFailed, toastUpdated } from '../../lib/operation-toast';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 import {
@@ -19,6 +21,7 @@ import { parseHealthDeclaration } from '../../lib/health-declaration';
 import { CURRENT_DOCUMENTS } from '../../lib/member-documents';
 
 const ACCENT = '#c49a3c';
+const DELETE_CONFIRM_WORD = 'delete';
 
 const EMPTY_FORM = {
   name: '',
@@ -283,7 +286,7 @@ function ClientProfileModal({
   );
 }
 
-export default function AdminStudentsPage() {
+export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boolean }) {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
@@ -293,7 +296,9 @@ export default function AdminStudentsPage() {
   const [filterProfile, setFilterProfile] = useState<'All' | 'Complete' | 'Incomplete'>('All');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ClientDirectoryItem | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<ClientDirectoryItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
@@ -344,7 +349,21 @@ export default function AdminStudentsPage() {
     setPage(1);
   }, [search, filterProfile]);
 
+  useEffect(() => {
+    setDeleteConfirmInput('');
+  }, [deleteTarget?.id]);
+
+  const deleteConfirmReady =
+    deleteConfirmInput.trim().toLowerCase() === DELETE_CONFIRM_WORD;
+
   if (!adminUser) return null;
+
+  const openAdd = () => {
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+    setFormError('');
+    setShowModal(true);
+  };
 
   const openEdit = (student: ClientDirectoryItem) => {
     setForm({
@@ -366,7 +385,10 @@ export default function AdminStudentsPage() {
       setFormError('Name and email are required.');
       return;
     }
-    if (!editingId) return;
+    if (!editingId) {
+      setFormError('Adding new clients from admin is not available yet. Clients can register via the public sign-up page.');
+      return;
+    }
 
     setSaving(true);
     setFormError('');
@@ -382,23 +404,37 @@ export default function AdminStudentsPage() {
     setSaving(false);
 
     if (!result.ok) {
-      setFormError(result.error || 'Failed to update client.');
+      const message = result.error || 'Failed to update client.';
+      setFormError(message);
+      toastOperationFailed(message);
       return;
     }
 
+    toastUpdated('Client profile');
     await loadClients();
     setShowModal(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const result = await deleteManagedAccount(id);
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || !deleteConfirmReady || deleting) return;
+
+    const deletedName = deleteTarget.name;
+    setDeleting(true);
+    const result = await deleteManagedAccount(deleteTarget.id);
+    setDeleting(false);
+
     if (!result.ok) {
-      setFormError(result.error || 'Failed to delete client.');
-      setDeleteId(null);
+      toast.error(result.error || 'Could not delete this client account. Try again or contact support.');
       return;
     }
+
+    if (viewingStudent?.id === deleteTarget.id) {
+      setViewingStudent(null);
+    }
+    setDeleteTarget(null);
+    setDeleteConfirmInput('');
     await loadClients();
-    setDeleteId(null);
+    toast.success(`Account deleted. ${deletedName} was removed from clients and auth.`);
   };
 
   const inputClass =
@@ -410,21 +446,6 @@ export default function AdminStudentsPage() {
     <>
       <div className="h-full min-h-0 overflow-hidden flex flex-col">
       <div className="max-w-7xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col">
-        <div className="flex items-center justify-between mb-7 shrink-0">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Users size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Clients</span>
-            </div>
-            <h1
-              className="text-[#1E2A35] leading-tight"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}
-            >
-              Client Accounts
-            </h1>
-          </div>
-        </div>
-
         <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
           <div className="relative flex-1 max-w-sm">
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
@@ -447,12 +468,35 @@ export default function AdminStudentsPage() {
               </button>
             ))}
           </div>
-          <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} of {students.length} clients</span>
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
+              {filtered.length} of {students.length} clients
+            </span>
+            {!viewOnly && (
+              <button
+                type="button"
+                onClick={openAdd}
+                className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
+              >
+                <Plus size={16} className="shrink-0" />
+                <span>Add Client</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
-            {['Name', 'Email', 'Phone', 'Joined', 'Profile', 'Actions'].map((h) => (
+          <div
+            className={`grid gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0 ${
+              viewOnly
+                ? 'grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]'
+                : 'grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px]'
+            }`}
+          >
+            {(viewOnly
+              ? ['Name', 'Email', 'Phone', 'Joined', 'Profile']
+              : ['Name', 'Email', 'Phone', 'Joined', 'Profile', 'Actions']
+            ).map((h) => (
               <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
             ))}
           </div>
@@ -475,7 +519,11 @@ export default function AdminStudentsPage() {
                       setViewingStudent(student);
                     }
                   }}
-                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
+                  className={`grid gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer ${
+                    viewOnly
+                      ? 'grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]'
+                      : 'grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_100px]'
+                  }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center shrink-0 overflow-hidden">
@@ -498,51 +546,30 @@ export default function AdminStudentsPage() {
                     {student.profileComplete ? 'Complete' : 'Incomplete'}
                   </span>
 
-                  <div
-                    className="flex items-center gap-1.5 w-[100px]"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    {deleteId === student.id ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(student.id)}
-                          aria-label="Confirm delete"
-                          className="h-8 w-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all"
-                        >
-                          <Check size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(null)}
-                          aria-label="Cancel delete"
-                          className="h-8 w-8 rounded-lg bg-white border border-[#D4CDB5]/70 text-[#8A7E6E] flex items-center justify-center hover:bg-[#EDE8D8] active:scale-95 transition-all"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(student)}
-                          aria-label={`Edit ${student.name}`}
-                          className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(student.id)}
-                          aria-label={`Delete ${student.name}`}
-                          className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {!viewOnly && (
+                    <div
+                      className="flex items-center gap-1.5 w-[100px]"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openEdit(student)}
+                        aria-label={`Edit ${student.name}`}
+                        className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(student)}
+                        aria-label={`Delete ${student.name}`}
+                        className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -565,6 +592,78 @@ export default function AdminStudentsPage() {
         <ClientProfileModal student={viewingStudent} onClose={() => setViewingStudent(null)} />
       )}
 
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+          role="presentation"
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-client-title"
+            aria-describedby="delete-client-desc"
+            className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50">
+              <h3
+                id="delete-client-title"
+                className="text-[#1E2A35]"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+              >
+                Delete client account?
+              </h3>
+            </div>
+            <div className="px-7 py-5 flex flex-col gap-4">
+              <p id="delete-client-desc" className="text-[#5A5048] text-sm leading-relaxed">
+                This permanently removes{' '}
+                <span className="font-semibold text-[#1E2A35]">{deleteTarget.name}</span>
+                {' '}({deleteTarget.email}) and their profile data. This cannot be undone.
+              </p>
+              <div>
+                <label htmlFor="delete-client-confirm" className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">
+                  Type <span className="font-bold text-[#1E2A35] normal-case tracking-normal">{DELETE_CONFIRM_WORD}</span> to confirm
+                </label>
+                <input
+                  id="delete-client-confirm"
+                  type="text"
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  disabled={deleting}
+                  placeholder={DELETE_CONFIRM_WORD}
+                  className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 transition-all placeholder-[#C0B8A8] disabled:opacity-60"
+                />
+              </div>
+            </div>
+            <div className="px-7 pb-7 flex items-center gap-3">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm font-medium hover:bg-[#EDE8D8] transition-all disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting || !deleteConfirmReady}
+                onClick={() => void handleConfirmDelete()}
+                className="flex-1 py-3 rounded-full bg-red-600 text-white text-sm font-bold hover:bg-red-700 active:scale-[0.97] transition-all disabled:opacity-60"
+              >
+                {deleting ? 'Deleting…' : 'Delete account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md">
@@ -573,7 +672,7 @@ export default function AdminStudentsPage() {
                 className="text-[#1E2A35]"
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
               >
-                Edit Client
+                {editingId ? 'Edit Client' : 'Add Client'}
               </h3>
               <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:text-[#1E2A35] hover:bg-[#EDE8D8] flex items-center justify-center transition-all">
                 <X size={16} />
@@ -630,10 +729,9 @@ export default function AdminStudentsPage() {
               <button
                 onClick={() => void handleSave()}
                 disabled={saving}
-                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60"
               >
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Client'}
               </button>
             </div>
           </div>

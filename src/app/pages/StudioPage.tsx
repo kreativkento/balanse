@@ -1,38 +1,20 @@
-import { useEffect, useState } from 'react';
-import {
-  Accessibility,
-  Activity,
-  ArrowUpDown,
-  Car,
-  ChevronLeft,
-  ChevronRight,
-  Coffee,
-  CreditCard,
-  Droplets,
-  Dumbbell,
-  Flower2,
-  Footprints,
-  Lock,
-  MapPin,
-  Navigation,
-  Phone,
-  ShieldCheck,
-  Shirt,
-  ShowerHead,
-  Snowflake,
-  Sofa,
-  Sparkles,
-  Target,
-  Users,
-  Volume2,
-  Waves,
-  Wifi,
-  Wind,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, MapPin, Navigation, Phone, X, type LucideIcon } from 'lucide-react';
 import { CARD_HOVER_GROW, HOVER_FADE_UP, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
+import {
+  loadPublicAmenitiesCarouselPosts,
+  loadPublicGalleryPosts,
+  type GalleryPost,
+} from '../../lib/gallery-service';
+import { GalleryLightbox } from '../components/gallery/GalleryLightbox';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
+import {
+  buildStudioAmenityDisplayGroups,
+  flattenStudioAmenityDisplayGroups,
+  type StudioAmenityDisplayGroup,
+  type StudioAmenityDisplayItem,
+} from '../data/studio-amenities';
+import { fetchPublicStudioAmenitiesLabels } from '../../lib/studio-amenities-service';
 
 const STUDIO_CAROUSEL = [
   {
@@ -66,127 +48,83 @@ const STUDIO_DETAILS = {
     'https://www.google.com/maps/place/Balans%C3%A9/@10.3163126,123.8903472,1109m/data=!3m2!1e3!4b1!4m6!3m5!1s0x33a999b43ce2f4eb:0xbf2bc2b8ba8edbe4!8m2!3d10.3163073!4d123.8929221!16s%2Fg%2F11lmfp9w8b?entry=ttu&g_ep=EgoyMDI2MDgzMS4wIKXMDSoASAFQAw%3D%3D',
 };
 
-const AMENITY_GROUPS: { title: string; items: { icon: LucideIcon; label: string }[] }[] = [
-  {
-    title: 'Studio & equipment',
-    items: [
-      { icon: Footprints, label: 'Yoga mats & props provided' },
-      { icon: Dumbbell, label: 'Free weights & kettlebells' },
-      { icon: Activity, label: 'Reformer & mat Pilates gear' },
-      { icon: Target, label: 'Boxing bags & gloves' },
-      { icon: Waves, label: 'Cushioned movement flooring' },
-      { icon: Volume2, label: 'Studio sound system' },
-    ],
-  },
-  {
-    title: 'Comfort & facilities',
-    items: [
-      { icon: Snowflake, label: 'Air-conditioned studios' },
-      { icon: ShowerHead, label: 'Showers & changing rooms' },
-      { icon: Lock, label: 'Personal lockers' },
-      { icon: Shirt, label: 'Towel service' },
-      { icon: Droplets, label: 'Filtered drinking water' },
-      { icon: Wind, label: 'Cross-ventilated studios' },
-    ],
-  },
-  {
-    title: 'Guest experience',
-    items: [
-      { icon: Wifi, label: 'Free high-speed Wi-Fi' },
-      { icon: Sofa, label: 'Reception lounge' },
-      { icon: Flower2, label: 'Quiet mindfulness corner' },
-      { icon: Sparkles, label: 'Aromatherapy diffusers' },
-      { icon: Users, label: 'Small-group class sizes' },
-      { icon: Coffee, label: 'Complimentary herbal tea' },
-    ],
-  },
-  {
-    title: 'Getting here',
-    items: [
-      { icon: Car, label: 'Building parking' },
-      { icon: ArrowUpDown, label: 'Elevator access' },
-      { icon: Accessibility, label: 'Step-free studio entry' },
-      { icon: CreditCard, label: 'Card & e-wallet payments' },
-      { icon: ShieldCheck, label: '24/7 building security' },
-    ],
-  },
-];
-
-/** Two per group so the preview spans every category. */
-const FEATURED_AMENITIES = AMENITY_GROUPS.flatMap((group) => group.items.slice(0, 2));
-const AMENITY_COUNT = AMENITY_GROUPS.reduce((total, group) => total + group.items.length, 0);
+/** Airbnb listings preview the first 10, then link out to the full list. */
+const AMENITY_PREVIEW_LIMIT = 10;
 
 function AmenityRow({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <Icon size={18} className="shrink-0 text-[#c49a3c]" strokeWidth={1.75} />
-      <span className="text-[#1E2A35] text-sm leading-snug">{label}</span>
+    <div className="flex items-center gap-4">
+      <Icon size={24} className="shrink-0 text-[#1E2A35]" strokeWidth={1.5} />
+      <span className="text-[#1E2A35] text-base leading-snug">{label}</span>
     </div>
   );
 }
 
-function AmenitiesModal({ onClose }: { onClose: () => void }) {
+function AmenitiesModal({
+  groups,
+  onClose,
+}: {
+  groups: StudioAmenityDisplayGroup[];
+  onClose: () => void;
+}) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
-      style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-[#1E2A35]/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="All studio amenities"
     >
       <div
-        className="my-4 w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-[720px] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[min(820px,90vh)] sm:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-[#D4CDB5]/50 px-6 py-5 md:px-8">
-          <div>
-            <p className="text-[#8A7E6E] text-[0.65rem] uppercase tracking-widest mb-1">Amenities</p>
-            <h2
-              className="text-[#1E2A35] leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.05em' }}
-            >
-              What this space offers
-            </h2>
-          </div>
+        <div className="shrink-0 border-b border-[#D4CDB5]/50 px-6 pb-5 pt-5 md:px-8">
           <button
             type="button"
             onClick={onClose}
             aria-label="Close amenities"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F8F3E8] text-[#8A7E6E] transition-colors hover:bg-[#EDE8D8] hover:text-[#1E2A35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
+            className="mb-5 flex h-8 w-8 items-center justify-center rounded-full border border-[#1E2A35]/80 text-[#1E2A35] transition-colors hover:bg-[#F8F3E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
           >
             <X size={16} />
           </button>
+          <h2
+            className="text-[#1E2A35] leading-none"
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.04em' }}
+          >
+            What this space offers
+          </h2>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-5 md:px-8">
-          <div className="flex flex-col gap-6">
-            {AMENITY_GROUPS.map((group) => (
-              <div key={group.title}>
-                <p className="text-[#8A7E6E] text-[0.65rem] uppercase tracking-widest mb-3">
-                  {group.title}
-                </p>
-                <div className="flex flex-col">
-                  {group.items.map((item) => (
-                    <div
-                      key={item.label}
-                      className="border-b border-[#D4CDB5]/40 py-3 last:border-b-0"
-                    >
-                      <AmenityRow icon={item.icon} label={item.label} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="overflow-y-auto px-6 py-2 md:px-8">
+          {groups.map((group) => (
+            <section key={group.title} className="border-b border-[#E8E2D4] py-6 last:border-b-0">
+              <h3 className="mb-1 text-base font-semibold text-[#1E2A35]">{group.title}</h3>
+              <ul>
+                {group.items.map((item) => (
+                  <li
+                    key={item.label}
+                    className="border-b border-[#E8E2D4] py-4 last:border-b-0"
+                  >
+                    <AmenityRow icon={item.icon} label={item.label} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       </div>
     </div>
@@ -244,6 +182,16 @@ const STUDIO_IMAGES_INITIAL = [
   },
 ];
 
+const GALLERY_INITIAL_COUNT = 8;
+
+type StudioGalleryTile = {
+  id: string;
+  url: string;
+  alt: string;
+  tall: boolean;
+  post?: GalleryPost;
+};
+
 const STUDIO_IMAGES_MORE = [
   {
     id: 9,
@@ -271,37 +219,105 @@ const STUDIO_IMAGES_MORE = [
   },
 ];
 
+function staticGalleryTiles(): StudioGalleryTile[] {
+  return [...STUDIO_IMAGES_INITIAL, ...STUDIO_IMAGES_MORE].map((img) => ({
+    id: String(img.id),
+    url: img.url,
+    alt: img.alt,
+    tall: img.tall,
+  }));
+}
+
+function postsToTiles(posts: GalleryPost[]): StudioGalleryTile[] {
+  return posts.map((post) => ({
+    id: post.id,
+    url: post.thumbnailUrl ?? '',
+    alt: post.caption,
+    tall: post.masonryTall,
+    post,
+  }));
+}
+
+type CarouselSlide = { src: string; alt: string; post?: GalleryPost };
+
+function postsToCarouselSlides(posts: GalleryPost[]): CarouselSlide[] {
+  return posts.map((post) => ({
+    src: post.thumbnailUrl ?? '',
+    alt: post.caption,
+    post,
+  }));
+}
+
 export default function StudioPage() {
   const [showMore, setShowMore] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [amenitiesOpen, setAmenitiesOpen] = useState(false);
+  const [galleryPosts, setGalleryPosts] = useState<GalleryPost[]>([]);
+  const [amenitiesPosts, setAmenitiesPosts] = useState<GalleryPost[]>([]);
+  const [amenityGroups, setAmenityGroups] = useState<StudioAmenityDisplayGroup[]>([]);
+  const [viewingPost, setViewingPost] = useState<GalleryPost | null>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCarouselIndex((current) => (current + 1) % STUDIO_CAROUSEL.length);
-    }, 5000);
-    return () => window.clearInterval(timer);
+    void loadPublicGalleryPosts().then(setGalleryPosts);
+    void loadPublicAmenitiesCarouselPosts().then(setAmenitiesPosts);
+    void fetchPublicStudioAmenitiesLabels().then((labels) => {
+      setAmenityGroups(buildStudioAmenityDisplayGroups(labels));
+    });
   }, []);
 
+  const allAmenities: StudioAmenityDisplayItem[] = useMemo(
+    () => flattenStudioAmenityDisplayGroups(amenityGroups),
+    [amenityGroups],
+  );
+  const previewAmenities = allAmenities.slice(0, AMENITY_PREVIEW_LIMIT);
+  const amenityCount = allAmenities.length;
+  const hasMoreAmenities = amenityCount > AMENITY_PREVIEW_LIMIT;
+
+  const carouselSlides: CarouselSlide[] = amenitiesPosts.length
+    ? postsToCarouselSlides(amenitiesPosts)
+    : STUDIO_CAROUSEL.map((slide) => ({ src: slide.src, alt: slide.alt }));
+
+  useEffect(() => {
+    setCarouselIndex((current) =>
+      carouselSlides.length ? Math.min(current, carouselSlides.length - 1) : 0,
+    );
+  }, [carouselSlides.length]);
+
+  useEffect(() => {
+    if (!carouselSlides.length) return;
+    const timer = window.setInterval(() => {
+      setCarouselIndex((current) => (current + 1) % carouselSlides.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [carouselSlides.length]);
+
   const goToSlide = (index: number) => {
-    setCarouselIndex((index + STUDIO_CAROUSEL.length) % STUDIO_CAROUSEL.length);
+    if (!carouselSlides.length) return;
+    setCarouselIndex((index + carouselSlides.length) % carouselSlides.length);
   };
 
-  const allImages = showMore
-    ? [...STUDIO_IMAGES_INITIAL, ...STUDIO_IMAGES_MORE]
-    : STUDIO_IMAGES_INITIAL;
+  const dynamicTiles = galleryPosts.length ? postsToTiles(galleryPosts) : staticGalleryTiles();
+  const extraCount = Math.max(0, dynamicTiles.length - GALLERY_INITIAL_COUNT);
+  const allImages = showMore ? dynamicTiles : dynamicTiles.slice(0, GALLERY_INITIAL_COUNT);
 
   // Column splits
-  const buildCols = (images: typeof STUDIO_IMAGES_INITIAL, count: number) =>
+  const buildCols = (images: StudioGalleryTile[], count: number) =>
     Array.from({ length: count }, (_, i) => images.filter((_, idx) => idx % count === i));
 
   const [col0, col1, col2, col3] = buildCols(allImages, 4);
   const leftCol = allImages.filter((_, i) => i % 2 === 0);
   const rightCol = allImages.filter((_, i) => i % 2 === 1);
 
+  const openTile = (tile: StudioGalleryTile) => {
+    if (tile.post) setViewingPost(tile.post);
+  };
+
   return (
     <div className="bg-[#F8F3E8] min-h-screen">
-      {amenitiesOpen && <AmenitiesModal onClose={() => setAmenitiesOpen(false)} />}
+      {amenitiesOpen && (
+        <AmenitiesModal groups={amenityGroups} onClose={() => setAmenitiesOpen(false)} />
+      )}
+      {viewingPost && <GalleryLightbox post={viewingPost} onClose={() => setViewingPost(null)} />}
 
       {/* Header */}
       <div className="border-b border-[#D4CDB5]/60">
@@ -325,9 +341,9 @@ export default function StudioPage() {
               {/* Image carousel — main + thumbnails */}
               <div className="flex flex-col gap-3 min-w-0">
                 <div className="relative overflow-hidden rounded-3xl border border-[#D4CDB5]/60 shadow-sm bg-[#EDE8D8] aspect-[16/11] md:aspect-[16/10] min-h-[14rem]">
-                  {STUDIO_CAROUSEL.map((slide, index) => (
+                  {carouselSlides.map((slide, index) => (
                     <img
-                      key={slide.src}
+                      key={slide.post?.id ?? slide.src}
                       src={slide.src}
                       alt={slide.alt}
                       className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
@@ -355,48 +371,56 @@ export default function StudioPage() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => goToSlide(carouselIndex - 1)}
-                    aria-label="Previous thumbnail"
-                    className="shrink-0 w-8 h-8 flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] transition-colors"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-
-                  <div className="flex-1 min-w-0 flex gap-2 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {STUDIO_CAROUSEL.map((slide, index) => (
+                {carouselSlides.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    {carouselSlides.length > 1 && (
                       <button
-                        key={slide.src}
                         type="button"
-                        onClick={() => goToSlide(index)}
-                        aria-label={`Show studio photo ${index + 1}`}
-                        aria-pressed={index === carouselIndex}
-                        className={`relative shrink-0 w-[4.5rem] h-[3.25rem] md:w-24 md:h-[4.25rem] rounded-xl overflow-hidden transition-all ${
-                          index === carouselIndex
-                            ? 'ring-2 ring-[#1E2A35] ring-offset-1 ring-offset-[#F8F3E8]'
-                            : 'opacity-80 hover:opacity-100'
-                        }`}
+                        onClick={() => goToSlide(carouselIndex - 1)}
+                        aria-label="Previous thumbnail"
+                        className="shrink-0 w-8 h-8 flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] transition-colors"
                       >
-                        <img
-                          src={slide.src}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
+                        <ChevronLeft size={18} />
                       </button>
-                    ))}
-                  </div>
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={() => goToSlide(carouselIndex + 1)}
-                    aria-label="Next thumbnail"
-                    className="shrink-0 w-8 h-8 flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] transition-colors"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
+                    <div className="flex-1 min-w-0 flex justify-center">
+                      <div className="inline-flex max-w-full gap-2 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {carouselSlides.map((slide, index) => (
+                          <button
+                            key={slide.post?.id ?? slide.src}
+                            type="button"
+                            onClick={() => goToSlide(index)}
+                            aria-label={`Show studio photo ${index + 1}`}
+                            aria-pressed={index === carouselIndex}
+                            className={`relative shrink-0 w-[4.5rem] h-[3.25rem] md:w-24 md:h-[4.25rem] rounded-xl overflow-hidden transition-all ${
+                              index === carouselIndex
+                                ? 'ring-2 ring-[#1E2A35] ring-offset-1 ring-offset-[#F8F3E8]'
+                                : 'opacity-80 hover:opacity-100'
+                            }`}
+                          >
+                            <img
+                              src={slide.src}
+                              alt=""
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {carouselSlides.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => goToSlide(carouselIndex + 1)}
+                        aria-label="Next thumbnail"
+                        className="shrink-0 w-8 h-8 flex items-center justify-center text-[#8A7E6E] hover:text-[#1E2A35] transition-colors"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Studio details */}
@@ -470,21 +494,22 @@ export default function StudioPage() {
                 <div className="flex-1 h-px bg-[#D4CDB5]/60" />
               </div>
 
-              <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm p-4 md:p-6">
-                <div className="grid grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2">
-                  {FEATURED_AMENITIES.map((amenity) => (
+              <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm p-5 md:p-8">
+                <div className="grid grid-cols-1 gap-x-16 gap-y-5 sm:grid-cols-2">
+                  {previewAmenities.map((amenity) => (
                     <AmenityRow key={amenity.label} icon={amenity.icon} label={amenity.label} />
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setAmenitiesOpen(true)}
-                  className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-[#D4CDB5]/80 bg-[#F8F3E8] px-4 py-2 text-xs font-semibold text-[#5A5048] transition-all hover:border-[#c49a3c]/40 hover:bg-[#EDE8D8] hover:text-[#1E2A35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
-                >
-                  Show all {AMENITY_COUNT} amenities
-                  <ChevronRight size={12} className="text-[#c49a3c]" />
-                </button>
+                {hasMoreAmenities && (
+                  <button
+                    type="button"
+                    onClick={() => setAmenitiesOpen(true)}
+                    className="mt-7 inline-flex cursor-pointer items-center text-base font-semibold text-[#1E2A35] underline decoration-[#c49a3c] decoration-2 underline-offset-[6px] transition-colors hover:text-[#a67f2e] hover:decoration-[#a67f2e] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#745b3c]/50"
+                  >
+                    Show all {amenityCount} amenities
+                  </button>
+                )}
               </div>
             </section>
 
@@ -507,26 +532,36 @@ export default function StudioPage() {
             <div className="md:hidden flex gap-3">
               <div className="flex-1 flex flex-col gap-3">
                 {leftCol.map((img) => (
-                  <div key={img.id} className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm ${CARD_HOVER_GROW}`}>
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => openTile(img)}
+                    className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm ${CARD_HOVER_GROW} ${img.post ? 'cursor-pointer' : ''}`}
+                  >
                     <img
                       src={img.url}
                       alt={img.alt}
                       className={`w-full object-cover ${img.tall ? 'h-56' : 'h-40'}`}
                     />
                     <div className="absolute inset-0 bg-[#1E2A35]/0 group-active:bg-[#1E2A35]/10 transition-colors rounded-2xl" />
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="flex-1 flex flex-col gap-3 mt-6">
                 {rightCol.map((img) => (
-                  <div key={img.id} className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm ${CARD_HOVER_GROW}`}>
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => openTile(img)}
+                    className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm ${CARD_HOVER_GROW} ${img.post ? 'cursor-pointer' : ''}`}
+                  >
                     <img
                       src={img.url}
                       alt={img.alt}
                       className={`w-full object-cover ${img.tall ? 'h-56' : 'h-40'}`}
                     />
                     <div className="absolute inset-0 bg-[#1E2A35]/0 group-active:bg-[#1E2A35]/10 transition-colors rounded-2xl" />
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -540,9 +575,11 @@ export default function StudioPage() {
                   style={{ marginTop: colIdx % 2 === 1 ? '2rem' : '0' }}
                 >
                   {col.map((img) => (
-                    <div
+                    <button
                       key={img.id}
-                      className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm cursor-pointer ${CARD_HOVER_GROW}`}
+                      type="button"
+                      onClick={() => openTile(img)}
+                      className={`rounded-2xl overflow-hidden bg-[#EDE8D8] relative group shadow-sm text-left ${img.post ? 'cursor-pointer' : ''} ${CARD_HOVER_GROW}`}
                     >
                       <img
                         src={img.url}
@@ -556,26 +593,29 @@ export default function StudioPage() {
                           {img.alt}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ))}
             </div>
 
             {/* ── See More / See Less button ── */}
-            <div className="flex justify-center mt-8 mb-2">
-              <button
-                onClick={() => setShowMore((v) => !v)}
-                className="flex items-center gap-2 px-7 py-3 rounded-full border-2 border-[#c49a3c] text-[#c49a3c] hover:bg-[#c49a3c] hover:text-white active:scale-95 transition-all"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '1rem',
-                  letterSpacing: '0.1em',
-                }}
-              >
-                {showMore ? 'See Less' : `See More  (+${STUDIO_IMAGES_MORE.length})`}
-              </button>
-            </div>
+            {extraCount > 0 && (
+              <div className="flex justify-center mt-8 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMore((v) => !v)}
+                  className="flex items-center gap-2 px-7 py-3 rounded-full border-2 border-[#c49a3c] text-[#c49a3c] hover:bg-[#c49a3c] hover:text-white active:scale-95 transition-all"
+                  style={{
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: '1rem',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  {showMore ? 'See Less' : `See More  (+${extraCount})`}
+                </button>
+              </div>
+            )}
 
             {/* Bottom label */}
             <div className="px-4 pt-4 pb-2 text-center">

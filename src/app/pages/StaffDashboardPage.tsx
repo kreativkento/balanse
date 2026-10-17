@@ -1,352 +1,550 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import {
-  LogOut, CalendarDays, ChevronRight,
-  ShieldCheck, LayoutGrid, Clock, Users,
+  AlertCircle,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  LayoutGrid,
+  Loader2,
   SendHorizonal,
+  Users,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
-import { AccountMenu } from '../components/layout/AccountMenu';
-import { DashboardGreetingBar } from '../components/layout/DashboardGreetingBar';
-import { CARD_HOVER_GROW } from '../../lib/motion-classes';
-import { getPhilippinesGreeting } from '../../lib/philippines-time';
+import { STAFF_PAGE_CONTAINER } from '../lib/staff-page-meta';
+import {
+  fetchCoachAssignedClassDisplays,
+  fetchClassesForStaffSchedule,
+  type ClassDisplay,
+} from '../../lib/class-service';
+import { fetchDisciplinesForPublic } from '../../lib/discipline-service';
+import {
+  fetchMyPortalRequests,
+  PORTAL_REQUESTS_CHANGED,
+  portalRequestStatusBadgeClass,
+  type PortalRequestRow,
+  type PortalRequestStatus,
+} from '../../lib/portal-request-service';
+import { toast } from 'sonner';
 
-// ── Mock Data ──────────────────────────────────────────────────
+const DASHBOARD_CLASS_DETAIL_TOAST = 'Go to my classes to view class details';
 
-const CLASS_COLORS: Record<string, string> = {
-  'Yoga': '#c49a3c', 'Calisthenics': '#3A4A5A', 'Animal Flow': '#6B8E6B',
-  'Groundworks': '#8B6F5A', 'Circuit Training': '#B86A4A', 'Mat Pilates': '#9A7A8A',
-  'Kickboxing': '#7A3A4A', 'Capoeira': '#A07050', 'Personal Coaching': '#a67f2e',
+const PH_TZ = 'Asia/Manila';
+const MAX_TODAY = 4;
+const MAX_UPCOMING = 4;
+const MAX_REQUESTS = 3;
+
+const CLASS_COLOR_FALLBACK: Record<string, string> = {
+  Yoga: '#c49a3c',
+  Calisthenics: '#3A4A5A',
+  'Animal Flow': '#6B8E6B',
+  Groundworks: '#8B6F5A',
+  'Circuit Training': '#B86A4A',
+  'Mat Pilates': '#9A7A8A',
+  Kickboxing: '#7A3A4A',
+  Capoeira: '#A07050',
+  'Personal Coaching': '#a67f2e',
 };
 
-const UPCOMING_CLASSES = [
-  { id: 1, date: 'Mon, Apr 13', className: 'Yoga',            time: '8:00 AM',  trainer: 'Jodi',     enrolled: 11, capacity: 15, status: 'open' as const },
-  { id: 2, date: 'Mon, Apr 13', className: 'Mat Pilates',      time: '10:00 AM', trainer: 'Kate',     enrolled: 8,  capacity: 12, status: 'open' as const },
-  { id: 3, date: 'Mon, Apr 13', className: 'Calisthenics',     time: '6:00 PM',  trainer: 'Rex',      enrolled: 6,  capacity: 12, status: 'open' as const },
-  { id: 4, date: 'Tue, Apr 14', className: 'Animal Flow',      time: '9:00 AM',  trainer: 'Ephraim',  enrolled: 10, capacity: 12, status: 'open' as const },
-  { id: 5, date: 'Tue, Apr 14', className: 'Kickboxing',       time: '5:00 PM',  trainer: 'Wolf',     enrolled: 10, capacity: 10, status: 'full' as const },
-  { id: 6, date: 'Wed, Apr 15', className: 'Circuit Training', time: '4:00 PM',  trainer: 'Rachelle', enrolled: 12, capacity: 15, status: 'open' as const },
-  { id: 7, date: 'Thu, Apr 16', className: 'Yoga',             time: '8:00 AM',  trainer: 'Jodi',     enrolled: 7,  capacity: 15, status: 'open' as const },
-  { id: 8, date: 'Thu, Apr 16', className: 'Groundworks',      time: '11:00 AM', trainer: 'Alec',     enrolled: 4,  capacity: 10, status: 'open' as const },
-];
+const bebas = {
+  fontFamily: "'Bebas Neue', sans-serif",
+  letterSpacing: '0.05em',
+} as const;
 
-const ENROLLED_BY_CLASS: Record<number, { name: string; membership: string }[]> = {
-  1: [{ name: 'Alex Johnson', membership: 'Gold' }, { name: 'Sofia Reyes', membership: 'Gold' }, { name: 'Hannah Ong', membership: 'Gold' }, { name: 'Maria Santos', membership: 'Silver' }, { name: 'Marco Lim', membership: 'Silver' }, { name: 'Pia Villanueva', membership: 'Gold' }, { name: 'Ryan Bautista', membership: 'Gold' }, { name: 'Camille Cruz', membership: 'Silver' }, { name: 'Jan Corpus', membership: 'Silver' }, { name: 'Lea Mendoza', membership: 'Single Pass' }, { name: 'Cris Dela Cruz', membership: 'Single Pass' }],
-  2: [{ name: 'Maria Santos', membership: 'Silver' }, { name: 'Diego Tan', membership: 'Single Pass' }, { name: 'Camille Cruz', membership: 'Silver' }, { name: 'Hannah Ong', membership: 'Gold' }, { name: 'Sofia Reyes', membership: 'Gold' }, { name: 'Ryan Bautista', membership: 'Gold' }, { name: 'Alex Johnson', membership: 'Gold' }, { name: 'Jan Corpus', membership: 'Silver' }],
-  3: [{ name: 'Cris Dela Cruz', membership: 'Single Pass' }, { name: 'Marco Lim', membership: 'Silver' }, { name: 'Pia Villanueva', membership: 'Gold' }, { name: 'Ryan Bautista', membership: 'Gold' }, { name: 'Jan Corpus', membership: 'Silver' }, { name: 'Alex Johnson', membership: 'Gold' }],
-  4: [{ name: 'Sofia Reyes', membership: 'Gold' }, { name: 'Pia Villanueva', membership: 'Gold' }, { name: 'Hannah Ong', membership: 'Gold' }, { name: 'Camille Cruz', membership: 'Silver' }, { name: 'Cris Dela Cruz', membership: 'Single Pass' }, { name: 'Alex Johnson', membership: 'Gold' }, { name: 'Maria Santos', membership: 'Silver' }, { name: 'Jan Corpus', membership: 'Silver' }, { name: 'Marco Lim', membership: 'Silver' }, { name: 'Ryan Bautista', membership: 'Gold' }],
-  5: [{ name: 'Alex Johnson', membership: 'Gold' }, { name: 'Maria Santos', membership: 'Silver' }, { name: 'Cris Dela Cruz', membership: 'Single Pass' }, { name: 'Hannah Ong', membership: 'Gold' }, { name: 'Ryan Bautista', membership: 'Gold' }, { name: 'Pia Villanueva', membership: 'Gold' }, { name: 'Marco Lim', membership: 'Silver' }, { name: 'Camille Cruz', membership: 'Silver' }, { name: 'Jan Corpus', membership: 'Silver' }, { name: 'Sofia Reyes', membership: 'Gold' }],
-  6: [{ name: 'Lea Mendoza', membership: 'Single Pass' }, { name: 'Diego Tan', membership: 'Single Pass' }, { name: 'Hannah Ong', membership: 'Gold' }, { name: 'Alex Johnson', membership: 'Gold' }, { name: 'Sofia Reyes', membership: 'Gold' }, { name: 'Marco Lim', membership: 'Silver' }, { name: 'Maria Santos', membership: 'Silver' }, { name: 'Camille Cruz', membership: 'Silver' }, { name: 'Ryan Bautista', membership: 'Gold' }, { name: 'Jan Corpus', membership: 'Silver' }, { name: 'Cris Dela Cruz', membership: 'Single Pass' }, { name: 'Pia Villanueva', membership: 'Gold' }],
-  7: [{ name: 'Alex Johnson', membership: 'Gold' }, { name: 'Maria Santos', membership: 'Silver' }, { name: 'Sofia Reyes', membership: 'Gold' }, { name: 'Hannah Ong', membership: 'Gold' }, { name: 'Ryan Bautista', membership: 'Gold' }, { name: 'Marco Lim', membership: 'Silver' }, { name: 'Jan Corpus', membership: 'Silver' }],
-  8: [{ name: 'Pia Villanueva', membership: 'Gold' }, { name: 'Camille Cruz', membership: 'Silver' }, { name: 'Cris Dela Cruz', membership: 'Single Pass' }, { name: 'Diego Tan', membership: 'Single Pass' }],
-};
+function phDateKey(iso: string | Date): string {
+  const date = typeof iso === 'string' ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: PH_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
 
-const MEMBERSHIP_COLOR: Record<string, string> = {
-  'Gold': 'bg-[#c49a3c]/12 text-[#a67f2e] border-[#c49a3c]/30',
-  'Silver': 'bg-[#8A7E6E]/10 text-[#5A5048] border-[#8A7E6E]/20',
-  'Single Pass': 'bg-[#EDE8D8] text-[#7A6A52] border-[#D4CDB5]/60',
-};
+function formatShortDate(iso: string, now: Date): string {
+  const startKey = phDateKey(iso);
+  const todayKey = phDateKey(now);
+  if (startKey === todayKey) return 'Today';
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (startKey === phDateKey(tomorrow)) return 'Tomorrow';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: PH_TZ,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(iso));
+}
 
-// ── Sub-components ─────────────────────────────────────────────
+function formatTimeStart(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: PH_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date(iso));
+}
 
-function StatCard({ label, value, sub, icon, gold, amber }: {
-  label: string; value: string; sub: string; icon: React.ReactNode; gold?: boolean; amber?: boolean;
+function formatRelativeSubmitted(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diffMs = Date.now() - then;
+  if (!Number.isFinite(then) || diffMs < 0) return 'just now';
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function isInNextSevenDaysPh(iso: string, now: Date): boolean {
+  const dayMs = 86_400_000;
+  for (let offset = 0; offset < 7; offset += 1) {
+    const d = new Date(now.getTime() + offset * dayMs);
+    if (phDateKey(iso) === phDateKey(d)) return true;
+  }
+  return false;
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  variant = 'default',
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  variant?: 'default' | 'gold' | 'amber';
 }) {
+  const iconWrap =
+    variant === 'gold'
+      ? 'bg-[#c49a3c]/12 text-[#c49a3c]'
+      : variant === 'amber'
+        ? 'bg-amber-50 text-amber-600'
+        : 'bg-[#EDE8D8] text-[#5A5048]';
+  const border =
+    variant === 'gold'
+      ? 'border-[#c49a3c]/35'
+      : variant === 'amber'
+        ? 'border-amber-200/70'
+        : 'border-[#D4CDB5]/60';
+
   return (
-    <div className={`bg-white rounded-3xl border shadow-sm px-5 py-4 flex items-center gap-4 ${CARD_HOVER_GROW} ${gold ? 'border-[#c49a3c]/40' : amber ? 'border-amber-200/60' : 'border-[#D4CDB5]/60'}`}>
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${gold ? 'bg-[#c49a3c]/12' : amber ? 'bg-amber-50' : 'bg-[#EDE8D8]'}`}>
+    <div
+      className={`flex min-w-0 items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-sm ${border}`}
+    >
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconWrap}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{label}</p>
-        <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}>{value}</p>
-        <p className="text-[#B0A898] text-xs mt-0.5">{sub}</p>
+      <div className="min-w-0">
+        <p className="truncate text-[#8A7E6E] text-[11px] uppercase tracking-widest">{label}</p>
+        <p
+          className="text-[#1E2A35] leading-none tabular-nums"
+          style={{ ...bebas, fontSize: '1.65rem' }}
+        >
+          {value}
+        </p>
       </div>
     </div>
   );
 }
 
-// ── Enrolled Students Modal ────────────────────────────────────
+function PanelLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-0.5 text-[#8A7E6E] text-xs font-semibold hover:text-[#c49a3c] transition-colors"
+    >
+      {children}
+      <ChevronRight size={13} className="opacity-70" />
+    </Link>
+  );
+}
 
-function EnrolledModal({ cls, onClose }: {
-  cls: typeof UPCOMING_CLASSES[0];
-  onClose: () => void;
+function Panel({
+  title,
+  hint,
+  action,
+  tone = 'neutral',
+  children,
+}: {
+  title: string;
+  hint?: string;
+  action?: React.ReactNode;
+  tone?: 'neutral' | 'requests';
+  children: React.ReactNode;
 }) {
-  const students = ENROLLED_BY_CLASS[cls.id] ?? [];
-  const color = CLASS_COLORS[cls.className] || '#c49a3c';
-  const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
+  const headerClass =
+    tone === 'requests'
+      ? 'border-b border-amber-100/80 bg-amber-50/50'
+      : 'border-b border-[#D4CDB5]/45 bg-[#FBF9F3]/80';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50 shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-10 rounded-full shrink-0" style={{ backgroundColor: color }} />
-              <div>
-                <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
-                  {cls.className}
-                </h3>
-                <p className="text-[#8A7E6E] text-xs">{cls.date} · {cls.time} · Coach {cls.trainer}</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all shrink-0">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
+    <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/55 bg-white shadow-sm">
+      <div className={`flex shrink-0 items-start justify-between gap-3 px-4 py-3 ${headerClass}`}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {tone === 'requests' ? (
+              <SendHorizonal size={14} className="shrink-0 text-amber-600" aria-hidden />
+            ) : null}
+            <h2 className="truncate text-[#1E2A35]" style={{ ...bebas, fontSize: '1.15rem' }}>
+              {title}
+            </h2>
           </div>
-
-          {/* Status bar */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-3">
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
-                cls.status === 'full' ? 'bg-red-50 text-red-600 border-red-200' :
-                fillPct >= 80 ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                'bg-green-50 text-green-700 border-green-200'
-              }`}>
-                {cls.status === 'full' ? 'Fully Booked' : fillPct >= 80 ? 'Almost Full' : 'Open'}
-              </span>
-              <span className="text-[#8A7E6E] text-xs">{cls.enrolled} / {cls.capacity} enrolled</span>
-            </div>
-            <div className="w-20 h-1.5 bg-[#EDE8D8] rounded-full overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${fillPct}%`, backgroundColor: color }} />
-            </div>
-          </div>
+          {hint ? <p className="mt-0.5 text-[#8A7E6E] text-[11px] leading-snug">{hint}</p> : null}
         </div>
-
-        {/* Student list */}
-        <div className="overflow-y-auto flex-1">
-          <div className="px-6 py-3">
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Enrolled Students</p>
-            {students.length === 0 ? (
-              <p className="text-[#B0A898] text-sm text-center py-6">No students enrolled yet.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {students.map((s, i) => (
-                  <div key={i} className="flex items-center justify-between bg-[#F8F3E8] rounded-xl border border-[#D4CDB5]/40 px-3 py-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#1E2A35]/08 border border-[#1E2A35]/12 flex items-center justify-center">
-                        <span className="text-[#1E2A35] text-[10px] font-bold">{s.name.split(' ').map(n => n[0]).join('').slice(0,2)}</span>
-                      </div>
-                      <span className="text-[#1E2A35] text-sm font-medium">{s.name}</span>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${MEMBERSHIP_COLOR[s.membership]}`}>{s.membership}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {action ? <div className="shrink-0 pt-0.5">{action}</div> : null}
       </div>
-    </div>
+      <div className="min-h-0 flex-1 overflow-hidden divide-y divide-[#D4CDB5]/25">{children}</div>
+    </section>
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────
+function ClassListRow({
+  classRow,
+  now,
+  accentColor,
+  onClick,
+}: {
+  classRow: ClassDisplay;
+  now: Date;
+  accentColor: string;
+  onClick: () => void;
+}) {
+  const limit = classRow.classLimit ?? 0;
+  const enrolled = classRow.enrolledCount;
+  const isFull = limit > 0 && enrolled >= limit;
+  const title = classRow.name.trim() || classRow.disciplineName;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[#F8F3E8]/90"
+    >
+      <span className="h-9 w-1 shrink-0 rounded-full" style={{ backgroundColor: accentColor }} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[#1E2A35] text-sm font-semibold">{title}</p>
+        <p className="truncate text-[#8A7E6E] text-xs">
+          {classRow.disciplineName} · {formatShortDate(classRow.startsAt, now)} ·{' '}
+          {formatTimeStart(classRow.startsAt)}
+        </p>
+      </div>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+          isFull
+            ? 'bg-red-50 text-red-600 border border-red-200/80'
+            : 'bg-[#F0EBE0] text-[#7A6A52] border border-[#D4CDB5]/50'
+        }`}
+      >
+        {limit > 0 ? `${enrolled}/${limit}` : `${enrolled}`}
+      </span>
+      <Users
+        size={14}
+        className="shrink-0 text-[#C0B8A8] transition-colors group-hover:text-[#c49a3c]"
+      />
+    </button>
+  );
+}
+
+type DashboardRequestItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  status: PortalRequestStatus;
+  accentColor: string;
+};
+
+function mapDashboardRequests(
+  requests: PortalRequestRow[],
+  classesById: Map<string, ClassDisplay>,
+  disciplineColorById: Map<string, string>,
+  disciplineNameById: Map<string, string>,
+): DashboardRequestItem[] {
+  return requests
+    .slice()
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map((req) => {
+      const classRow = req.target_class_id ? classesById.get(req.target_class_id) : undefined;
+      const payload = req.payload as { name?: string; discipline_id?: string };
+      const disciplineId = payload.discipline_id ?? classRow?.disciplineId ?? '';
+      const disciplineName =
+        (disciplineId ? disciplineNameById.get(disciplineId) : undefined)
+        ?? classRow?.disciplineName
+        ?? 'Class';
+      const accentColor =
+        (disciplineId ? disciplineColorById.get(disciplineId) : undefined)
+        ?? CLASS_COLOR_FALLBACK[disciplineName]
+        ?? '#c49a3c';
+
+      const startsAt = classRow?.startsAt ?? '';
+      const startDate = startsAt ? new Date(startsAt) : null;
+      const when = startDate
+        ? `${startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+        : '—';
+      const kind = req.request_type === 'cancellation_request' ? 'Cancellation' : 'Slot request';
+      const title =
+        req.request_type === 'cancellation_request'
+          ? classRow?.name || disciplineName
+          : payload.name?.trim() || classRow?.name || disciplineName;
+
+      return {
+        id: req.id,
+        title,
+        subtitle: `${kind} · ${when} · ${formatRelativeSubmitted(req.created_at)}`,
+        status: req.status,
+        accentColor,
+      };
+    });
+}
+
+function EmptyLine({ message }: { message: string }) {
+  return (
+    <p className="px-4 py-8 text-center text-[#B0A898] text-sm leading-relaxed">{message}</p>
+  );
+}
+
+function RequestRow({ req }: { req: DashboardRequestItem }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5">
+      <span className="h-9 w-1 shrink-0 rounded-full" style={{ backgroundColor: req.accentColor }} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[#1E2A35] text-sm font-semibold">{req.title}</p>
+        <p className="truncate text-[#8A7E6E] text-xs">{req.subtitle}</p>
+      </div>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${portalRequestStatusBadgeClass(req.status)}`}
+      >
+        {req.status}
+      </span>
+    </div>
+  );
+}
 
 export default function StaffDashboardPage() {
   const navigate = useNavigate();
-  const { staffUser, staffProfile, staffLogout } = useStaffAuth();
+  const { staffUser } = useStaffAuth();
+  const accountId = staffUser?.accountId ?? '';
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [viewingClass, setViewingClass]       = useState<typeof UPCOMING_CLASSES[0] | null>(null);
+  const [now] = useState(() => new Date());
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [assignedClasses, setAssignedClasses] = useState<ClassDisplay[]>([]);
+  const [portalRequests, setPortalRequests] = useState<PortalRequestRow[]>([]);
+  const [classesById, setClassesById] = useState<Map<string, ClassDisplay>>(new Map());
+  const [disciplineColorById, setDisciplineColorById] = useState<Map<string, string>>(new Map());
+  const [disciplineNameById, setDisciplineNameById] = useState<Map<string, string>>(new Map());
 
-  const handleLogout = () => { staffLogout(); navigate('/staff-login'); };
+  const notifyOpenClassOnMyClasses = useCallback(() => {
+    toast.message(DASHBOARD_CLASS_DETAIL_TOAST);
+  }, []);
+
+  const loadData = useCallback(async () => {
+    if (!accountId) {
+      setAssignedClasses([]);
+      setPortalRequests([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+
+    const [assignedResult, requestsResult, allClassesResult, disciplinesResult] = await Promise.all([
+      fetchCoachAssignedClassDisplays(accountId),
+      fetchMyPortalRequests(),
+      fetchClassesForStaffSchedule(),
+      fetchDisciplinesForPublic(),
+    ]);
+
+    const errors = [
+      assignedResult.error,
+      requestsResult.error,
+      allClassesResult.error,
+      disciplinesResult.error,
+    ].filter(Boolean) as string[];
+    if (errors.length > 0) setLoadError(errors[0]);
+
+    setAssignedClasses(assignedResult.data ?? []);
+    setPortalRequests(requestsResult.requests.filter((r) => r.requester_account_id === accountId));
+    setClassesById(new Map((allClassesResult.data ?? []).map((row) => [row.id, row])));
+    setDisciplineColorById(
+      new Map((disciplinesResult.data ?? []).map((d) => [d.id, d.colorHex || '#c49a3c'])),
+    );
+    setDisciplineNameById(new Map((disciplinesResult.data ?? []).map((d) => [d.id, d.name])));
+    setLoading(false);
+  }, [accountId]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    const onChange = () => {
+      void loadData();
+    };
+    window.addEventListener(PORTAL_REQUESTS_CHANGED, onChange);
+    return () => window.removeEventListener(PORTAL_REQUESTS_CHANGED, onChange);
+  }, [loadData]);
 
   useEffect(() => {
     if (!staffUser) navigate('/staff-login');
   }, [staffUser, navigate]);
+
+  const colorForClass = useCallback(
+    (row: ClassDisplay) => {
+      if (row.disciplineId && disciplineColorById.has(row.disciplineId)) {
+        return disciplineColorById.get(row.disciplineId)!;
+      }
+      return CLASS_COLOR_FALLBACK[row.disciplineName] ?? '#c49a3c';
+    },
+    [disciplineColorById],
+  );
+
+  const { todayClasses, upcomingClasses, weekCount, pendingRequestCount } = useMemo(() => {
+    const todayKey = phDateKey(now);
+    const futureAssigned = assignedClasses
+      .filter((row) => {
+        const endMs = row.endsAt ? new Date(row.endsAt).getTime() : new Date(row.startsAt).getTime();
+        return Number.isFinite(endMs) && endMs >= now.getTime();
+      })
+      .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+
+    const today = futureAssigned.filter((row) => phDateKey(row.startsAt) === todayKey);
+    const upcoming = futureAssigned.filter((row) => phDateKey(row.startsAt) > todayKey);
+    const week = assignedClasses.filter((row) => isInNextSevenDaysPh(row.startsAt, now)).length;
+    const pending = portalRequests.filter((r) => r.status === 'pending').length;
+
+    return { todayClasses: today, upcomingClasses: upcoming, weekCount: week, pendingRequestCount: pending };
+  }, [assignedClasses, now, portalRequests]);
+
+  const dashboardRequests = useMemo(
+    () => mapDashboardRequests(portalRequests, classesById, disciplineColorById, disciplineNameById),
+    [portalRequests, classesById, disciplineColorById, disciplineNameById],
+  );
+
+  const todayShown = todayClasses.slice(0, MAX_TODAY);
+  const upcomingShown = upcomingClasses.slice(0, MAX_UPCOMING);
+  const requestsShown = dashboardRequests.slice(0, MAX_REQUESTS);
+
   if (!staffUser) return null;
 
-  const firstName = staffUser.name.split(' ')[0];
-  const greeting = getPhilippinesGreeting();
-
   return (
-    <div className="min-h-full bg-[#F8F3E8]">
-      {viewingClass && <EnrolledModal cls={viewingClass} onClose={() => setViewingClass(null)} />}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-sm p-7 flex flex-col gap-5">
-            <div className="flex flex-col items-center text-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center">
-                <LogOut size={24} className="text-red-500" />
-              </div>
-              <div>
-                <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.05em' }}>Log Out?</h3>
-                <p className="text-[#8A7E6E] text-sm mt-1">You'll be signed out of the BALANSÉ coach portal.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-3.5 rounded-full border border-[#D4CDB5]/70 text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-95 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleLogout} className="flex-1 py-3.5 rounded-full bg-red-600 text-white text-sm font-bold hover:bg-red-700 active:scale-95 transition-all shadow-sm">
-                Log Out
-              </button>
-            </div>
+    <>
+      <div
+        className={`${STAFF_PAGE_CONTAINER} flex h-full min-h-0 flex-col gap-4 overflow-hidden py-4 md:py-5`}
+      >
+        {loadError ? (
+          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-red-800 text-sm">
+            <AlertCircle size={16} className="shrink-0" />
+            <span className="truncate">{loadError}</span>
           </div>
-        </div>
-      )}
+        ) : null}
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8">
-
-        {/* ── Greeting bar ── */}
-        <DashboardGreetingBar
-          greeting={greeting}
-          firstName={firstName}
-          searchPlaceholder="Search classes, students…"
-          leadingExtra={
-            <div className="flex items-center gap-2 mb-1">
-              <ShieldCheck size={13} className="text-[#c49a3c]" />
-              <span className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${staffUser.role === 'Administrator' ? 'bg-[#3A4A5A]/10 text-[#3A4A5A]' : 'bg-[#c49a3c]/12 text-[#a67f2e]'}`}>
-                {staffUser.role}
-              </span>
-            </div>
-          }
-          accountMenu={
-            <AccountMenu
-              onLogout={() => setShowLogoutModal(true)}
-              name={staffProfile?.displayName || staffUser.name}
-              email={staffUser.email}
-              photo={staffProfile?.photo}
-              profilePath="/staff-profile"
-            />
-          }
-        />
-
-        {/* ── Stats Row ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-5">
+        <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-3">
           <StatCard
-            label="Today's Classes"
-            value="3"
-            sub="Monday, April 13"
-            icon={<CalendarDays size={18} className="text-[#c49a3c]" />}
-            gold
+            label="Today's classes"
+            value={loading ? '—' : String(todayClasses.length)}
+            icon={<CalendarDays size={18} />}
+            variant="gold"
           />
           <StatCard
-            label="This Week"
-            value="8"
-            sub="Approved class sessions"
-            icon={<LayoutGrid size={18} className="text-[#5A5048]" />}
+            label="Next 7 days"
+            value={loading ? '—' : String(weekCount)}
+            icon={<LayoutGrid size={18} />}
           />
           <StatCard
-            label="Pending Requests"
-            value="2"
-            sub="Awaiting admin approval"
-            icon={<Clock size={18} className="text-amber-600" />}
-            amber
+            label="Pending requests"
+            value={loading ? '—' : String(pendingRequestCount)}
+            icon={<Clock size={18} />}
+            variant="amber"
           />
         </div>
 
-        {/* ── Main Grid ── */}
-        {/* Flat 5-col grid — cards placed directly so each row auto-stretches to equal height */}
-        <div className="grid grid-cols-1 md:grid-cols-5 md:items-stretch gap-6 pb-10">
-
-          {/* ── Row 1 Left: Upcoming Classes ── */}
-          <div className={`md:col-span-3 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
-            <div className="px-5 py-4 border-b border-[#D4CDB5]/50 flex items-center justify-between shrink-0">
-              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '0.05em' }} className="text-[#1E2A35]">
-                My Schedule
-              </h2>
-              <span className="text-[#8A7E6E] text-xs">Next 4 days · tap to see students</span>
-            </div>
-            <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-[#D4CDB5]/30
-              [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-              [&::-webkit-scrollbar-thumb]:bg-[#D4CDB5] [&::-webkit-scrollbar-thumb]:rounded-full">
-              {UPCOMING_CLASSES.map((cls) => {
-                const color = CLASS_COLORS[cls.className] || '#c49a3c';
-                const fillPct = Math.round((cls.enrolled / cls.capacity) * 100);
-                const isFull = cls.status === 'full';
-                const almostFull = fillPct >= 80 && !isFull;
-                return (
-                  <button
-                    key={cls.id}
-                    onClick={() => setViewingClass(cls)}
-                    className="w-full flex items-center gap-4 px-5 py-3 hover:bg-[#F8F3E8]/70 transition-colors group text-left"
-                  >
-                    <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    <div className="w-24 shrink-0">
-                      <p className="text-[#8A7E6E] text-xs">{cls.date}</p>
-                      <p className="text-[#1E2A35] text-xs font-semibold">{cls.time}</p>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[#1E2A35] text-sm font-semibold">{cls.className}</p>
-                      <p className="text-[#8A7E6E] text-xs">Coach {cls.trainer}</p>
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        isFull ? 'bg-red-50 text-red-600 border border-red-200' :
-                        almostFull ? 'bg-amber-50 text-amber-700' :
-                        'bg-[#F0EBE0] text-[#7A6A52]'
-                      }`}>
-                        {cls.enrolled}/{cls.capacity}
-                      </span>
-                      <div className="flex items-center gap-1 text-[#B0A898] group-hover:text-[#c49a3c] transition-colors">
-                        <Users size={13} />
-                        <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        {loading ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-[#8A7E6E]">
+            <Loader2 size={28} className="animate-spin text-[#c49a3c]" />
+            <p className="text-sm">Loading your dashboard…</p>
           </div>
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-3 lg:gap-5 lg:overflow-hidden">
+            <Panel
+              title="Today"
+              hint="Open My Classes for full session details"
+              action={
+                todayClasses.length > MAX_TODAY ? (
+                  <PanelLink to="/staff-my-classes">
+                    +{todayClasses.length - MAX_TODAY} more
+                  </PanelLink>
+                ) : (
+                  <PanelLink to="/staff-my-classes">My classes</PanelLink>
+                )
+              }
+            >
+              {todayShown.length === 0 ? (
+                <EmptyLine message="Nothing scheduled for today." />
+              ) : (
+                todayShown.map((row) => (
+                  <ClassListRow
+                    key={row.id}
+                    classRow={row}
+                    now={now}
+                    accentColor={colorForClass(row)}
+                    onClick={notifyOpenClassOnMyClasses}
+                  />
+                ))
+              )}
+            </Panel>
 
-          {/* ── Row 1 Right: Today at a Glance ── */}
-          <div className={`md:col-span-2 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5 flex flex-col ${CARD_HOVER_GROW}`}>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-4 shrink-0">Today at a Glance</p>
-            <div className="flex flex-col gap-3">
-              {[
-                { label: 'Total Classes',  value: '3',   color: 'text-[#1E2A35]' },
-                { label: 'Total Students', value: '26',  color: 'text-[#1E2A35]' },
-                { label: 'Open Spots',     value: '13',  color: 'text-amber-600'  },
-                { label: 'Active Members', value: '200', color: 'text-[#c49a3c]'  },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[#5A5048] text-sm">{label}</span>
-                  <span className={`font-semibold ${color}`} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem' }}>{value}</span>
-                </div>
-              ))}
-            </div>
+            <Panel
+              title="Upcoming"
+              hint="Open My Classes for full session details"
+              action={
+                upcomingClasses.length > MAX_UPCOMING ? (
+                  <PanelLink to="/staff-class-schedule">
+                    +{upcomingClasses.length - MAX_UPCOMING} more
+                  </PanelLink>
+                ) : (
+                  <PanelLink to="/staff-class-schedule">Schedule</PanelLink>
+                )
+              }
+            >
+              {upcomingShown.length === 0 ? (
+                <EmptyLine message="No upcoming sessions yet." />
+              ) : (
+                upcomingShown.map((row) => (
+                  <ClassListRow
+                    key={row.id}
+                    classRow={row}
+                    now={now}
+                    accentColor={colorForClass(row)}
+                    onClick={notifyOpenClassOnMyClasses}
+                  />
+                ))
+              )}
+            </Panel>
+
+            <Panel
+              title="Requests"
+              hint="Slot & cancellation status"
+              tone="requests"
+              action={
+                <PanelLink to="/staff-requests">
+                  {pendingRequestCount > 0 ? `${pendingRequestCount} pending · ` : ''}
+                  View all
+                </PanelLink>
+              }
+            >
+              {requestsShown.length === 0 ? (
+                <EmptyLine message="No requests submitted yet." />
+              ) : (
+                requestsShown.map((req) => <RequestRow key={req.id} req={req} />)
+              )}
+            </Panel>
           </div>
-
-          {/* ── Row 2: Schedule Requests ── */}
-          <div className={`md:col-span-5 bg-white rounded-3xl border border-amber-200/50 shadow-sm flex flex-col overflow-hidden ${CARD_HOVER_GROW}`}>
-            <div className="px-5 py-4 border-b border-amber-100 bg-amber-50/40 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <SendHorizonal size={15} className="text-amber-600" />
-                <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }} className="text-[#1E2A35]">
-                  My Schedule Requests
-                </h2>
-              </div>
-              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">2 pending</span>
-            </div>
-            <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-[#D4CDB5]/30
-              [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-              [&::-webkit-scrollbar-thumb]:bg-[#D4CDB5] [&::-webkit-scrollbar-thumb]:rounded-full">
-              {[
-                { class: 'Yoga', date: 'Sat, Apr 19', time: '8:00 AM', coach: staffUser.name.split(' ')[0], status: 'pending' as const, submitted: '2 hrs ago' },
-                { class: 'Mat Pilates', date: 'Sun, Apr 20', time: '10:00 AM', coach: staffUser.name.split(' ')[0], status: 'pending' as const, submitted: '1 day ago' },
-              ].map((req, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                  <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: CLASS_COLORS[req.class] || '#c49a3c' }} />
-                  <div className="flex-1">
-                    <p className="text-[#1E2A35] text-sm font-semibold">{req.class}</p>
-                    <p className="text-[#8A7E6E] text-xs">{req.date} · {req.time} · Coach {req.coach}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
-                      Pending
-                    </span>
-                    <span className="text-[#C0B8A8] text-xs">{req.submitted}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }

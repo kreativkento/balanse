@@ -147,7 +147,7 @@ create policy "Feedback select admin_dev"
   using (public.is_admin_or_dev());
 
 -- Any signed-in account can open a ticket for themselves.
--- Status is forced to unresolved; priority stays null; ticket_level starts at 1.
+-- Members: ticket_level 0. Staff roles: ticket_level 3 (see 035 for full escalation model).
 create policy "Feedback insert own"
   on public.feedback_system
   for insert
@@ -156,7 +156,22 @@ create policy "Feedback insert own"
     account_id = public.current_account_id()
     and status = 'unresolved'::public.feedback_status
     and priority is null
-    and ticket_level = 1
+    and (
+      (
+        public.current_user_role() = 'user'::public.user_role
+        and ticket_level = 0
+      )
+      or (
+        public.current_user_role() in (
+          'coach'::public.user_role,
+          'admin'::public.user_role,
+          'frontdesk'::public.user_role,
+          'marketing'::public.user_role,
+          'dev'::public.user_role
+        )
+        and ticket_level = 3
+      )
+    )
   );
 
 -- Reviewers update status / priority. Submitters cannot edit after send.

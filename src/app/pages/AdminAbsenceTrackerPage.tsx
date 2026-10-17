@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { toastSaved } from '../../lib/operation-toast';
 import {
   UserX, Check, X, ChevronDown, ClipboardList,
   Calendar, Search, AlertCircle, CheckCircle,
@@ -160,8 +161,7 @@ function AbsenceModal({ item, onClose, onSave }: {
           <button onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
           <button
             onClick={() => { onSave(item.id, 'absent', note); onClose(); }}
-            className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm flex items-center justify-center gap-2"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}>
+            className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm flex items-center justify-center gap-2">
             <Check size={14} /> Save Record
           </button>
         </div>
@@ -253,6 +253,7 @@ export function AdminAbsenceTrackerPanel() {
     setClasses((prev) => prev.map((c) =>
       c.id === id ? { ...c, status, note } : c,
     ));
+    toastSaved('Attendance');
   };
 
   const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
@@ -400,12 +401,13 @@ export function AdminAbsenceTrackerPanel() {
 
 export default function AdminAbsenceTrackerPage() {
   const navigate = useNavigate();
-  const { adminUser } = useAdminAuth();
+  const { adminUser, adminAuthReady } = useAdminAuth();
 
   useEffect(() => {
+    if (!adminAuthReady) return;
     if (!adminUser) navigate('/admin-login');
     else navigate('/admin-coaches?tab=absence', { replace: true });
-  }, [adminUser, navigate]);
+  }, [adminAuthReady, adminUser, navigate]);
 
   return null;
 }

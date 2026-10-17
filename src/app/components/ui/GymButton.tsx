@@ -1,4 +1,5 @@
 import { ReactNode, ButtonHTMLAttributes } from 'react';
+import { ACTION_BUTTON_CLASS } from '../../../lib/action-button-styles';
 
 interface GymButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
@@ -16,19 +17,19 @@ export function GymButton({
   ...props
 }: GymButtonProps) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-150 active:scale-[0.97] select-none disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-2 rounded-full transition-all duration-150 active:scale-[0.97] select-none disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants: Record<string, string> = {
     primary:
-      'bg-[#c49a3c] text-white hover:bg-[#a67f2e] shadow-[0_4px_20px_rgba(196,154,60,0.35)]',
+      `${ACTION_BUTTON_CLASS} bg-[#c49a3c] text-white hover:bg-[#a67f2e] shadow-[0_4px_20px_rgba(196,154,60,0.35)]`,
     secondary:
-      'bg-[#EDE8D8] text-[#1E2A35] hover:bg-[#E3DCC8] border border-[#D4CDB5]',
+      'font-semibold bg-[#EDE8D8] text-[#1E2A35] hover:bg-[#E3DCC8] border border-[#D4CDB5]',
     ghost:
-      'bg-transparent text-[#1E2A35] hover:bg-[#EDE8D8]',
+      'font-semibold bg-transparent text-[#1E2A35] hover:bg-[#EDE8D8]',
     outline:
-      'bg-transparent text-[#c49a3c] border-2 border-[#c49a3c] hover:bg-[#c49a3c] hover:text-white',
+      'font-semibold bg-transparent text-[#c49a3c] border-2 border-[#c49a3c] hover:bg-[#c49a3c] hover:text-white',
     danger:
-      'bg-red-100/80 text-red-700 border border-red-200 hover:bg-red-100',
+      'font-semibold bg-red-100/80 text-red-700 border border-red-200 hover:bg-red-100',
   };
 
   const sizes: Record<string, string> = {

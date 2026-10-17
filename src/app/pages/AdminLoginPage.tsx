@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Eye, EyeOff, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
@@ -9,7 +9,20 @@ const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
-  const { adminLogin } = useAdminAuth();
+  const { adminLogin, adminUser, adminAuthReady } = useAdminAuth();
+
+  useEffect(() => {
+    if (adminAuthReady && adminUser) {
+      navigate(
+        adminUser.role === 'frontdesk'
+          ? '/frontdesk-dashboard'
+          : adminUser.role === 'marketing'
+            ? '/marketing-dashboard'
+            : '/admin-dashboard',
+        { replace: true },
+      );
+    }
+  }, [adminAuthReady, adminUser, navigate]);
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +53,7 @@ export default function AdminLoginPage() {
     const result = await adminLogin(email.trim(), password);
     setLoading(false);
     if (result.success) {
-      navigate('/admin-dashboard');
+      // Role-based redirect runs in useEffect once adminUser is hydrated.
     } else {
       setError(result.error || 'Login failed.');
     }
@@ -192,8 +205,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em', fontSize: '1rem' }}
+              className="action-button w-full flex items-center justify-center bg-[#1E2A35] text-white rounded-full py-4 mt-1 shadow-[0_4px_20px_rgba(30,42,53,0.25)] hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

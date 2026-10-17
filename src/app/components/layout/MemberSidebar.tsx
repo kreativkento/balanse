@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Activity, ChevronDown, CreditCard, LayoutDashboard, MessageSquare, Newspaper, Repeat, User, Info } from 'lucide-react';
+import { Activity, ChevronDown, CreditCard, LayoutDashboard, MessageSquare, Newspaper, User, Info } from 'lucide-react';
 import logoMain from '@/assets/logo_main.svg';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -29,10 +29,7 @@ const financeLinks: {
   label: string;
   path: string;
   icon: ReactNode;
-}[] = [
-  { label: 'Payments', path: '/payment-history', icon: <CreditCard size={16} /> },
-  { label: 'Subscriptions', path: '/subscriptions', icon: <Repeat size={16} /> },
-];
+}[] = [{ label: 'Payments', path: '/payment-history', icon: <CreditCard size={16} /> }];
 
 const userProfileLinks: {
   label: string;
@@ -59,6 +56,9 @@ const communityBulletinLink = {
   path: '/member-bulletin',
   icon: <Newspaper size={16} />,
 };
+
+/** Kept visible, but not navigable until these areas are ready. */
+const TEMPORARILY_DISABLED_PATHS = new Set(['/performance']);
 
 function MemberSidebarNav({
   onNavigate,
@@ -90,6 +90,8 @@ function MemberSidebarNav({
           statusLabel: `Profile ${profileScore}% complete`,
         }
       : {};
+
+  const isTemporarilyDisabled = (path: string) => TEMPORARILY_DISABLED_PATHS.has(path);
 
   return (
     <div className="flex flex-col h-full">
@@ -187,7 +189,12 @@ function MemberSidebarNav({
                         label={link.label}
                         active={isActive(link.path)}
                         onNavigate={onNavigate}
-                        disabled={featuresLocked}
+                        disabled={featuresLocked || isTemporarilyDisabled(link.path)}
+                        disabledTitle={
+                          !featuresLocked && isTemporarilyDisabled(link.path)
+                            ? 'Temporarily unavailable'
+                            : undefined
+                        }
                         {...linkStatus(link.path)}
                       />
                     ))}
@@ -218,6 +225,7 @@ function MemberSidebarNav({
           active={isActive('/feedback')}
           onNavigate={onNavigate}
           disabled={featuresLocked}
+          appearance="gold"
         />
       </div>
     </div>
@@ -243,6 +251,7 @@ export function MemberSidebar({ children, lockScroll = false, lockScrollDesktop 
     <>
       <AppSidebarLayout
         mainOverflow={mainOverflow}
+        memberMainScroll
         renderSidebar={(closeMobile) => (
           <MemberSidebarNav onNavigate={closeMobile} />
         )}

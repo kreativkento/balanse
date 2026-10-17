@@ -134,8 +134,7 @@ export function TermsModal({
               type="button"
               onClick={() => { void confirmAccept(); }}
               disabled={!accepted || saving}
-              className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted && !saving ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+              className={`action-button flex-1 py-3 rounded-full text-sm transition-all flex items-center justify-center gap-2 ${accepted && !saving ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
               {saving ? 'Saving…' : 'I Accept'}
@@ -239,8 +238,7 @@ export function PrivacyModal({
               type="button"
               onClick={() => { void confirmAccept(); }}
               disabled={!accepted || saving}
-              className={`flex-1 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 ${accepted && !saving ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+              className={`action-button flex-1 py-3 rounded-full text-sm transition-all flex items-center justify-center gap-2 ${accepted && !saving ? 'bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97]' : 'bg-[#EDE8D8] text-[#9A8E7E] cursor-not-allowed'}`}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
               {saving ? 'Saving…' : 'I Accept'}

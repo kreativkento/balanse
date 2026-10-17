@@ -10,14 +10,56 @@ export const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-export const DAY_LABELS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-export const DAY_LABELS_LONG = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+export const DAY_LABELS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const DAY_LABELS_LONG = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Sunday-first full names (matches month grid columns). */
+export const DAY_LABELS_FULL = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+/** Monday-first full names (matches admin weekly schedule columns). */
+export const WEEKDAY_LABELS_MON_START = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const;
+
+/** Sat/Sun column shading — strong enough to read against weekday columns. */
+export const WEEKEND_COLUMN_BG = 'bg-[#DDD6C8]/90';
+export const WEEKEND_COLUMN_BG_SOFT = 'bg-[#E6E0D4]/75';
+
+export function isWeekendDate(date: Date): boolean {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+/** Weekly admin grid: Mon=0 … Sun=6. */
+export function isWeekendDayIndexMonStart(dayIndex: number): boolean {
+  return dayIndex === 5 || dayIndex === 6;
+}
+
+/** Month grid header columns (Sunday-first): column 0 or 6. */
+export function isWeekendMonthGridColumn(columnIndex: number): boolean {
+  return columnIndex % 7 === 0 || columnIndex % 7 === 6;
+}
 
 /** Studio hours shown on every calendar: 9:00 AM – 9:00 PM. */
 export const SCHEDULE_START_HOUR = 9;
 export const SCHEDULE_END_HOUR = 21;
 export const SCHEDULE_START_TIME_24 = '09:00';
 export const SCHEDULE_END_TIME_24 = '21:00';
+
+/** Default pixel height per hour row in shared week / 3-day grids. */
+export const SCHEDULE_GRID_ROW_HEIGHT = 50;
 
 /** Hour marks for week/admin grids (9 through 21 inclusive). */
 export const SCHEDULE_HOURS: number[] = Array.from(
@@ -134,6 +176,13 @@ export function getMondayOfWeekContaining(date: Date): Date {
   return d;
 }
 
+/** Sunday of the week containing the given date (local midnight). */
+export function getSundayOfWeekContaining(date: Date): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+
 /** e.g. "Aug 18 – Aug 24, 2026" for the Mon–Sun week containing `anchor`. */
 export function formatMonSunWeekRange(anchor: Date = getTodayLocal()): string {
   const mon = getMondayOfWeekContaining(anchor);
@@ -191,10 +240,34 @@ export function getWeekDatesContaining(anchor: Date): Date[] {
 }
 
 export function formatWeekRange(dates: Date[]): string {
+  if (dates.length < 2) return formatDayRange(dates);
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const start = dates[0].toLocaleDateString('en-US', opts);
-  const end = dates[6].toLocaleDateString('en-US', { ...opts, year: 'numeric' });
+  const end = dates[dates.length - 1].toLocaleDateString('en-US', { ...opts, year: 'numeric' });
   return `${start} – ${end}`;
+}
+
+/** e.g. "Apr 14 – Apr 16, 2026" for any consecutive date span (3-day view, etc.). */
+export function formatDayRange(dates: Date[]): string {
+  if (dates.length === 0) return '';
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (dates.length === 1) {
+    return dates[0].toLocaleDateString('en-US', { ...opts, year: 'numeric' });
+  }
+  const start = dates[0].toLocaleDateString('en-US', opts);
+  const end = dates[dates.length - 1].toLocaleDateString('en-US', { ...opts, year: 'numeric' });
+  return `${start} – ${end}`;
+}
+
+/** Three consecutive calendar days starting at `start` (local midnight). */
+export function getThreeDayDates(start: Date): Date[] {
+  const base = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  return [0, 1, 2].map((i) => addDaysToDate(base, i));
+}
+
+export function visibleRangeIncludesToday(dates: Date[], today: Date = getTodayLocal()): boolean {
+  const key = toDateKey(today);
+  return dates.some((d) => toDateKey(d) === key);
 }
 
 export function toDateKey(date: Date): string {

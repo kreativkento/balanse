@@ -109,8 +109,8 @@ export function BulletinDetailModal({ post, onClose }: { post: BulletinPost; onC
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-full bg-[#1E2A35] py-3 text-white transition-all hover:bg-[#263545] active:scale-[0.97]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+            className="action-button w-full rounded-full bg-[#1E2A35] py-3 text-white transition-all hover:bg-[#263545] active:scale-[0.97]"
+           
           >
             Close
           </button>

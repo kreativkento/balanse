@@ -1,4 +1,25 @@
-import { formatHourLabel, parseTimeToMinutes, isSameDay, DAY_LABELS_LONG, SCHEDULE_START_HOUR, SCHEDULE_END_HOUR } from './weekCalendarUtils';
+import {
+  formatHourLabel,
+  parseTimeToMinutes,
+  isSameDay,
+  DAY_LABELS_LONG,
+  SCHEDULE_START_HOUR,
+  SCHEDULE_END_HOUR,
+  SCHEDULE_GRID_ROW_HEIGHT,
+  isWeekendDate,
+  WEEKEND_COLUMN_BG,
+  WEEKEND_COLUMN_BG_SOFT,
+} from './weekCalendarUtils';
+import {
+  CALENDAR_BORDER_DIVIDER,
+  CALENDAR_DATE_MUTED,
+  CALENDAR_GRID_HALF_HOUR_LINE,
+  CALENDAR_GRID_HOUR_LINE,
+  CALENDAR_TIME_GUTTER_BG,
+  CALENDAR_TIME_LABEL,
+  CALENDAR_TODAY_COLUMN,
+  CALENDAR_TODAY_RING,
+} from './calendarContrast';
 
 // ─────────────────────────────────────────────
 // GOOGLE-CALENDAR-INSPIRED WEEK GRID
@@ -41,7 +62,7 @@ export function WeekCalendarGrid({
   today = new Date(),
   startHour = SCHEDULE_START_HOUR,
   endHour = SCHEDULE_END_HOUR,
-  rowHeight = 56,
+  rowHeight = SCHEDULE_GRID_ROW_HEIGHT,
   dayLabels = DAY_LABELS_LONG,
   timezoneLabel = 'GMT+8',
   selectedDayIndex = null,
@@ -57,18 +78,18 @@ export function WeekCalendarGrid({
   });
 
   return (
-    <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-x-auto">
+    <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-x-auto mb-6">
       <div className="flex min-w-[640px]">
         {/* Time column */}
-        <div className="w-14 md:w-16 shrink-0 sticky left-0 bg-white z-10 border-r border-[#D4CDB5]/40">
-          <div className="h-14 border-b border-[#D4CDB5]/40 flex items-end justify-center pb-1">
-            <span className="text-[9px] text-[#B0A898] uppercase tracking-wide">{timezoneLabel}</span>
+        <div className={`w-14 md:w-16 shrink-0 sticky left-0 z-10 border-r ${CALENDAR_BORDER_DIVIDER} ${CALENDAR_TIME_GUTTER_BG}`}>
+          <div className={`h-14 border-b ${CALENDAR_BORDER_DIVIDER} flex items-end justify-center pb-1`}>
+            <span className={`text-[9px] uppercase tracking-wide ${CALENDAR_DATE_MUTED}`}>{timezoneLabel}</span>
           </div>
           <div className="relative" style={{ height: gridHeight }}>
             {hourMarks.map((hour, i) => (
               <span
                 key={hour}
-                className="absolute right-2 -translate-y-1/2 text-[10px] text-[#9A8E7E]"
+                className={`absolute right-2 -translate-y-1/2 text-[10px] ${CALENDAR_TIME_LABEL}`}
                 style={{ top: i * rowHeight }}
               >
                 {formatHourLabel(hour)}
@@ -78,24 +99,46 @@ export function WeekCalendarGrid({
         </div>
 
         {/* Day columns */}
-        <div className="flex-1 grid grid-cols-7">
+        <div
+          className="flex-1 grid"
+          style={{ gridTemplateColumns: `repeat(${weekDates.length}, minmax(0, 1fr))` }}
+        >
           {weekDates.map((date, dayIdx) => {
             const isToday = isSameDay(date, today);
             const isSelected = selectedDayIndex === dayIdx;
+            const isWeekend = isWeekendDate(date);
             const dayEvents = eventsByDay[dayIdx] || [];
+            const headerBg = isSelected
+              ? 'bg-[#c49a3c]/16 ring-1 ring-inset ring-[#c49a3c]/30'
+              : isWeekend
+                ? WEEKEND_COLUMN_BG
+                : 'bg-[#F5F1E8]';
             return (
-              <div key={dayIdx} className="relative border-r border-[#D4CDB5]/30 last:border-r-0">
+              <div
+                key={dayIdx}
+                className={`relative border-r ${CALENDAR_BORDER_DIVIDER} last:border-r-0 ${
+                  isToday ? `z-[2] ${CALENDAR_TODAY_COLUMN}` : ''
+                }`}
+              >
                 {/* Day header */}
                 <button
                   type="button"
                   onClick={onDayHeaderClick ? () => onDayHeaderClick(date, dayIdx) : undefined}
-                  className={`w-full h-14 flex flex-col items-center justify-center border-b border-[#D4CDB5]/40 transition-colors ${
-                    isSelected ? 'bg-[#c49a3c]/14' : isToday ? 'bg-[#c49a3c]/8' : ''
-                  } ${onDayHeaderClick ? 'hover:bg-[#c49a3c]/10 cursor-pointer' : 'cursor-default'}`}
+                  className={`w-full h-14 flex flex-col items-center justify-center border-b ${CALENDAR_BORDER_DIVIDER} transition-colors ${headerBg} ${
+                    onDayHeaderClick ? 'hover:bg-[#c49a3c]/10 cursor-pointer' : 'cursor-default'
+                  }`}
                 >
-                  <span className="text-[10px] text-[#9A8E7E] tracking-wide">{dayLabels[dayIdx]}</span>
+                  <span className={`text-[10px] tracking-wide font-semibold ${CALENDAR_DATE_MUTED}`}>
+                    {dayLabels[dayIdx] ?? dayLabels[date.getDay()]}
+                  </span>
                   <span
-                    className={isToday || isSelected ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}
+                    className={`${
+                      isToday
+                        ? `${CALENDAR_TODAY_RING} text-[#1E2A35]`
+                        : isSelected
+                          ? 'text-[#8A6520]'
+                          : 'text-[#1E2A35]'
+                    }`}
                     style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.03em' }}
                   >
                     {date.getDate()}
@@ -103,13 +146,21 @@ export function WeekCalendarGrid({
                 </button>
 
                 {/* Hour rows + events */}
-                <div className="relative" style={{ height: gridHeight }}>
-                  {hourMarks.map((hour, i) => (
-                    <div
-                      key={hour}
-                      className="absolute left-0 right-0 border-t border-[#D4CDB5]/20"
-                      style={{ top: i * rowHeight }}
-                    />
+                <div
+                  className={`relative ${isWeekend && !isSelected ? WEEKEND_COLUMN_BG_SOFT : 'bg-white'}`}
+                  style={{ height: gridHeight }}
+                >
+                  {hourMarks.slice(0, -1).map((hour, i) => (
+                    <div key={hour}>
+                      <div
+                        className={`absolute left-0 right-0 ${CALENDAR_GRID_HOUR_LINE}`}
+                        style={{ top: i * rowHeight }}
+                      />
+                      <div
+                        className={`absolute left-0 right-0 ${CALENDAR_GRID_HALF_HOUR_LINE}`}
+                        style={{ top: i * rowHeight + rowHeight / 2 }}
+                      />
+                    </div>
                   ))}
 
                   {dayEvents.map((evt) => {
@@ -123,16 +174,14 @@ export function WeekCalendarGrid({
                         style={{
                           top,
                           height,
-                          backgroundColor: evt.muted ? '#EDE8D8' : `${evt.color}16`,
-                          borderLeft: `3px solid ${evt.muted ? '#C0B8A8' : evt.color}`,
+                          backgroundColor: evt.muted ? '#E8E4DA' : `${evt.color}22`,
+                          borderLeft: `3px solid ${evt.muted ? '#8A7E6E' : evt.color}`,
                         }}
-                        className={`absolute left-1 right-1 rounded-lg px-2 py-1 text-left overflow-hidden transition-all hover:brightness-[0.97] active:scale-[0.98] ${
-                          evt.muted ? 'opacity-80' : ''
-                        }`}
+                        className="absolute left-1 right-1 rounded-lg px-2 py-1 text-left overflow-hidden transition-all shadow-sm ring-1 ring-[#B8AB93]/40 hover:ring-[#A89880]/60 active:scale-[0.99]"
                       >
                         <p
                           className="text-[11px] font-bold leading-tight truncate"
-                          style={{ color: evt.muted ? '#9A8E7E' : evt.color }}
+                          style={{ color: evt.muted ? '#4A443C' : evt.color }}
                         >
                           {evt.title}
                         </p>

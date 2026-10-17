@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { toastCreated, toastUpdated } from '../../lib/operation-toast';
 import { CreditCard, Pencil, Plus, X, Check, ChevronDown, Users, TrendingUp } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminHeaderActions } from '../context/AdminHeaderActionsContext';
 import { CARD_HOVER_GROW, HOVER_SCALE_SMOOTH } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -64,6 +66,30 @@ export default function AdminSubscriptionsPage() {
   const [subFilter, setSubFilter] = useState('All Plans');
 
   useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
+
+  const openAddPlan = useCallback(() => {
+    setShowAddPlan(true);
+    setEditingPlan(null);
+    setPlanForm({ name: '', fee: '', sessions: '', desc: '', color: '#8A7E6E' });
+    setPlanFormErrors({});
+  }, []);
+
+  useAdminHeaderActions(
+    useMemo(
+      () => (
+        <button
+          type="button"
+          onClick={openAddPlan}
+          className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+         
+        >
+          <Plus size={16} /> Add Plan
+        </button>
+      ),
+      [openAddPlan],
+    ),
+  );
+
   if (!adminUser) return null;
 
   const totalCreditsRemaining = SUBSCRIBERS.filter(s => s.status === 'active')
@@ -100,10 +126,12 @@ export default function AdminSubscriptionsPage() {
       setSavedPlanId(editingPlan.id);
       setTimeout(() => setSavedPlanId(null), 2500);
       setEditingPlan(null);
+      toastUpdated('Plan');
     } else {
       const newPlan: Plan = { id: Date.now(), name: planForm.name, fee: Number(planForm.fee), sessions: Number(planForm.sessions), desc: planForm.desc, color: planForm.color };
       setPlans(prev => [...prev, newPlan]);
       setShowAddPlan(false);
+      toastCreated('Plan');
     }
     setPlanForm({ name: '', fee: '', sessions: '', desc: '', color: '#8A7E6E' });
   };
@@ -113,26 +141,6 @@ export default function AdminSubscriptionsPage() {
   return (
     <>
       <div className="max-w-7xl mx-auto px-6 py-8">
-
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <CreditCard size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Subscriptions</span>
-            </div>
-            <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-              Subscription Plans
-            </h1>
-          </div>
-          <button
-            onClick={() => { setShowAddPlan(true); setEditingPlan(null); setPlanForm({ name: '', fee: '', sessions: '', desc: '', color: '#8A7E6E' }); setPlanFormErrors({}); }}
-            className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-          >
-            <Plus size={16} /> Add Plan
-          </button>
-        </div>
 
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
@@ -290,7 +298,7 @@ export default function AdminSubscriptionsPage() {
             </div>
             <div className="px-7 pb-7 flex gap-3">
               <button onClick={() => { setEditingPlan(null); setShowAddPlan(false); }} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
-              <button onClick={handleSavePlan} className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}>
+              <button onClick={handleSavePlan} className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm">
                 {editingPlan ? 'Save Changes' : 'Add Plan'}
               </button>
             </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
-import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import { AdminTablePagination, PaginationPageButtons, useFitPageSize } from '../components/layout/AdminTablePagination';
 import {
   AdminDisciplineCardsGrid,
   DisciplineDensityToggle,
@@ -119,20 +119,11 @@ export default function MemberDisciplinesPage() {
         >
           <ChevronLeft size={16} />
         </button>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => setPage(n)}
-            className={`min-w-9 h-9 rounded-full px-2.5 text-xs font-semibold transition-all ${
-              n === currentPage
-                ? 'bg-[#c49a3c] text-white'
-                : 'border border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/40'
-            }`}
-          >
-            {n}
-          </button>
-        ))}
+        <PaginationPageButtons
+          page={currentPage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
         <button
           type="button"
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -153,7 +144,7 @@ export default function MemberDisciplinesPage() {
           discipline={selectedDiscipline}
           readOnly
           onClose={() => setSelectedDiscipline(null)}
-          onEnroll={() => navigate('/book')}
+          onEnroll={() => navigate('/class-schedule')}
         />
       )}
 

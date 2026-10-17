@@ -5,6 +5,7 @@ import {
   Clock, AlertOctagon, Users, LayoutGrid, List, Eye, EyeOff,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { toastCreated, toastDeleted, toastOperationFailed, toastUpdated } from '../../lib/operation-toast';
 import { NATIONALITIES } from '../data/nationalities';
 import {
   createStaffAccount,
@@ -18,6 +19,9 @@ import {
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
 import { AdminCoachAvailabilityPanel } from './AdminCoachAvailabilityPage';
 import { AdminAbsenceTrackerPanel } from './AdminAbsenceTrackerPage';
+
+/** Set true when Absence Tracker is ready to ship. */
+const ABSENCE_TRACKER_TAB_ENABLED = false;
 
 interface CoachMember {
   id: string;
@@ -412,19 +416,30 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
   );
 }
 
-export default function AdminCoachesPage() {
+export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: boolean }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { adminUser } = useAdminAuth();
 
   const tabParam = searchParams.get('tab');
   const pageTab: 'coaches' | 'availability' | 'absence' =
-    tabParam === 'availability' || tabParam === 'absence' ? tabParam : 'coaches';
+    tabParam === 'availability'
+      ? 'availability'
+      : tabParam === 'absence' && ABSENCE_TRACKER_TAB_ENABLED
+        ? 'absence'
+        : 'coaches';
 
   const setPageTab = (tab: 'coaches' | 'availability' | 'absence') => {
+    if (tab === 'absence' && !ABSENCE_TRACKER_TAB_ENABLED) return;
     if (tab === 'coaches') setSearchParams({}, { replace: true });
     else setSearchParams({ tab }, { replace: true });
   };
+
+  useEffect(() => {
+    if (!ABSENCE_TRACKER_TAB_ENABLED && tabParam === 'absence') {
+      setSearchParams({}, { replace: true });
+    }
+  }, [tabParam, setSearchParams]);
 
   const [coaches, setCoaches] = useState<CoachMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -576,12 +591,16 @@ export default function AdminCoachesPage() {
         nationality: form.nationality,
         staffRole: 'coach',
         disciplineIds: form.disciplineIds,
+        status: form.status,
       });
       setSaving(false);
       if (!result.ok) {
-        setFormError(result.error || 'Failed to update coach account.');
+        const message = result.error || 'Failed to update coach account.';
+        setFormError(message);
+        toastOperationFailed(message);
         return;
       }
+      toastUpdated('Coach account');
     } else {
       const result = await createStaffAccount({
         email: form.email.trim(),
@@ -591,12 +610,16 @@ export default function AdminCoachesPage() {
         nationality: form.nationality,
         staffRole: 'coach',
         disciplineIds: form.disciplineIds,
+        status: form.status,
       });
       setSaving(false);
       if (!result.ok) {
-        setFormError(result.error || 'Failed to create coach account.');
+        const message = result.error || 'Failed to create coach account.';
+        setFormError(message);
+        toastOperationFailed(message);
         return;
       }
+      toastCreated('Coach account');
     }
 
     await loadCoaches();
@@ -610,7 +633,12 @@ export default function AdminCoachesPage() {
     if (!deleteId || deleting) return;
     setDeleting(true);
     const result = await deleteManagedAccount(deleteId);
-    if (result.ok) {
+    if (!result.ok) {
+      toastOperationFailed(
+        result.error || 'Could not delete this coach account. Try again or contact support.',
+      );
+    } else {
+      toastDeleted('Coach account');
       if (selectedCoach?.id === deleteId) setSelectedCoach(null);
       await loadCoaches();
     }
@@ -630,52 +658,43 @@ export default function AdminCoachesPage() {
   return (
     <>
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Award size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Coaches</span>
-            </div>
-            <h1
-              className="text-[#1E2A35] leading-tight"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}
-            >
-              Coaches Management
-            </h1>
-          </div>
-          {pageTab === 'coaches' && (
-            <button
-              onClick={openAdd}
-              className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-            >
-              <Plus size={16} /> Add Coach
-            </button>
-          )}
-        </div>
-
+        {!viewOnly && (
         <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit">
           {([
-            ['coaches', 'Coaches', Users],
-            ['availability', 'Coach Availability', Clock],
-            ['absence', 'Absence Tracker', AlertOctagon],
-          ] as const).map(([id, label, Icon]) => (
+            ['coaches', 'Coaches', Users, true],
+            ['availability', 'Coach Availability', Clock, true],
+            ['absence', 'Absence Tracker', AlertOctagon, ABSENCE_TRACKER_TAB_ENABLED],
+          ] as const).map(([id, label, Icon, enabled]) => (
             <button
               key={id}
+              type="button"
+              disabled={!enabled}
               onClick={() => setPageTab(id)}
+              title={enabled ? undefined : 'Not available yet'}
+              aria-disabled={!enabled}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                pageTab === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                !enabled
+                  ? 'cursor-not-allowed text-[#C0B8A8] opacity-60'
+                  : pageTab === id
+                    ? 'bg-[#1E2A35] text-white shadow-sm'
+                    : 'text-[#8A7E6E] hover:text-[#1E2A35]'
               }`}
             >
               <Icon size={12} /> {label}
+              {!enabled && (
+                <span className="text-[9px] font-bold uppercase tracking-wide text-[#B0A898]">
+                  Soon
+                </span>
+              )}
             </button>
           ))}
         </div>
+        )}
 
-        {pageTab === 'availability' && <AdminCoachAvailabilityPanel />}
-        {pageTab === 'absence' && <AdminAbsenceTrackerPanel />}
+        {!viewOnly && pageTab === 'availability' && <AdminCoachAvailabilityPanel />}
+        {!viewOnly && ABSENCE_TRACKER_TAB_ENABLED && pageTab === 'absence' && <AdminAbsenceTrackerPanel />}
 
-        {pageTab === 'coaches' && (
+        {(viewOnly || pageTab === 'coaches') && (
           <>
         <div className="flex items-center gap-4 mb-5 flex-wrap">
           <div className="relative flex-1 max-w-sm min-w-[200px]">
@@ -712,7 +731,18 @@ export default function AdminCoachesPage() {
               <LayoutGrid size={13} /> Card
             </button>
           </div>
-          <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} of {coaches.length} coaches</span>
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="text-[#8A7E6E] text-sm">{filtered.length} of {coaches.length} coaches</span>
+            {!viewOnly && (
+              <button
+                type="button"
+                onClick={openAdd}
+                className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+              >
+                <Plus size={16} /> Add Coach
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -808,28 +838,30 @@ export default function AdminCoachesPage() {
                       <p className="text-[#B0A898] text-xs mb-4">No disciplines tagged</p>
                     )}
 
-                    <div
-                      className="flex items-center gap-1.5 pt-3 border-t border-[#D4CDB5]/40"
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => openEdit(coach)}
-                        aria-label={`Edit ${coach.name}`}
-                        className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                    {!viewOnly && (
+                      <div
+                        className="flex items-center gap-1.5 pt-3 border-t border-[#D4CDB5]/40"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
                       >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteId(coach.id)}
-                        aria-label={`Delete ${coach.name}`}
-                        className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(coach)}
+                          aria-label={`Edit ${coach.name}`}
+                          className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteId(coach.id)}
+                          aria-label={`Delete ${coach.name}`}
+                          className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -837,8 +869,17 @@ export default function AdminCoachesPage() {
           </div>
         ) : (
         <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-            {['Name', 'Email', 'Discipline', 'Status', 'Actions'].map((h) => (
+          <div
+            className={`grid gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 ${
+              viewOnly
+                ? 'grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)]'
+                : 'grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)_100px]'
+            }`}
+          >
+            {(viewOnly
+              ? ['Name', 'Email', 'Discipline', 'Status']
+              : ['Name', 'Email', 'Discipline', 'Status', 'Actions']
+            ).map((h) => (
               <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
             ))}
           </div>
@@ -856,7 +897,11 @@ export default function AdminCoachesPage() {
                       setSelectedCoach(coach);
                     }
                   }}
-                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)_100px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer"
+                  className={`grid gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px] cursor-pointer ${
+                    viewOnly
+                      ? 'grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)]'
+                      : 'grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)_100px]'
+                  }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-xl bg-[#c49a3c]/12 border border-[#c49a3c]/25 flex items-center justify-center shrink-0 overflow-hidden">
@@ -879,28 +924,30 @@ export default function AdminCoachesPage() {
                   >
                     {coach.status}
                   </span>
-                  <div
-                    className="flex items-center gap-1.5 w-[100px]"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => openEdit(coach)}
-                      aria-label={`Edit ${coach.name}`}
-                      className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                  {!viewOnly && (
+                    <div
+                      className="flex items-center gap-1.5 w-[100px]"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
                     >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteId(coach.id)}
-                      aria-label={`Delete ${coach.name}`}
-                      className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(coach)}
+                        aria-label={`Edit ${coach.name}`}
+                        className="h-8 w-8 rounded-lg bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 flex items-center justify-center hover:bg-[#EDE8D8] hover:text-[#1E2A35] active:scale-95 transition-all"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(coach.id)}
+                        aria-label={`Delete ${coach.name}`}
+                        className="h-8 w-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -968,8 +1015,7 @@ export default function AdminCoachesPage() {
                 type="button"
                 onClick={() => void handleDelete()}
                 disabled={deleting}
-                className="flex-1 py-3 rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                className="action-button flex-1 py-3 rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
@@ -1144,8 +1190,8 @@ export default function AdminCoachesPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+               
               >
                 {saving ? 'Saving…' : editingId !== null ? 'Save Changes' : 'Add Coach'}
               </button>

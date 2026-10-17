@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { ShieldCheck, Check, RotateCcw } from 'lucide-react';
+import { toastSaved } from '../../lib/operation-toast';
+import { Check, RotateCcw } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminHeaderActions } from '../context/AdminHeaderActionsContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Defaults ───────────────────────────────────────────────────
@@ -75,6 +77,52 @@ export default function AdminPoliciesPage() {
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
+
+  const handleSave = useCallback(() => {
+    setSaved(true);
+    setHasChanges(false);
+    toastSaved('Policy settings');
+    setTimeout(() => setSaved(false), 3000);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setSettings({ ...DEFAULTS });
+    setHasChanges(false);
+  }, []);
+
+  useAdminHeaderActions(
+    useMemo(
+      () => (
+        <div className="flex items-center gap-3">
+          {hasChanges && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] active:scale-95 transition-all"
+            >
+              <RotateCcw size={13} /> Reset
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            className={`action-button flex items-center gap-2 px-5 py-2.5 rounded-full transition-all shadow-sm active:scale-[0.97] ${saved ? 'bg-green-600 text-white' : 'bg-[#1E2A35] text-white hover:bg-[#263545]'}`}
+           
+          >
+            {saved ? (
+              <>
+                <Check size={14} /> Saved
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </button>
+        </div>
+      ),
+      [hasChanges, saved, handleReset, handleSave],
+    ),
+  );
+
   if (!adminUser) return null;
 
   const update = (key: keyof Settings, val: string) => {
@@ -82,51 +130,10 @@ export default function AdminPoliciesPage() {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setHasChanges(false);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  const handleReset = () => {
-    setSettings({ ...DEFAULTS });
-    setHasChanges(false);
-  };
-
   const INP = (key: keyof Settings) => String(settings[key]);
 
   return (
       <div className="max-w-4xl mx-auto px-6 py-8">
-
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <ShieldCheck size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Policy Settings</span>
-            </div>
-            <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-              Business Policy Settings
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {hasChanges && (
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] active:scale-95 transition-all"
-              >
-                <RotateCcw size={13} /> Reset
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all shadow-sm active:scale-[0.97] ${saved ? 'bg-green-600 text-white' : 'bg-[#1E2A35] text-white hover:bg-[#263545]'}`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-            >
-              {saved ? <><Check size={14} /> Saved</> : 'Save Changes'}
-            </button>
-          </div>
-        </div>
 
         {saved && (
           <div className="mb-5 flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
@@ -246,8 +253,8 @@ export default function AdminPoliciesPage() {
         <div className="mt-6 flex justify-end">
           <button
             onClick={handleSave}
-            className={`flex items-center gap-2 px-7 py-3.5 rounded-full transition-all shadow-md active:scale-[0.97] ${saved ? 'bg-green-600 text-white' : 'bg-[#1E2A35] text-white hover:bg-[#263545]'}`}
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '1rem' }}
+            className={`action-button flex items-center gap-2 px-7 py-3.5 rounded-full transition-all shadow-md active:scale-[0.97] ${saved ? 'bg-green-600 text-white' : 'bg-[#1E2A35] text-white hover:bg-[#263545]'}`}
+           
           >
             {saved ? <><Check size={16} /> All Changes Saved</> : 'Save All Changes'}
           </button>

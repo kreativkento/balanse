@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Calendar as CalendarIcon, Check, ChevronDown, Clock, Eye, Newspaper, Paperclip, Pause, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import {
+  toastCreated,
+  toastDeleted,
+  toastOperationFailed,
+  toastUpdated,
+} from '../../lib/operation-toast';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
@@ -384,8 +390,8 @@ type FormState = {
 
 function emptyForm(): FormState {
   return {
-    title: '',
-    description: '',
+  title: '',
+  description: '',
     category: 'Announcement',
     visibility: 'private',
     pinned: false,
@@ -818,7 +824,7 @@ function ConfirmActionDialog({
             type="button"
             disabled={busy}
             onClick={onConfirm}
-            className={`flex-1 rounded-full py-3 text-sm font-semibold text-white shadow-sm transition-all active:scale-[0.97] disabled:opacity-60 ${
+            className={`action-button flex-1 rounded-full py-3 text-sm font-semibold text-white shadow-sm transition-all active:scale-[0.97] disabled:opacity-60 ${
               copy.danger ? 'bg-red-500 hover:bg-red-600' : 'bg-[#1E2A35] hover:bg-[#263545]'
             }`}
           >
@@ -1052,13 +1058,13 @@ function PostFormModal({
                 </div>
               </>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-[#8A7E6E] transition-all hover:bg-[#EDE8D8]"
-            >
-              <X size={16} />
-            </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-[#8A7E6E] transition-all hover:bg-[#EDE8D8]"
+          >
+            <X size={16} />
+          </button>
           </div>
         </div>
 
@@ -1087,8 +1093,8 @@ function PostFormModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs uppercase tracking-widest text-[#8A7E6E]">Category</label>
+          <div>
+            <label className="mb-1.5 block text-xs uppercase tracking-widest text-[#8A7E6E]">Category</label>
               <FormSelectDropdown
                 value={form.category}
                 options={BULLETIN_POST_TYPES}
@@ -1138,7 +1144,7 @@ function PostFormModal({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {form.schedulePost && (
-              <div>
+          <div>
                 <label className="mb-1.5 block text-xs uppercase tracking-widest text-[#8A7E6E]">Published on</label>
                 <DateTimeSplitField
                   value={form.postedAt}
@@ -1161,81 +1167,81 @@ function PostFormModal({
           <div className="flex items-stretch">
             <div className="w-[60%] min-w-0">
               <label className="mb-1.5 block text-xs uppercase tracking-widest text-[#8A7E6E]">Preview image</label>
-              <input
+            <input
                 ref={previewInputRef}
-                type="file"
+              type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
                   if (file) applyPreviewImage(file);
-                  event.target.value = '';
-                }}
-              />
-              <div
-                role="button"
-                tabIndex={0}
+                event.target.value = '';
+              }}
+            />
+            <div
+              role="button"
+              tabIndex={0}
                 onClick={() => previewInputRef.current?.click()}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
                     previewInputRef.current?.click();
-                  }
-                }}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setDragOver(false);
+                }
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragOver(false);
                   const file = event.dataTransfer.files?.[0];
                   if (file) applyPreviewImage(file);
-                }}
+              }}
                 className={`relative flex h-28 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed px-3 py-2.5 transition-all ${
-                  dragOver
+                dragOver
                     ? 'border-[#c49a3c] bg-[#c49a3c]/08'
-                    : 'border-[#D4CDB5]/70 bg-[#F8F3E8]/50 hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/04'
-                }`}
-              >
+                      : 'border-[#D4CDB5]/70 bg-[#F8F3E8]/50 hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/04'
+              }`}
+            >
                 {hasPreviewImage ? (
-                  <>
-                    <img
+                <>
+                  <img
                       src={form.imagePreview}
                       alt="Preview"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-[#1E2A35]/0 opacity-0 transition-colors hover:bg-[#1E2A35]/35 hover:opacity-100">
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#1E2A35]/0 opacity-0 transition-colors hover:bg-[#1E2A35]/35 hover:opacity-100">
                       <p className="px-3 text-center text-xs text-white">
                         {isExisting ? 'Click to replace preview image' : 'Click to change preview image'}
                       </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
                         clearPreviewImage();
-                      }}
-                      className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-xl bg-white/90 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-red-50 hover:text-red-500"
+                    }}
+                    className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-xl bg-white/90 text-[#8A7E6E] shadow-sm backdrop-blur-sm transition-all hover:bg-red-50 hover:text-red-500"
                       aria-label="Remove preview image"
-                    >
-                      <X size={12} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-xl border border-[#D4CDB5]/60 bg-[#EDE8D8]">
-                      <Upload size={16} className="text-[#9A8E7E]" />
-                    </div>
+                  >
+                    <X size={12} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-xl border border-[#D4CDB5]/60 bg-[#EDE8D8]">
+                    <Upload size={16} className="text-[#9A8E7E]" />
+                  </div>
                     <p className="text-xs text-[#1E2A35]">
                       {isExisting ? 'Add or replace preview image' : 'Add preview image'}
                     </p>
                     <p className="mt-0.5 text-[11px] text-[#B0A898]">JPG, PNG, WEBP, or GIF</p>
-                  </>
-                )}
-              </div>
+                </>
+              )}
             </div>
+          </div>
 
             <div className="w-[5%] shrink-0" aria-hidden="true" />
 
@@ -1262,8 +1268,8 @@ function PostFormModal({
                 <div className="flex min-h-28 flex-1 items-center gap-2 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-3 py-2.5">
                   <Paperclip size={14} className="shrink-0 text-[#c49a3c]" />
                   <p className="min-w-0 flex-1 truncate text-sm text-[#1E2A35]">{form.attachmentName}</p>
-                  <button
-                    type="button"
+          <button
+            type="button"
                     onClick={() =>
                       setForm((current) => ({
                         ...current,
@@ -1276,11 +1282,11 @@ function PostFormModal({
                     aria-label="Remove attachment"
                   >
                     <X size={12} />
-                  </button>
+          </button>
                 </div>
               ) : (
-                <button
-                  type="button"
+          <button
+            type="button"
                   onClick={() => attachmentInputRef.current?.click()}
                   className="flex min-h-28 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-[#D4CDB5]/70 bg-[#F8F3E8]/50 px-3 py-2.5 text-center transition-all hover:border-[#c49a3c]/40"
                 >
@@ -1317,8 +1323,8 @@ function PostFormModal({
             type="button"
             disabled={saving}
             onClick={handleSave}
-            className="w-full rounded-full bg-[#1E2A35] py-2.5 text-sm text-white transition-all hover:bg-[#263545] active:scale-[0.97] disabled:opacity-60"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+            className="action-button w-full rounded-full bg-[#1E2A35] py-2.5 text-sm text-white transition-all hover:bg-[#263545] active:scale-[0.97] disabled:opacity-60"
+           
           >
             {saving ? 'Saving…' : isExisting ? 'Save Changes' : form.schedulePost ? 'Schedule' : 'Publish'}
           </button>
@@ -1445,10 +1451,17 @@ export default function AdminBulletinPage() {
     if (result.error) {
       setFormError(result.error);
       setNotice({ type: 'error', message: result.error });
+      toastOperationFailed(result.error);
       return;
     }
     closeModal();
-    setNotice({ type: 'success', message: editingPost ? 'Post updated.' : 'Post saved.' });
+    const successMessage = editingPost ? 'Post updated.' : 'Post saved.';
+    setNotice({ type: 'success', message: successMessage });
+    if (editingPost) {
+      toastUpdated('Bulletin post');
+    } else {
+      toastCreated('Bulletin post');
+    }
     await refresh();
   };
 
@@ -1462,12 +1475,15 @@ export default function AdminBulletinPage() {
       const result = await approveBulletinPost(target.id);
       setActionBusy(null);
       if (result.error || !result.data) {
-        setNotice({ type: 'error', message: result.error ?? 'Could not approve the post.' });
+        const message = result.error ?? 'Could not approve the post.';
+        setNotice({ type: 'error', message });
+        toastOperationFailed(message);
         return;
       }
       if (editingPost?.id === target.id) setEditingPost(result.data);
       if (viewingPost?.id === target.id) setViewingPost(null);
       setNotice({ type: 'success', message: 'Post approved.' });
+      toastUpdated('Post approved');
       await refresh();
       return;
     }
@@ -1476,12 +1492,15 @@ export default function AdminBulletinPage() {
       const result = await holdBulletinPost(target.id);
       setActionBusy(null);
       if (result.error || !result.data) {
-        setNotice({ type: 'error', message: result.error ?? 'Could not hold the post.' });
+        const message = result.error ?? 'Could not hold the post.';
+        setNotice({ type: 'error', message });
+        toastOperationFailed(message);
         return;
       }
       if (editingPost?.id === target.id) setEditingPost(result.data);
       if (viewingPost?.id === target.id) setViewingPost(result.data);
       setNotice({ type: 'success', message: 'Post put on hold.' });
+      toastUpdated('Post on hold');
       await refresh();
       return;
     }
@@ -1490,12 +1509,20 @@ export default function AdminBulletinPage() {
     setActionBusy(null);
     if (result.error) {
       setNotice({ type: 'error', message: result.error });
+      toastOperationFailed(result.error);
       return;
     }
     closeModal();
     setNotice({ type: 'success', message: 'Post rejected and deleted.' });
+    toastDeleted('Bulletin post');
     await refresh();
   };
+
+  const openAddPost = useCallback(() => {
+    setFormStartEditing(false);
+    setEditingPost(null);
+    setShowAddModal(true);
+  }, []);
 
   if (!adminUser) return null;
 
@@ -1539,49 +1566,24 @@ export default function AdminBulletinPage() {
         <div className={`${BULLETIN_PAGE_CONTAINER} flex flex-1 min-h-0 overflow-hidden py-5`}>
           <section className="flex min-h-0 w-full flex-1 overflow-hidden">
             <div className="flex w-[50%] min-w-0 flex-col overflow-hidden">
-              <header className="mb-4 flex w-full min-w-0 shrink-0 items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <span className="text-xs uppercase tracking-widest text-[#8A7E6E]">Admin › Marketing</span>
-                  <h1
-                    className="mt-0.5 leading-none text-[#1E2A35]"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3vw, 2.1rem)', letterSpacing: '0.04em' }}
-                  >
-                    Bulletin
-                  </h1>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormStartEditing(false);
-                    setEditingPost(null);
-                    setShowAddModal(true);
-                  }}
-                  className="flex shrink-0 items-center gap-2 rounded-full bg-[#1E2A35] px-5 py-2.5 text-white shadow-sm transition-all hover:bg-[#263545] active:scale-[0.97]"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-                >
-                  <Plus size={15} />
-                  Add Post
-                </button>
-              </header>
-
               {formError && (
                 <div className="mb-3 shrink-0 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
                   {formError}
-                </div>
+          </div>
               )}
 
               <div className="mb-3 flex w-full shrink-0 gap-1 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
                 {LIST_TABS.map((tab) => (
-                  <button
+                <button
                     key={tab.id}
-                    type="button"
+                  type="button"
                     onClick={() => setListTab(tab.id)}
                     className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold transition-all ${
                       listTab === tab.id
-                        ? 'bg-[#1E2A35] text-white shadow-sm'
-                        : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                    }`}
-                  >
+                      ? 'bg-[#1E2A35] text-white shadow-sm'
+                      : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                  }`}
+                >
                     <span className="truncate">{tab.label}</span>
                     <span
                       className={`rounded-full px-1.5 text-[10px] tabular-nums ${
@@ -1590,49 +1592,60 @@ export default function AdminBulletinPage() {
                     >
                       {tabCounts[tab.id]}
                     </span>
-                  </button>
-                ))}
-              </div>
+                </button>
+              ))}
+            </div>
 
-              <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
-                <FilterDropdown
-                  label="Type"
-                  options={BULLETIN_POST_TYPES}
-                  selected={selectedCategories}
-                  onChange={setSelectedCategories}
-                />
-                <FilterDropdown
-                  label="Reach"
-                  options={BULLETIN_VISIBILITIES}
-                  selected={selectedVisibilities}
-                  onChange={setSelectedVisibilities}
-                  getLabel={(visibility) => BULLETIN_VISIBILITY_META[visibility].label}
-                />
-                <FilterDropdown
-                  label="Status"
-                  options={['featured', 'pending'] as const}
-                  selected={selectedStatuses}
-                  onChange={setSelectedStatuses}
-                  getLabel={(status) => (status === 'featured' ? 'Featured' : 'Pending')}
-                />
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="text-[11px] font-semibold text-[#8A7E6E] underline-offset-2 hover:text-[#1E2A35] hover:underline"
-                  >
-                    Clear
-                  </button>
-                )}
+              <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <FilterDropdown
+                    label="Type"
+                    options={BULLETIN_POST_TYPES}
+                    selected={selectedCategories}
+                    onChange={setSelectedCategories}
+                  />
+                  <FilterDropdown
+                    label="Reach"
+                    options={BULLETIN_VISIBILITIES}
+                    selected={selectedVisibilities}
+                    onChange={setSelectedVisibilities}
+                    getLabel={(visibility) => BULLETIN_VISIBILITY_META[visibility].label}
+                  />
+                  <FilterDropdown
+                    label="Status"
+                    options={['featured', 'pending'] as const}
+                    selected={selectedStatuses}
+                    onChange={setSelectedStatuses}
+                    getLabel={(status) => (status === 'featured' ? 'Featured' : 'Pending')}
+                  />
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="text-[11px] font-semibold text-[#8A7E6E] underline-offset-2 hover:text-[#1E2A35] hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+          </div>
+                <button
+                  type="button"
+                  onClick={openAddPost}
+                  className="action-button flex shrink-0 items-center gap-2 rounded-full bg-[#1E2A35] px-5 py-2.5 text-white shadow-sm transition-all hover:bg-[#263545] active:scale-[0.97]"
+                 
+                >
+                  <Plus size={15} />
+                  Add Post
+                </button>
               </div>
-              {filtered.length === 0 ? (
+          {filtered.length === 0 ? (
                 <div
                   ref={containerRef}
                   className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-[#D4CDB5]/60 bg-white px-6 text-center shadow-sm"
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D4CDB5]/60 bg-[#F8F3E8]">
                     <Newspaper size={18} className="text-[#c49a3c]" />
-                  </div>
+              </div>
                   <p className="text-sm font-semibold text-[#1E2A35]">{loading ? 'Loading posts…' : 'No posts found'}</p>
                   <p className="max-w-sm text-xs text-[#8A7E6E]">
                     {loading
@@ -1642,28 +1655,25 @@ export default function AdminBulletinPage() {
                         : 'Create your first bulletin post for members and the public site.'}
                   </p>
                   {!loading && !hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormStartEditing(false);
-                        setShowAddModal(true);
-                      }}
+              <button
+                type="button"
+                      onClick={openAddPost}
                       className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#D4CDB5]/70 bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1E2A35] transition-all hover:border-[#c49a3c]/40 hover:bg-[#F8F3E8]"
-                    >
+              >
                       <Plus size={13} />
-                      Add Post
-                    </button>
+                Add Post
+              </button>
                   )}
-                </div>
-              ) : (
+            </div>
+          ) : (
                 <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
                   {pagePosts.map((post) => {
                     const audience = BULLETIN_VISIBILITY_META[post.visibility];
                     const displayImage = bulletinDisplayImageUrl(post);
                     const schedule = bulletinScheduleState(post);
                     return (
-                      <article
-                        key={post.id}
+                <article
+                  key={post.id}
                         role="button"
                         tabIndex={0}
                         onClick={() => {
@@ -1683,21 +1693,21 @@ export default function AdminBulletinPage() {
                         <div className="flex h-full min-w-0 items-stretch">
                           <div
                             className="relative w-[4.75rem] shrink-0 overflow-hidden sm:w-24"
-                            style={{ backgroundColor: post.imageColor }}
-                          >
+                      style={{ backgroundColor: post.imageColor }}
+                    >
                             {displayImage ? (
                               <img src={displayImage} alt="" className={`absolute inset-0 h-full w-full object-cover ${IMAGE_HOVER_ZOOM}`} />
-                            ) : (
-                              <div className="flex h-full items-center justify-center">
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
                                 <Newspaper size={18} className="text-white/70" />
-                              </div>
-                            )}
-                          </div>
+                        </div>
+                      )}
+                    </div>
                           <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2">
                             <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${post.badgeColor}`}>
-                                {post.badgeText}
-                              </span>
+                          {post.badgeText}
+                        </span>
                               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${audience.badgeClass}`}>
                                 {audience.label}
                               </span>
@@ -1725,31 +1735,31 @@ export default function AdminBulletinPage() {
                                 <span className="font-semibold tracking-wide text-[#5A5048]">{post.uid}</span>
                                 <span className="flex items-center gap-1">
                                   <CalendarIcon size={10} />
-                                  {post.date}
+                          {post.date}
                                 </span>
-                              </span>
-                            </div>
-                            <h2
+                        </span>
+                      </div>
+                      <h2
                               className="truncate leading-tight text-[#1E2A35]"
-                              style={{
-                                fontFamily: "'Bebas Neue', sans-serif",
+                        style={{
+                          fontFamily: "'Bebas Neue', sans-serif",
                                 fontSize: '1.05rem',
-                                letterSpacing: '0.04em',
-                              }}
-                            >
-                              {post.title}
-                            </h2>
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {post.title}
+                      </h2>
                             <p className="truncate text-xs text-[#8A7E6E]">
                               {post.excerpt}
                               {post.attachmentName ? ` · ${post.attachmentName}` : ''}
-                            </p>
-                          </div>
-                        </div>
-                      </article>
+          </p>
+                    </div>
+                  </div>
+                </article>
                     );
                   })}
-                </div>
-              )}
+            </div>
+          )}
 
               <AdminTablePagination
                 page={currentPage}
@@ -1772,7 +1782,7 @@ export default function AdminBulletinPage() {
                 onSelect={setViewingPost}
               />
             </aside>
-          </section>
+        </section>
         </div>
       </div>
     </>

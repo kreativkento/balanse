@@ -11,15 +11,30 @@ import {
   type DisciplineDisplay,
   type DisciplineStatusDisplay,
 } from '../../../lib/discipline-service';
+import { toastCreated, toastDeleted, toastOperationFailed, toastUpdated } from '../../../lib/operation-toast';
 import { StatusDisciplineBadge } from './StatusDisciplineBadge';
 import { DisciplineImagePicker } from './DisciplineImagePicker';
+import { DisciplineColorPicker } from './DisciplineColorPicker';
+import { DisciplineCalendarColorBadge } from './DisciplineCalendarColorBadge';
+import { isDefaultAssetPublicUrl, normalizeDisciplineColorHex } from '../../../lib/default-assets';
 import { isDisciplineBucketImageUrl } from '../../../lib/discipline-images';
+import { ImageWithFallback } from '../figma/ImageWithFallback';
+
+function coachInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2) || '?';
+}
 
 export interface DisciplineFormValues {
   name: string;
   description: string;
   logoUrl: string;
   imageUrl: string;
+  colorHex: string;
 }
 
 interface AdminDisciplineModalProps {
@@ -44,7 +59,7 @@ function normalizeMediaUrl(url: string, previewName: string, type: 'logo' | 'ima
       ? getDisciplinePlaceholderLogo(previewName)
       : getDisciplinePlaceholderImage(previewName);
 
-  if (isDisciplineBucketImageUrl(trimmed)) {
+  if (isDisciplineBucketImageUrl(trimmed) || isDefaultAssetPublicUrl(trimmed)) {
     return trimmed.split('?')[0];
   }
 
@@ -107,6 +122,7 @@ export function AdminDisciplineModal({
   const [description, setDescription] = useState(discipline.description);
   const [logoUrl, setLogoUrl] = useState(discipline.logoUrl);
   const [imageUrl, setImageUrl] = useState(discipline.imageUrl);
+  const [colorHex, setColorHex] = useState(discipline.colorHex);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [coaches, setCoaches] = useState<DisciplineCoachDisplay[]>([]);
@@ -118,6 +134,7 @@ export function AdminDisciplineModal({
     setDescription(discipline.description);
     setLogoUrl(discipline.logoUrl);
     setImageUrl(discipline.imageUrl);
+    setColorHex(discipline.colorHex);
     setIsEditing(isCreateMode && !readOnly);
     setShowConfirm(false);
     setShowConfirmDelete(false);
@@ -159,9 +176,12 @@ export function AdminDisciplineModal({
     name.trim() !== discipline.name.trim() ||
     description.trim() !== discipline.description.trim() ||
     displayLogoUrl !== discipline.logoUrl ||
-    displayImageUrl !== discipline.imageUrl;
+    displayImageUrl !== discipline.imageUrl ||
+    normalizeDisciplineColorHex(colorHex) !== normalizeDisciplineColorHex(discipline.colorHex);
 
   const displayStatus = isCreateMode && defaultStatus ? defaultStatus : discipline.status;
+  const savedColorHex = normalizeDisciplineColorHex(discipline.colorHex);
+  const editingColorHex = normalizeDisciplineColorHex(colorHex);
 
   const handleStartEdit = () => {
     setIsEditing(true);
@@ -178,6 +198,7 @@ export function AdminDisciplineModal({
     setDescription(discipline.description);
     setLogoUrl(discipline.logoUrl);
     setImageUrl(discipline.imageUrl);
+    setColorHex(discipline.colorHex);
     setIsEditing(false);
     setShowConfirm(false);
     setShowConfirmDelete(false);
@@ -198,6 +219,7 @@ export function AdminDisciplineModal({
     description: description.trim(),
     logoUrl: normalizeMediaUrl(displayLogoUrl, previewName, 'logo'),
     imageUrl: normalizeMediaUrl(displayImageUrl, previewName, 'image'),
+    colorHex: normalizeDisciplineColorHex(colorHex),
   });
 
   const handleSaveClick = () => {
@@ -205,9 +227,13 @@ export function AdminDisciplineModal({
       setError('Discipline name is required.');
       return;
     }
+    if (isCreateMode && !normalizeDisciplineColorHex(colorHex)) {
+      setError('Calendar color is required.');
+      return;
+    }
     if (!hasChanges) {
       if (isCreateMode) {
-        setError('Enter a discipline name and description before saving.');
+        setError('Enter a discipline name, color, and description before saving.');
         return;
       }
       setIsEditing(false);
@@ -232,11 +258,14 @@ export function AdminDisciplineModal({
     setSaving(false);
 
     if (!result.success) {
-      setError(result.error ?? 'Failed to delete discipline.');
+      const message = result.error ?? 'Failed to delete discipline.';
+      setError(message);
+      toastOperationFailed(message);
       setShowConfirmDelete(false);
       return;
     }
 
+    toastDeleted('Discipline');
     onClose();
   };
 
@@ -246,6 +275,13 @@ export function AdminDisciplineModal({
     setSaving(true);
     setError('');
 
+    if (isCreateMode && !normalizeDisciplineColorHex(colorHex)) {
+      setSaving(false);
+      setError('Calendar color is required.');
+      setShowConfirm(false);
+      return;
+    }
+
     const payload = buildPayload();
     const result = isCreateMode
       ? await (onCreate?.(payload) ?? Promise.resolve({ success: false, error: 'Create handler is missing.' }))
@@ -254,9 +290,17 @@ export function AdminDisciplineModal({
     setSaving(false);
 
     if (!result.success) {
-      setError(result.error ?? 'Failed to save changes.');
+      const message = result.error ?? 'Failed to save changes.';
+      setError(message);
+      toastOperationFailed(message);
       setShowConfirm(false);
       return;
+    }
+
+    if (isCreateMode) {
+      toastCreated('Discipline');
+    } else {
+      toastUpdated('Discipline');
     }
 
     setShowConfirm(false);
@@ -281,14 +325,18 @@ export function AdminDisciplineModal({
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full overflow-y-auto ${
+        className={`flex flex-col bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full overflow-y-auto ${
           readOnly
-            ? 'max-w-5xl min-h-[min(860px,94vh)] max-h-[94vh]'
-            : 'max-w-2xl min-h-[min(720px,92vh)] max-h-[92vh]'
+            ? 'max-w-5xl min-h-[min(512px,72vh)] max-h-[74vh]'
+            : 'max-w-2xl min-h-[min(448px,69vh)] max-h-[70vh]'
         }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className={`relative overflow-hidden ${readOnly ? 'h-72 md:h-80' : 'h-64 md:h-72'}`}>
+        <div
+          className={`relative overflow-hidden shrink-0 ${
+            readOnly ? 'h-48 md:h-[13.6rem]' : 'h-[10.4rem] md:h-[11.2rem]'
+          }`}
+        >
           <EditableMedia
             isEditing={isEditing && !readOnly}
             label="Choose cover image"
@@ -324,7 +372,7 @@ export function AdminDisciplineModal({
               <button
                 type="button"
                 onClick={handleStartEdit}
-                className="w-9 h-9 rounded-full bg-[#c49a3c] border border-[#a67f2e] flex items-center justify-center text-white hover:bg-[#a67f2e] transition-colors shadow-md"
+                className="action-button w-9 h-9 rounded-full bg-[#c49a3c] border border-[#a67f2e] flex items-center justify-center text-white hover:bg-[#a67f2e] transition-colors shadow-md"
                 aria-label="Edit discipline"
               >
                 <Pencil size={18} />
@@ -356,7 +404,7 @@ export function AdminDisciplineModal({
                     src={displayLogoUrl}
                     alt=""
                     aria-hidden="true"
-                    className="w-14 h-14 rounded-2xl border border-white/30 bg-white object-cover shadow-sm"
+                    className="w-12 h-12 rounded-xl border border-white/30 bg-white object-cover shadow-sm"
                   />
                 </EditableMedia>
                 {isEditing && !readOnly && (
@@ -390,20 +438,30 @@ export function AdminDisciplineModal({
                 <p className="text-white/70 text-xs mt-1">/{isCreateMode || isEditing ? previewSlug : discipline.slug}</p>
               </div>
             </div>
-            <StatusDisciplineBadge status={displayStatus} className="shrink-0 mb-0.5" />
+            <div className="flex flex-col items-end gap-1.5 shrink-0 mb-0.5">
+              {isEditing && !readOnly ? (
+                <DisciplineCalendarColorBadge
+                  hex={editingColorHex || undefined}
+                  placeholder={!editingColorHex}
+                />
+              ) : savedColorHex ? (
+                <DisciplineCalendarColorBadge hex={savedColorHex} />
+              ) : null}
+              <StatusDisciplineBadge status={displayStatus} className="shrink-0" />
+            </div>
           </div>
         </div>
 
-        <div className="px-6 py-6 flex flex-col gap-5 min-h-[280px]">
+        <div className="px-5 py-4 flex flex-col gap-3 flex-1">
           <div>
-            <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">Description</p>
+            <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1.5">Description</p>
             {isEditing ? (
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                rows={6}
+                rows={3}
                 placeholder="Describe this discipline…"
-                className="w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 resize-y min-h-[140px]"
+                className="w-full px-3 py-2.5 rounded-xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 resize-y min-h-[86px]"
               />
             ) : (
               <p className="text-[#5A5048] text-sm leading-relaxed whitespace-pre-wrap">
@@ -412,45 +470,63 @@ export function AdminDisciplineModal({
             )}
           </div>
 
+          {isEditing && !readOnly && (
+            <DisciplineColorPicker
+              value={colorHex}
+              onChange={setColorHex}
+              disabled={saving}
+              seedIfMissing
+              required={isCreateMode}
+            />
+          )}
+
           <div>
-            <div className="flex items-center gap-2 mb-2.5">
-              <Users size={13} className="text-[#c49a3c]" />
+            <div className="flex items-center gap-2 mb-1.5">
+              <Users size={12} className="text-[#c49a3c]" />
               <p className="text-[#9A8E7E] text-xs uppercase tracking-widest">Coaches</p>
             </div>
             {isCreateMode ? (
-              <p className="text-[#B0A898] text-sm">
+              <p className="text-[#B0A898] text-xs leading-relaxed">
                 Coaches appear here after they are assigned to classes in this discipline.
               </p>
             ) : coachesLoading ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {[0, 1, 2].map((key) => (
                   <span
                     key={key}
-                    className="h-8 w-24 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/50 animate-pulse"
+                    className="h-7 w-20 rounded-full bg-[#EDE8D8] border border-[#D4CDB5]/50 animate-pulse"
                   />
                 ))}
               </div>
             ) : coaches.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {coaches.map((coach) => (
-                  <span
+                  <div
                     key={coach.accountId}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-3 py-1.5 text-xs font-semibold text-[#1E2A35]"
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8]/90 py-0.5 pl-0.5 pr-2.5"
                   >
-                    <span className="w-5 h-5 rounded-full bg-[#1E2A35] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                      {coach.name
-                        .split(/\s+/)
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((part) => part[0]?.toUpperCase() ?? '')
-                        .join('') || '?'}
+                    {coach.photo ? (
+                      <ImageWithFallback
+                        src={coach.photo}
+                        alt=""
+                        className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-white"
+                      />
+                    ) : (
+                      <span
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1E2A35] text-[9px] font-bold text-white ring-1 ring-white"
+                        aria-hidden
+                      >
+                        {coachInitials(coach.name)}
+                      </span>
+                    )}
+                    <span className="text-[#1E2A35] text-xs font-semibold truncate leading-none">
+                      {coach.name}
                     </span>
-                    {coach.name}
-                  </span>
+                  </div>
                 ))}
               </div>
             ) : (
-              <p className="text-[#B0A898] text-sm">
+              <p className="text-[#B0A898] text-xs">
                 No coaches are assigned to this discipline yet.
               </p>
             )}
@@ -471,8 +547,8 @@ export function AdminDisciplineModal({
               <button
                 type="button"
                 onClick={onEnroll}
-                className="w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+                className="action-button w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white font-bold text-sm rounded-full py-3.5 min-h-[48px] shadow-[0_4px_16px_rgba(196,154,60,0.3)] active:scale-[0.97] transition-all hover:bg-[#a67f2e]"
+               
               >
                 Enroll
               </button>
@@ -530,7 +606,7 @@ export function AdminDisciplineModal({
                   type="button"
                   onClick={handleConfirmSave}
                   disabled={saving}
-                  className="flex-1 py-2.5 rounded-full bg-[#c49a3c] text-white text-sm font-bold hover:bg-[#a67f2e] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  className="action-button flex-1 py-2.5 rounded-full bg-[#c49a3c] text-white text-sm font-bold hover:bg-[#a67f2e] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
                   <Check size={14} />
                   {saving ? 'Saving…' : isCreateMode ? 'Confirm Add' : 'Confirm Save'}
@@ -540,12 +616,12 @@ export function AdminDisciplineModal({
           )}
 
           {!readOnly && isEditing && (
-            <div className="flex gap-3 pt-1 border-t border-[#D4CDB5]/40">
+            <div className="flex gap-2 pt-1 border-t border-[#D4CDB5]/40">
               <button
                 type="button"
                 onClick={handleCancelEdit}
                 disabled={saving}
-                className="flex-1 py-3 rounded-full border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 hover:border-red-300 transition-all disabled:opacity-60"
+                className="flex-1 py-2.5 rounded-full border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 hover:border-red-300 transition-all disabled:opacity-60"
               >
                 {isCreateMode ? 'Cancel' : 'Cancel Edit'}
               </button>
@@ -553,8 +629,8 @@ export function AdminDisciplineModal({
                 type="button"
                 onClick={handleSaveClick}
                 disabled={saving}
-                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] transition-all disabled:opacity-60"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+                className="action-button flex-1 py-2.5 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] transition-all disabled:opacity-60"
+               
               >
                 {isCreateMode ? 'Add Discipline' : 'Save'}
               </button>

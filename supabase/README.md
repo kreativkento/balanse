@@ -201,6 +201,19 @@ App-side helpers for future admin pages (no UI wired yet):
 
 - `src/lib/admin-service.ts` — list, update, and delete user/coach records
 
+## Class payment e-receipts (Edge Function)
+
+After an admin **approves** a class payment, the app invokes `send-payment-receipt` to email a branded official e-receipt (HTML uses your public site logo: `{PUBLIC_SITE_URL}/logo_main_white.svg`).
+
+1. Deploy the function: `supabase functions deploy send-payment-receipt`
+2. In **Project Settings → Edge Functions → Secrets**, set:
+   - `RESEND_API_KEY` — from [Resend](https://resend.com)
+   - `RECEIPT_FROM_EMAIL` — verified sender, e.g. `Balansé Wellness <receipts@yourdomain.com>`
+   - `PUBLIC_SITE_URL` — production app origin, e.g. `https://balanse.kentveloso.com` (must serve `/logo_main_white.svg` from `public/`)
+3. Supabase injects `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` automatically.
+
+On success, `class_payments.email_receipt_sent` is set to `true`. Template reference: `supabase/email-templates/confirm-signup.html` (same brand colors).
+
 ## Security notes
 
 - Only the **anon key** belongs in the frontend (`.env`).

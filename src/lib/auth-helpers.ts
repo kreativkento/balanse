@@ -5,7 +5,12 @@ import type { ProfileClientRow, ProfileStaffRow, UserRole } from './database.typ
 
 export const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
-export type AuthResult = { success: boolean; error?: string; profileComplete?: boolean };
+export type AuthResult = {
+  success: boolean;
+  error?: string;
+  profileComplete?: boolean;
+  redirectTo?: string;
+};
 
 export function deriveNameFromEmail(email: string): string {
   const local = email.split('@')[0];
@@ -27,10 +32,30 @@ export function validateEmailPassword(email: string, password: string): AuthResu
   return null;
 }
 
-export function mapAuthError(error: AuthError | null | undefined, fallback: string): string {
+type AuthErrorLike = AuthError & { status?: number; name?: string };
+
+const SIGNUP_EMAIL_500_HELP =
+  'Sign up could not send the confirmation email. In Supabase Dashboard → Authentication → Providers → Email, configure SMTP or turn off “Confirm email” for testing.';
+
+export function mapAuthError(
+  error: AuthErrorLike | null | undefined,
+  fallback: string,
+  context?: 'signup' | 'login',
+): string {
   if (!error) return fallback;
 
-  const message = error.message.toLowerCase();
+  const rawMessage = error.message?.trim() ?? '';
+  const message = rawMessage.toLowerCase();
+
+  // auth-js throws AuthRetryableFetchError on HTTP 500 before reading the JSON body,
+  // so msg is often empty even when GoTrue returns "Error sending confirmation email".
+  if (
+    context === 'signup'
+    && error.status === 500
+    && (!rawMessage || rawMessage === '{}' || error.name === 'AuthRetryableFetchError')
+  ) {
+    return SIGNUP_EMAIL_500_HELP;
+  }
 
   if (message.includes('invalid login credentials')) {
     return 'Incorrect email or password. Please try again.';
@@ -43,6 +68,15 @@ export function mapAuthError(error: AuthError | null | undefined, fallback: stri
   }
   if (message.includes('rate limit') || message.includes('too many requests')) {
     return 'Too many attempts. Please wait a moment and try again.';
+  }
+  if (message.includes('database error') || message.includes('error saving new user')) {
+    return 'Sign up could not finish on the server (database setup). Ask the studio to verify Supabase migrations, especially the signup trigger on auth.users.';
+  }
+  if (message.includes('error sending') && message.includes('email')) {
+    return 'Sign up failed while sending email. In Supabase, configure SMTP or turn off “Confirm email” under Authentication → Providers → Email.';
+  }
+  if (message.includes('signup is disabled') || message.includes('signups not allowed')) {
+    return 'New sign-ups are disabled for this app. Please contact the studio.';
   }
 
   return error.message || fallback;
@@ -233,4 +267,8 @@ export function wrongRoleMessage(expected: UserRole): string {
     return 'Access denied. This account is not authorized for the admin portal.';
   }
   return 'Access denied. This account is not authorized for the admin portal.';
+}
+
+export function wrongStaffPortalMessage(): string {
+  return 'Access denied. This account is not authorized for the staff portal.';
 }

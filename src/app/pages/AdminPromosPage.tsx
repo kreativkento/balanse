@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { toastCreated, toastDeleted, toastUpdated } from '../../lib/operation-toast';
 import { Tag, Plus, X, Check, Pencil, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminHeaderActions } from '../context/AdminHeaderActionsContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 
 // ── Types & Data ───────────────────────────────────────────────
@@ -56,12 +58,35 @@ export default function AdminPromosPage() {
   const [filterStatus, setFilterStatus] = useState<'All' | PromoStatus>('All');
 
   useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
+
+  const openAdd = useCallback(() => {
+    setEditingPromo(null);
+    setForm(EMPTY_FORM);
+    setErrors({});
+    setShowModal(true);
+  }, []);
+
+  useAdminHeaderActions(
+    useMemo(
+      () => (
+        <button
+          type="button"
+          onClick={openAdd}
+          className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+         
+        >
+          <Plus size={16} /> Create Promo
+        </button>
+      ),
+      [openAdd],
+    ),
+  );
+
   if (!adminUser) return null;
 
   const filtered = promos.filter(p => filterStatus === 'All' || p.status === filterStatus);
   const activeCount = promos.filter(p => p.status === 'active').length;
 
-  const openAdd = () => { setEditingPromo(null); setForm(EMPTY_FORM); setErrors({}); setShowModal(true); };
   const openEdit = (p: Promo) => {
     setEditingPromo(p);
     setForm({ name: p.name, code: p.code, type: p.type, value: String(p.value), eligibility: p.eligibility, minSessions: p.minSessions ? String(p.minSessions) : '', status: p.status, expiryDate: p.expiryDate });
@@ -95,36 +120,25 @@ export default function AdminPromosPage() {
         status: form.status, usedCount: 0, expiryDate: form.expiryDate,
       }]);
     }
+    if (editingPromo) {
+      toastUpdated('Promo');
+    } else {
+      toastCreated('Promo');
+    }
     setShowModal(false);
   };
 
-  const handleDelete = (id: number) => { setPromos(prev => prev.filter(p => p.id !== id)); setDeleteId(null); };
+  const handleDelete = (id: number) => {
+    setPromos(prev => prev.filter(p => p.id !== id));
+    setDeleteId(null);
+    toastDeleted('Promo');
+  };
 
   const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
 
   return (
     <>
       <div className="max-w-7xl mx-auto px-6 py-8">
-
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Tag size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Promos & Discounts</span>
-            </div>
-            <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-              Promos & Discounts
-            </h1>
-          </div>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-          >
-            <Plus size={16} /> Create Promo
-          </button>
-        </div>
 
         {/* ── Stats ── */}
         <div className="grid grid-cols-3 gap-4 mb-7">
@@ -306,7 +320,7 @@ export default function AdminPromosPage() {
             </div>
             <div className="px-7 pb-7 flex gap-3 border-t border-[#D4CDB5]/40 pt-5">
               <button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
-              <button onClick={handleSave} className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}>
+              <button onClick={handleSave} className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm">
                 {editingPromo ? 'Save Changes' : 'Create Promo'}
               </button>
             </div>

@@ -8,6 +8,7 @@ import {
   BulletinDetailModal,
   BulletinSocialButtons,
 } from './BulletinPage';
+import { STAFF_PAGE_CONTAINER_PADDED } from '../lib/staff-page-meta';
 
 export default function StaffBulletinPage() {
   const navigate = useNavigate();
@@ -42,21 +43,8 @@ export default function StaffBulletinPage() {
     <>
       {selectedPost && <BulletinDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />}
 
-      <div className="min-h-full bg-[#F8F3E8]">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
-          <div className="mb-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">Community</p>
-              <h2
-                className="leading-tight text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
-              >
-                Staff Bulletin
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-[#8A7E6E]">
-                Studio announcements, staff notes, and updates shared with your role.
-              </p>
-            </div>
+      <div className={STAFF_PAGE_CONTAINER_PADDED}>
+          <div className="mb-6 flex justify-end">
             <BulletinSocialButtons />
           </div>
 
@@ -120,7 +108,6 @@ export default function StaffBulletinPage() {
               </p>
             </div>
           )}
-        </div>
       </div>
     </>
   );

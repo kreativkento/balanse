@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ChevronLeft, ChevronRight, Check, Leaf, Users, Clock, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,8 @@ import { HelpSupportFab } from '../components/layout/HelpSupportFab';
 import { HomeStorySection } from '../components/home/HomeStorySection';
 import { HomeCoachesSection } from '../components/home/HomeCoachesSection';
 import { ICON_HOVER_GROW } from '../../lib/motion-classes';
+import { loadHomeStudioFeaturedPosts, type GalleryPost } from '../../lib/gallery-service';
+import { GalleryLightbox } from '../components/gallery/GalleryLightbox';
 import heroAboutImg from '@/assets/hero-about.jpg';
 
 const STUDIO_VIDEOS = [
@@ -45,21 +47,64 @@ const perks = [
   'Community of 200+ dedicated members',
 ];
 
+type MotionCard = {
+  id: string;
+  thumbnail: string;
+  title: string;
+  duration?: string;
+  isVideo: boolean;
+  post?: GalleryPost;
+};
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [videoIndex, setVideoIndex] = useState(0);
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
+  const [homeStudioPosts, setHomeStudioPosts] = useState<GalleryPost[]>([]);
+  const [viewingPost, setViewingPost] = useState<GalleryPost | null>(null);
+
+  useEffect(() => {
+    void loadHomeStudioFeaturedPosts().then(setHomeStudioPosts);
+  }, []);
+
+  const motionCards: MotionCard[] = useMemo(() => {
+    if (homeStudioPosts.length) {
+      return homeStudioPosts.map((post) => {
+        const first = post.media[0];
+        return {
+          id: post.id,
+          thumbnail: post.thumbnailUrl ?? '',
+          title: post.caption,
+          isVideo: first?.mediaKind === 'video',
+          post,
+        };
+      });
+    }
+    return STUDIO_VIDEOS.map((video) => ({
+      id: String(video.id),
+      thumbnail: video.thumbnail,
+      title: video.title,
+      duration: video.duration,
+      isVideo: true,
+    }));
+  }, [homeStudioPosts]);
 
   const handleBook = () => {
     navigate(isAuthenticated ? '/dashboard' : '/auth');
   };
 
-  const prevVideo = () => setVideoIndex((i) => (i - 1 + STUDIO_VIDEOS.length) % STUDIO_VIDEOS.length);
-  const nextVideo = () => setVideoIndex((i) => (i + 1) % STUDIO_VIDEOS.length);
+  const prevVideo = () =>
+    setVideoIndex((i) => (i - 1 + motionCards.length) % motionCards.length);
+  const nextVideo = () => setVideoIndex((i) => (i + 1) % motionCards.length);
+
+  const openMotionCard = (card: MotionCard) => {
+    if (card.post) setViewingPost(card.post);
+  };
 
   return (
     <div className="bg-[#F8F3E8]">
+      {viewingPost && <GalleryLightbox post={viewingPost} onClose={() => setViewingPost(null)} />}
       {/* ─── HERO ─── */}
       <section className="relative h-[72vh] md:h-[88vh] overflow-hidden">
         <img
@@ -189,7 +234,7 @@ export default function HomePage() {
 
           {/* Mobile: single card */}
           <div className="md:hidden relative overflow-hidden rounded-2xl">
-            {STUDIO_VIDEOS.map((video, i) => (
+            {motionCards.map((video, i) => (
               <div
                 key={video.id}
                 className="transition-all duration-500"
@@ -197,7 +242,7 @@ export default function HomePage() {
               >
                 <div
                   className="relative rounded-2xl overflow-hidden shadow-md group cursor-pointer"
-                  onClick={() => setPlayingVideo(playingVideo === video.id ? null : video.id)}
+                  onClick={() => (video.post ? openMotionCard(video) : setPlayingVideo(playingVideo === Number(video.id) ? null : Number(video.id)))}
                 >
                   <img
                     src={video.thumbnail}
@@ -210,9 +255,11 @@ export default function HomePage() {
                       <Play size={22} className="text-white fill-white ml-1" />
                     </div>
                   </div>
-                  <div className="absolute bottom-3 right-3 bg-[#1E2A35]/80 text-white text-xs px-2 py-0.5 rounded-md backdrop-blur-sm">
-                    {video.duration}
-                  </div>
+                  {video.duration && (
+                    <div className="absolute bottom-3 right-3 bg-[#1E2A35]/80 text-white text-xs px-2 py-0.5 rounded-md backdrop-blur-sm">
+                      {video.duration}
+                    </div>
+                  )}
                   <div className="absolute bottom-3 left-3 right-16">
                     <p className="text-white text-sm leading-snug drop-shadow">{video.title}</p>
                   </div>
@@ -220,7 +267,7 @@ export default function HomePage() {
               </div>
             ))}
             <div className="flex justify-center gap-2 mt-3">
-              {STUDIO_VIDEOS.map((_, i) => (
+              {motionCards.map((_, i) => (
                 <button
                   key={i}
                   type="button"
@@ -238,12 +285,18 @@ export default function HomePage() {
           {/* Desktop: multi-card visible with active highlighted */}
           <div className="hidden md:block relative">
             <div className="flex gap-4 overflow-hidden">
-              {STUDIO_VIDEOS.map((video, i) => {
+              {motionCards.map((video, i) => {
                 const isActive = i === videoIndex;
                 return (
                   <div
                     key={video.id}
-                    onClick={() => setVideoIndex(i)}
+                    onClick={() => {
+                      if (isActive && video.post) {
+                        openMotionCard(video);
+                        return;
+                      }
+                      setVideoIndex(i);
+                    }}
                     className={`relative rounded-2xl overflow-hidden shadow-sm cursor-pointer group transition-all duration-400 flex-shrink-0 ${
                       isActive ? 'flex-[2.2]' : 'flex-1 opacity-70 hover:opacity-90'
                     }`}
@@ -259,9 +312,11 @@ export default function HomePage() {
                         <Play size={isActive ? 22 : 16} className="text-white fill-white ml-0.5" />
                       </div>
                     </div>
-                    <div className="absolute top-3 right-3 bg-[#1E2A35]/80 text-white text-xs px-2 py-0.5 rounded-md backdrop-blur-sm">
-                      {video.duration}
-                    </div>
+                    {video.duration && (
+                      <div className="absolute top-3 right-3 bg-[#1E2A35]/80 text-white text-xs px-2 py-0.5 rounded-md backdrop-blur-sm">
+                        {video.duration}
+                      </div>
+                    )}
                     {isActive && (
                       <div className="absolute bottom-4 left-4 right-4">
                         <p className="text-white text-sm leading-snug drop-shadow">{video.title}</p>
@@ -272,7 +327,7 @@ export default function HomePage() {
               })}
             </div>
             <div className="flex justify-center gap-2 mt-3">
-              {STUDIO_VIDEOS.map((_, i) => (
+              {motionCards.map((_, i) => (
                 <button
                   key={i}
                   type="button"

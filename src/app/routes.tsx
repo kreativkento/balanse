@@ -25,22 +25,30 @@ import MemberGuidelinesPage from './pages/MemberGuidelinesPage';
 import MemberSubscription from './pages/MemberSubscription';
 import PerformancePage from './pages/PerformancePage';
 import FeedbackPage from './pages/FeedbackPage';
+import MemberFeedbackPage from './pages/MemberFeedbackPage';
 import AdminFeedbackPage from './pages/AdminFeedbackPage';
-import BookClassPage from './pages/BookClassPage';
-import PaymentPage from './pages/PaymentPage';
+import MemberPaymentPortal from './pages/MemberPaymentPortal';
 import BookingPendingPage from './pages/BookingPendingPage';
 import MemberProfilePage from './pages/MemberProfilePage';
 import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
-import StaffSchedulePage from './pages/StaffSchedulePage';
+import StaffRequestsPage from './pages/StaffRequestsPage';
+import StaffClassSchedulePage from './pages/StaffClassSchedulePage';
+import StaffMyClassesPage from './pages/StaffMyClassesPage';
+import StaffTimeSlotsPage from './pages/StaffTimeSlotsPage';
 import StaffGalleryPage from './pages/StaffGalleryPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminStaffPage from './pages/AdminStaffPage';
 import AdminStudentsPage from './pages/AdminStudentsPage';
-import AdminSchedulePage from './pages/AdminSchedulePage';
+import AdminTimeBlockingPage from './pages/AdminTimeBlockingPage';
+import AdminClassSchedulePage from './pages/AdminClassSchedulePage';
+import AdminCoachRequestsPage from './pages/AdminCoachRequestsPage';
 import AdminPaymentsPage from './pages/AdminPaymentsPage';
+import AdminPaymentChannelsPage from './pages/AdminPaymentChannelsPage';
+import AdminFinancialMetricsPage from './pages/AdminFinancialMetricsPage';
 import AdminGalleryPage from './pages/AdminGalleryPage';
+import AdminAmenitiesPage from './pages/AdminAmenitiesPage';
 import AdminSubscriptionsPage from './pages/AdminSubscriptionsPage';
 import AdminPromosPage from './pages/AdminPromosPage';
 import AdminBulletinPage from './pages/AdminBulletinPage';
@@ -48,17 +56,36 @@ import AdminPoliciesPage from './pages/AdminPoliciesPage';
 import AdminAbsenceTrackerPage from './pages/AdminAbsenceTrackerPage';
 import AdminCoachAvailabilityPage from './pages/AdminCoachAvailabilityPage';
 import AdminDisciplinesPage from './pages/AdminDisciplinesPage';
-import AdminClassesPage from './pages/AdminClassesPage';
+import AdminEventsRedirect from './pages/AdminEventsRedirect';
 import AdminCoachesPage from './pages/AdminCoachesPage';
 import AdminAccountPage from './pages/AdminAccountPage';
 import { AdminLayout } from './components/layout/AdminLayout';
+import { FrontdeskLayout } from './components/layout/FrontdeskLayout';
+import { MarketingLayout } from './components/layout/MarketingLayout';
+import FrontdeskStudentsPage from './pages/FrontdeskStudentsPage';
+import FrontdeskCoachesPage from './pages/FrontdeskCoachesPage';
+import FrontdeskDisciplinesPage from './pages/FrontdeskDisciplinesPage';
+import FrontdeskClassSchedulePage from './pages/FrontdeskClassSchedulePage';
+import FrontdeskBookingsPage from './pages/FrontdeskBookingsPage';
+import FrontdeskCancellationsPage from './pages/FrontdeskCancellationsPage';
+import FrontdeskPaymentsPage from './pages/FrontdeskPaymentsPage';
+import FrontdeskPoliciesPage from './pages/FrontdeskPoliciesPage';
+import FrontdeskFeedbackPage from './pages/FrontdeskFeedbackPage';
+import FrontdeskAccountPage from './pages/FrontdeskAccountPage';
+import FrontdeskDashboardPage from './pages/FrontdeskDashboardPage';
+import MarketingDashboardPage from './pages/MarketingDashboardPage';
+import MarketingGalleryPage from './pages/MarketingGalleryPage';
+import MarketingAmenitiesPage from './pages/MarketingAmenitiesPage';
+import MarketingBulletinPage from './pages/MarketingBulletinPage';
+import MarketingAccountPage from './pages/MarketingAccountPage';
+import MarketingFeedbackPage from './pages/MarketingFeedbackPage';
 import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
-import StaffProfilePage from './pages/StaffProfilePage';
+import StaffProfileRoutePage from './pages/StaffProfileRoutePage';
 import BulletinPage from './pages/BulletinPage';
 import CoachesPage from './pages/CoachesPage';
 import MemberCoachesPage from './pages/MemberCoachesPage';
 import EventsPage from './pages/EventsPage';
-import StudentPaymentHistoryPage from './pages/StudentPaymentHistoryPage';
+import MemberPaymentHistoryPage from './pages/MemberPaymentHistoryPage';
 import DevelopmentLoginPage from './pages/DevelopmentLoginPage';
 import DevDashboardPage from './pages/DevDashboardPage';
 import DevTicketsPage from './pages/DevTicketsPage';
@@ -78,11 +105,9 @@ export const router = createBrowserRouter([
     path: '/',
     Component: Root,
     ErrorBoundary: RouteErrorBoundary,
-    errorElement: <RouteErrorBoundary />,
     children: [
       {
         ErrorBoundary: RouteErrorBoundary,
-        errorElement: <RouteErrorBoundary />,
         children: [
           {
             Component: PublicSiteLayout,
@@ -103,8 +128,8 @@ export const router = createBrowserRouter([
               { path: 'login', Component: LoginPage },
               { path: 'signup', Component: SignupPage },
               { path: 'profile-setup', element: <Navigate to="/profile" replace /> },
-              { path: 'book', Component: BookClassPage },
-              { path: 'payment', Component: PaymentPage },
+              { path: 'book', element: <Navigate to="/class-schedule" replace /> },
+              { path: 'payment', element: <Navigate to="/member-payment-portal" replace /> },
               { path: 'booking-pending', Component: BookingPendingPage },
               { path: '*', Component: NotFoundPage },
             ],
@@ -115,17 +140,18 @@ export const router = createBrowserRouter([
               { path: 'dashboard', Component: MemberDashboardPage },
               { path: 'profile', Component: MemberProfilePage },
               { path: 'documents', element: <Navigate to="/profile" replace /> },
-              { path: 'payment-history', Component: StudentPaymentHistoryPage },
+              { path: 'payment-history', Component: MemberPaymentHistoryPage },
               { path: 'performance', Component: PerformancePage },
               { path: 'subscriptions', Component: MemberSubscription },
               { path: 'my-classes', Component: MemberClasses },
               { path: 'class-schedule', Component: MemberClassSchedule },
+              { path: 'member-payment-portal', Component: MemberPaymentPortal },
               { path: 'studio-guidelines', Component: MemberGuidelinesPage },
               { path: 'studio-services', Component: MemberServicesPage },
               { path: 'studio-coaches', Component: MemberCoachesPage },
               { path: 'studio-disciplines', Component: MemberDisciplinesPage },
               { path: 'member-bulletin', Component: MemberBulletinPage },
-              { path: 'feedback', Component: FeedbackPage },
+              { path: 'feedback', Component: MemberFeedbackPage },
             ],
           },
           { path: 'staff-login', Component: StaffLoginPage },
@@ -133,10 +159,15 @@ export const router = createBrowserRouter([
             Component: StaffSiteLayout,
             children: [
               { path: 'staff-dashboard', Component: StaffDashboardPage },
-              { path: 'staff-schedule', Component: StaffSchedulePage },
+              { path: 'staff-requests', Component: StaffRequestsPage },
+              { path: 'staff-schedule', element: <Navigate to="/staff-requests" replace /> },
+              { path: 'staff-my-classes', Component: StaffMyClassesPage },
+              { path: 'staff-my-schedule', element: <Navigate to="/staff-my-classes" replace /> },
+              { path: 'staff-time-slots', Component: StaffTimeSlotsPage },
+              { path: 'staff-class-schedule', Component: StaffClassSchedulePage },
               { path: 'staff-gallery', Component: StaffGalleryPage },
               { path: 'staff-availability', Component: StaffAvailabilityPage },
-              { path: 'staff-profile', Component: StaffProfilePage },
+              { path: 'staff-profile', Component: StaffProfileRoutePage },
               { path: 'staff-bulletin', Component: StaffBulletinPage },
               { path: 'staff-feedback', Component: FeedbackPage },
             ],
@@ -145,25 +176,57 @@ export const router = createBrowserRouter([
           {
             Component: AdminLayout,
             ErrorBoundary: RouteErrorBoundary,
-            errorElement: <RouteErrorBoundary />,
             children: [
               { path: 'admin-dashboard', Component: AdminDashboardPage },
               { path: 'admin-account', Component: AdminAccountPage },
+              { path: 'admin-financial-metrics', Component: AdminFinancialMetricsPage },
               { path: 'admin-staff', Component: AdminStaffPage },
               { path: 'admin-coaches', Component: AdminCoachesPage },
               { path: 'admin-students', Component: AdminStudentsPage },
-              { path: 'admin-schedule', Component: AdminSchedulePage },
+              { path: 'admin-schedule', Component: AdminTimeBlockingPage },
               { path: 'admin-payments', Component: AdminPaymentsPage },
+              { path: 'admin-payment-channels', Component: AdminPaymentChannelsPage },
               { path: 'admin-gallery', Component: AdminGalleryPage },
+              { path: 'admin-amenities', Component: AdminAmenitiesPage },
               { path: 'admin-disciplines', Component: AdminDisciplinesPage },
-              { path: 'admin-classes', Component: AdminClassesPage },
-              { path: 'admin-events', Component: AdminClassesPage },
+              { path: 'admin-classes', Component: AdminClassSchedulePage },
+              { path: 'admin-coach-requests', Component: AdminCoachRequestsPage },
+              { path: 'admin-events', Component: AdminEventsRedirect },
               { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
               { path: 'admin-promos', Component: AdminPromosPage },
               { path: 'admin-bulletin', Component: AdminBulletinPage },
               { path: 'admin-news', element: <Navigate to="/admin-bulletin" replace /> },
               { path: 'admin-policies', Component: AdminPoliciesPage },
               { path: 'admin-feedback', Component: AdminFeedbackPage },
+            ],
+          },
+          {
+            Component: FrontdeskLayout,
+            ErrorBoundary: RouteErrorBoundary,
+            children: [
+              { path: 'frontdesk-dashboard', Component: FrontdeskDashboardPage },
+              { path: 'frontdesk-account', Component: FrontdeskAccountPage },
+              { path: 'frontdesk-students', Component: FrontdeskStudentsPage },
+              { path: 'frontdesk-coaches', Component: FrontdeskCoachesPage },
+              { path: 'frontdesk-disciplines', Component: FrontdeskDisciplinesPage },
+              { path: 'frontdesk-classes', Component: FrontdeskClassSchedulePage },
+              { path: 'frontdesk-bookings', Component: FrontdeskBookingsPage },
+              { path: 'frontdesk-cancellations', Component: FrontdeskCancellationsPage },
+              { path: 'frontdesk-payments', Component: FrontdeskPaymentsPage },
+              { path: 'frontdesk-policies', Component: FrontdeskPoliciesPage },
+              { path: 'frontdesk-feedback', Component: FrontdeskFeedbackPage },
+            ],
+          },
+          {
+            Component: MarketingLayout,
+            ErrorBoundary: RouteErrorBoundary,
+            children: [
+              { path: 'marketing-dashboard', Component: MarketingDashboardPage },
+              { path: 'marketing-account', Component: MarketingAccountPage },
+              { path: 'marketing-gallery', Component: MarketingGalleryPage },
+              { path: 'marketing-amenities', Component: MarketingAmenitiesPage },
+              { path: 'marketing-bulletin', Component: MarketingBulletinPage },
+              { path: 'marketing-feedback', Component: MarketingFeedbackPage },
             ],
           },
           { path: 'admin-absence', Component: AdminAbsenceTrackerPage },

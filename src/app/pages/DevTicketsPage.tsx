@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { toastCreated, toastOperationFailed } from '../../lib/operation-toast';
 import {
   Ticket, Plus, X, ImagePlus, Loader2, AlertCircle, ArrowUpRight,
 } from 'lucide-react';
@@ -150,12 +151,15 @@ export default function DevTicketsPage() {
     setSaving(false);
 
     if (result.error) {
-      setFormError(result.error.includes('relation') || result.error.includes('schema cache')
+      const message = result.error.includes('relation') || result.error.includes('schema cache')
         ? 'Tickets table missing. Apply migration 901_tickets.sql first.'
-        : result.error);
+        : result.error;
+      setFormError(message);
+      toastOperationFailed(message);
       return;
     }
 
+    toastCreated('Ticket');
     resetForm();
     setShowCreate(false);
     await loadTickets();
@@ -197,8 +201,7 @@ export default function DevTicketsPage() {
           <button
             type="button"
             onClick={() => { resetForm(); setShowCreate(true); }}
-            className="shrink-0 flex items-center justify-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm font-bold shadow-sm"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+            className="action-button shrink-0 flex items-center justify-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm shadow-sm"
           >
             <Plus size={16} /> New Ticket
           </button>
@@ -412,7 +415,7 @@ export default function DevTicketsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] active:scale-95 transition-all disabled:opacity-60"
+                  className="action-button flex-1 py-3.5 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] active:scale-95 transition-all disabled:opacity-60"
                 >
                   {saving ? 'Saving…' : 'Create Ticket'}
                 </button>

@@ -3,6 +3,7 @@ import { Users, ChevronRight, ChevronLeft, Loader2, AlertCircle } from 'lucide-r
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { fetchPublicCoaches, type PublicCoachProfile } from '../../lib/admin-service';
 import { CoachProfileModal } from '../components/coaches/CoachProfileModal';
+import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 
 type Coach = PublicCoachProfile;
@@ -185,20 +186,11 @@ export default function MemberCoachesPage() {
                 >
                   <ChevronLeft size={16} />
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setPage(n)}
-                    className={`min-w-9 h-9 px-2.5 rounded-full text-xs font-semibold transition-all ${
-                      n === currentPage
-                        ? 'bg-[#c49a3c] text-white'
-                        : 'bg-white border border-[#D4CDB5]/60 text-[#5A5048] hover:border-[#c49a3c]/40'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
+                <PaginationPageButtons
+                  page={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

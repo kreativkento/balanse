@@ -1,25 +1,24 @@
-import { useNavigate } from 'react-router';
-import { MemberPageShell } from '../components/layout/MemberPageShell';
-import { WeeklySchedule } from './ClassesPage';
+import { CalendarRange } from 'lucide-react';
+import { MemberGreetingHeader } from '../components/layout/DashboardGreetingBar';
+import AdminTimeBlockingPage from './AdminTimeBlockingPage';
 
-/** Member dashboard version of the public class schedules calendar. */
+/** Member class calendar — same views as admin Class Schedule; Active blocks only. */
 export default function MemberClassSchedule() {
-  const navigate = useNavigate();
-
   return (
-    <MemberPageShell searchPlaceholder="Search sessions…">
-      <div className="pt-6 mb-6">
-        <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Class Management</p>
-        <h2
-          className="text-[#1E2A35] leading-tight"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
-        >
-          Class Schedules
-        </h2>
-        <p className="text-[#8A7E6E] text-sm mt-1">Browse the weekly timetable and reserve your spot.</p>
+    <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
+      <div className="mx-auto w-full max-w-7xl shrink-0 px-6">
+        <MemberGreetingHeader
+          searchPlaceholder="Search sessions…"
+          pageHeader={{
+            crumb: 'Class Management',
+            title: 'Class Schedule',
+            icon: <CalendarRange size={14} className="shrink-0 text-[#c49a3c]" aria-hidden />,
+          }}
+        />
       </div>
-
-      <WeeklySchedule onBook={() => navigate('/book')} />
-    </MemberPageShell>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <AdminTimeBlockingPage key="member-class-schedule" variant="member-class-schedule" />
+      </div>
+    </div>
   );
 }

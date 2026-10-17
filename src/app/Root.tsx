@@ -9,6 +9,7 @@ const PORTAL_PREFIXES = [
   '/development',
   '/staff-',
   '/admin',
+  '/frontdesk-',
 ];
 
 function Shell() {

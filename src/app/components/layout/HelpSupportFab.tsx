@@ -175,7 +175,7 @@ export function HelpSupportFab({
                 <button
                   type="button"
                   aria-label="Send message"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#c49a3c] text-white transition-colors hover:bg-[#a67f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50"
+                  className="action-button flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#c49a3c] text-white transition-colors hover:bg-[#a67f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/50"
                 >
                   <Send size={14} />
                 </button>

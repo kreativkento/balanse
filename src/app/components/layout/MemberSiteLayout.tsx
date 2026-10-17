@@ -6,7 +6,14 @@ export function MemberSiteLayout() {
   const { pathname } = useLocation();
 
   return (
-    <MemberSidebar lockScrollDesktop={pathname === '/dashboard' || pathname === '/studio-disciplines'}>
+    <MemberSidebar
+      lockScrollDesktop={
+        pathname === '/dashboard'
+        || pathname === '/studio-disciplines'
+        || pathname === '/class-schedule'
+        || pathname === '/payment-history'
+      }
+    >
       <Outlet />
     </MemberSidebar>
   );

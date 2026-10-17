@@ -18,6 +18,7 @@ import { exportTransparentSignaturePng, SignaturePad } from '../components/Signa
 import { usePhAddressOptions } from '../components/usePhAddressOptions';
 import { toCountryName } from '../data/nationalities';
 import { buildFullName } from '../../lib/auth-helpers';
+import { toastOperationFailed, toastSaved } from '../../lib/operation-toast';
 import {
   HEALTH_FORM_VERSION,
   HEALTH_QUESTIONS,
@@ -263,19 +264,19 @@ function EditableCard({
               type="button"
               onClick={onCancel}
               className="flex-1 flex items-center justify-center gap-2 rounded-full border border-[#D4CDB5]/80 bg-white py-3.5 text-[#5A5048] hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+             
             >
               <X size={16} /> Cancel
             </button>
             <button
               type="button"
               onClick={onSave}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-full py-3.5 transition-all active:scale-[0.97] ${
+              className={`action-button flex-1 flex items-center justify-center gap-2 rounded-full py-3.5 transition-all active:scale-[0.97] ${
                 saved
                   ? 'bg-[#8A9E7A] shadow-[0_4px_16px_rgba(138,158,122,0.3)]'
                   : 'bg-[#c49a3c] shadow-[0_4px_16px_rgba(196,154,60,0.3)] hover:bg-[#a67f2e]'
               } text-white`}
-              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+             
             >
               {saved ? <><Check size={16} /> Saved!</> : <><Save size={16} /> Save</>}
             </button>
@@ -325,7 +326,7 @@ function SectionNavButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all ${
+      className={`action-button flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all ${
         danger
           ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
           : active
@@ -385,7 +386,7 @@ const DOC_VALID_PILL = {
 function ValidStatusBadge({ verified, compact = false }: { verified: boolean; compact?: boolean }) {
   const pill = verified ? DOC_VALID_PILL.verified : DOC_VALID_PILL.unverified;
   return (
-    <span
+          <span
       className={`inline-flex shrink-0 items-center rounded-full border font-bold uppercase tracking-widest ${
         compact
           ? 'gap-1 px-1.5 py-0 text-[9px]'
@@ -397,7 +398,7 @@ function ValidStatusBadge({ verified, compact = false }: { verified: boolean; co
         aria-hidden="true"
       />
       {pill.label}
-    </span>
+          </span>
   );
 }
 
@@ -436,7 +437,7 @@ function DocumentDetailsBar({
               : 'Submitted'
             : 'No Record'}
         </p>
-      </div>
+              </div>
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
@@ -464,8 +465,8 @@ function DocumentDetailsBar({
             <Pencil size={12} /> Update
           </button>
         )}
-      </div>
-    </div>
+              </div>
+              </div>
   );
 }
 
@@ -614,7 +615,7 @@ function SignedDocumentTab({
           <div className="flex items-start justify-between gap-3">
             <div className={`flex h-18 w-18 shrink-0 items-center justify-center rounded-xl ${DOC_STATUS_ICON[status]}`}>
               {kind === 'privacy' ? <ShieldCheck size={32} /> : <FileText size={32} />}
-            </div>
+              </div>
             <div className="flex flex-col items-end gap-1.5">
               <span
                 className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${DOC_STATUS_CLASS[status]}`}
@@ -628,8 +629,8 @@ function SignedDocumentTab({
                 <span className={`h-1.5 w-1.5 rounded-full ${validPill.dot}`} aria-hidden="true" />
                 {validPill.label}
               </span>
+              </div>
             </div>
-          </div>
           <h2 className="mt-3 min-w-0 truncate text-sm font-semibold text-[#1E2A35]">{title}</h2>
           <p className="mt-1 text-sm leading-relaxed text-[#5A5048]">{note}</p>
           {footnote ? (
@@ -637,7 +638,7 @@ function SignedDocumentTab({
               <Clock size={11} /> {footnote}
             </p>
           ) : null}
-        </div>
+                </div>
         <div className="mt-4 flex gap-1.5">
           {submitted ? (
             <button
@@ -658,8 +659,8 @@ function SignedDocumentTab({
               <Send size={12} />
               Submit
             </button>
-          )}
-        </div>
+        )}
+      </div>
       </article>
     </div>
   );
@@ -742,7 +743,7 @@ function NicknameWelcomeModal({
             <button
               type="submit"
               disabled={saving}
-              className="mt-6 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#c49a3c] py-3.5 text-base font-bold text-white shadow-[0_4px_24px_rgba(196,154,60,0.4)] transition-all hover:bg-[#a67f2e] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+              className="action-button mt-6 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#c49a3c] py-3.5 text-base font-bold text-white shadow-[0_4px_24px_rgba(196,154,60,0.4)] transition-all hover:bg-[#a67f2e] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? (
                 <>
@@ -954,7 +955,8 @@ export default function MemberProfilePage() {
     setPhoneVerifyBusy(false);
   };
 
-  const markSaved = (card: EditableCardId) => {
+  const markSaved = (card: EditableCardId, subject = 'Profile') => {
+    toastSaved(subject);
     setCardSaved(card);
     setTimeout(() => {
       setCardSaved((current) => (current === card ? null : current));
@@ -1038,6 +1040,7 @@ export default function MemberProfilePage() {
       await updateProfile({ phoneValid: true });
       setPhone(nextPhone);
       setPhoneVerifyOk(true);
+      toastSaved('Phone number');
     } finally {
       setPhoneVerifyBusy(false);
     }
@@ -1192,9 +1195,12 @@ export default function MemberProfilePage() {
     try {
       await updateProfile({ nickname: value });
       setNickname(value);
+      toastSaved('Nickname');
     } catch (err) {
       console.error('Failed to save nickname:', err);
-      setWelcomeNicknameError('Could not save your nickname. Please try again.');
+      const message = 'Could not save your nickname. Please try again.';
+      setWelcomeNicknameError(message);
+      toastOperationFailed(message);
     } finally {
       setWelcomeNicknameSaving(false);
     }
@@ -1231,7 +1237,7 @@ export default function MemberProfilePage() {
                 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
               >
                 {activeTab.label}
-              </h2>
+            </h2>
             </div>
             <div className="w-full max-w-[12rem] shrink-0 rounded-2xl border border-[#D4CDB5]/60 bg-white px-3.5 py-2.5 shadow-sm">
               <div className="mb-1.5 flex items-baseline justify-between gap-3">
@@ -1241,8 +1247,8 @@ export default function MemberProfilePage() {
                   style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.04em' }}
                 >
                   {profileScore}%
-                </span>
-              </div>
+            </span>
+          </div>
               <div
                 className={`h-2 w-full overflow-hidden rounded-full ${profileScoreBar.track}`}
                 role="progressbar"
@@ -1257,7 +1263,7 @@ export default function MemberProfilePage() {
                 />
               </div>
             </div>
-          </div>
+        </div>
 
           <div className={tab === 'medical' ? 'flex flex-col pb-4' : `pb-4 ${SLIM_SCROLL_OUTSET}`}>
 
@@ -1386,7 +1392,7 @@ export default function MemberProfilePage() {
                             {label}
                           </button>
                         ))}
-                      </div>
+                </div>
                       {sex ? (
                         <button
                           type="button"
@@ -1396,7 +1402,7 @@ export default function MemberProfilePage() {
                           Clear
                         </button>
                       ) : null}
-                    </div>
+              </div>
                   </Field>
                   <Field label="Nationality" error={basicErrors.nationality}>
                     <CountrySelect
@@ -1464,10 +1470,10 @@ export default function MemberProfilePage() {
                       <div className="min-w-0 flex-1">
                         <ClearableInput
                           className={`${INPUT} ${contactErrors.phone ? INPUT_ERROR : ''}`}
-                          type="tel"
+                      type="tel"
                           inputMode="numeric"
                           maxLength={11}
-                          value={phone}
+                      value={phone}
                           onChange={e => {
                             setPhone(e.target.value);
                             setPhoneVerifyOk(false);
@@ -1532,9 +1538,9 @@ export default function MemberProfilePage() {
                         emptyText="No city found."
                         disabled={!province}
                         loading={Boolean(province) && loadingCities}
-                      />
-                    </Field>
-                  </div>
+                    />
+                  </Field>
+                </div>
                   <Field label="Barangay" optional>
                     <SearchableSelect
                       value={barangay}
@@ -1549,7 +1555,7 @@ export default function MemberProfilePage() {
                       loading={loadingBarangays}
                     />
                   </Field>
-                </div>
+              </div>
               </EditableCard>
 
               <EditableCard
@@ -1632,13 +1638,13 @@ export default function MemberProfilePage() {
               headerAside={<ValidStatusBadge verified={Boolean(profile?.healthValid)} />}
               display={
                 <div className="flex flex-col gap-6">
-                  <div className="bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
-                    <Shield size={15} className="text-[#c49a3c] mt-0.5 shrink-0" />
-                    <p className="text-[#7A6A52] text-xs leading-relaxed">
-                      This information is strictly confidential and shared only with your assigned coaches
-                      to ensure your safety and wellbeing during every session.
-                    </p>
-                  </div>
+              <div className="bg-[#c49a3c]/06 border border-[#c49a3c]/20 rounded-2xl px-4 py-3 flex items-start gap-3">
+                <Shield size={15} className="text-[#c49a3c] mt-0.5 shrink-0" />
+                <p className="text-[#7A6A52] text-xs leading-relaxed">
+                  This information is strictly confidential and shared only with your assigned coaches
+                  to ensure your safety and wellbeing during every session.
+                </p>
+              </div>
 
                   <div>
                     <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-3">Medical Questionnaire</p>
@@ -1772,40 +1778,40 @@ export default function MemberProfilePage() {
                   hint="If you answered Yes to any question above, please provide brief details so our coaching staff can accommodate you."
                 >
                   <ClearableTextarea
-                    className={TEXTAREA}
+                      className={TEXTAREA}
                     rows={4}
                     value={healthDetails}
                     onChange={e => setHealthDetails(e.target.value)}
                     onClear={() => setHealthDetails('')}
                     placeholder="Brief details about any Yes answers, injuries, or anything your coach should know"
-                  />
-                </Field>
+                    />
+                  </Field>
 
                 <div>
                   <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2">Acknowledgment and Declaration</p>
-                  <label
-                    className="flex items-start gap-3 cursor-pointer group"
+                <label
+                  className="flex items-start gap-3 cursor-pointer group"
                     onClick={() => {
                       setConsent(v => !v);
                       setHealthError('');
                     }}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                      consent
+                        ? 'bg-[#c49a3c] border-[#c49a3c]'
+                        : 'border-[#D4CDB5] group-hover:border-[#c49a3c]/60'
+                    }`}
                   >
-                    <div
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                        consent
-                          ? 'bg-[#c49a3c] border-[#c49a3c]'
-                          : 'border-[#D4CDB5] group-hover:border-[#c49a3c]/60'
-                      }`}
-                    >
-                      {consent && <Check size={12} className="text-white" strokeWidth={3} />}
-                    </div>
-                    <p className="text-[#5A5048] text-sm leading-relaxed">
-                      I confirm that I am physically capable of participating in fitness activities at BALANSÉ.
-                      I have disclosed all relevant medical conditions above and agree to notify BALANSÉ
-                      of any changes to my health status before attending future sessions.
-                    </p>
-                  </label>
-                </div>
+                    {consent && <Check size={12} className="text-white" strokeWidth={3} />}
+                  </div>
+                  <p className="text-[#5A5048] text-sm leading-relaxed">
+                    I confirm that I am physically capable of participating in fitness activities at BALANSÉ.
+                    I have disclosed all relevant medical conditions above and agree to notify BALANSÉ
+                    of any changes to my health status before attending future sessions.
+                  </p>
+                </label>
+              </div>
 
                 <div>
                   <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">
@@ -1821,7 +1827,7 @@ export default function MemberProfilePage() {
                           : 'Turn on to save without drawing a signature.'}
                       </p>
                     </div>
-                    <button
+              <button
                       type="button"
                       role="switch"
                       aria-checked={healthSkipSignature}
@@ -1839,7 +1845,7 @@ export default function MemberProfilePage() {
                           healthSkipSignature ? 'left-5' : 'left-0.5'
                         }`}
                       />
-                    </button>
+              </button>
                   </div>
 
                   {healthSkipSignature ? (
@@ -2007,8 +2013,8 @@ export default function MemberProfilePage() {
 
                 <button
                   onClick={changePassword}
-                  className="mt-5 w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-3.5 hover:bg-[#263545] active:scale-[0.97] transition-all"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+                  className="action-button mt-5 w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-3.5 hover:bg-[#263545] active:scale-[0.97] transition-all"
+                 
                 >
                   <Lock size={15} /> Update Password
                 </button>
@@ -2034,13 +2040,13 @@ export default function MemberProfilePage() {
                     </p>
                   </div>
                 </div>
-                <button
+                  <button
                   type="button"
                   disabled
                   className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-600 opacity-70"
-                >
-                  Deactivate My Account
-                </button>
+                  >
+                    Deactivate My Account
+                  </button>
               </div>
 
               {/* Delete — disabled for now */}
@@ -2063,13 +2069,13 @@ export default function MemberProfilePage() {
                     </p>
                   </div>
                 </div>
-                <button
+                      <button
                   type="button"
                   disabled
                   className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-600 opacity-70"
                 >
                   Delete My Account
-                </button>
+                      </button>
               </div>
             </div>
           )}
@@ -2102,8 +2108,8 @@ export default function MemberProfilePage() {
               verified={Boolean(profile?.privacyValid)}
             />
           )}
-          </div>
         </div>
+      </div>
 
         {/* ── Right: profile card + section selection ── */}
         <aside className="order-1 flex min-w-0 max-w-full flex-col gap-3 lg:sticky lg:top-6 lg:order-2 lg:self-start lg:border-l lg:border-[#D4CDB5]/50 lg:pl-6">
@@ -2114,8 +2120,14 @@ export default function MemberProfilePage() {
               initials={initials}
               editable
               coverClassName="h-28 md:h-32"
-              onPhotoUploaded={(url) => updateProfile({ photo: url })}
-              onCoverUploaded={(url) => updateProfile({ coverImage: url })}
+              onPhotoUploaded={(url) => {
+                updateProfile({ photo: url });
+                toastSaved('Profile photo');
+              }}
+              onCoverUploaded={(url) => {
+                updateProfile({ coverImage: url });
+                toastSaved('Cover image');
+              }}
             />
             <div className="px-5 pb-4 pt-12 md:px-6 md:pt-14">
               <h2
@@ -2125,7 +2137,7 @@ export default function MemberProfilePage() {
                 {user?.name || 'Member'}
               </h2>
               <p className="text-[#8A7E6E] text-sm truncate">{user?.email}</p>
-            </div>
+    </div>
           </div>
 
           <nav

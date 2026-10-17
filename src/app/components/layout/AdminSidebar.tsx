@@ -1,11 +1,13 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import {
   Award,
+  BarChart3,
   Briefcase,
   CalendarDays,
   CalendarRange,
   ChevronDown,
+  ClipboardList,
   CreditCard,
   Crown,
   Images,
@@ -14,15 +16,19 @@ import {
   MessageSquare,
   Newspaper,
   ShieldCheck,
-  Tag,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import logoMain from '@/assets/logo_main.svg';
 import logoMainWhite from '@/assets/logo_main_white.svg';
+import { AdminHeaderActionsProvider } from '../../context/AdminHeaderActionsContext';
 import { AdminGreetingHeader } from './DashboardGreetingBar';
 import { AppSidebarLayout } from './AppSidebarLayout';
 import { isPublicNavActive } from './NavBar';
+import { useAdminCoachRequestsPendingCount } from '../../hooks/useAdminCoachRequestsPendingCount';
 import { SidebarNavLink } from './SidebarNavLink';
+
+const COACH_REQUESTS_PATH = '/admin-coach-requests';
 
 const dashboardLinks: {
   label: string;
@@ -49,6 +55,7 @@ const scheduleLinks: {
 }[] = [
   { label: 'Time Blocking', path: '/admin-schedule', icon: <CalendarDays size={16} /> },
   { label: 'Class Schedule', path: '/admin-classes', icon: <CalendarRange size={16} /> },
+  { label: 'Coach Requests', path: COACH_REQUESTS_PATH, icon: <ClipboardList size={16} /> },
 ];
 
 const marketingLinks: {
@@ -57,19 +64,21 @@ const marketingLinks: {
   icon: ReactNode;
   disabled?: boolean;
 }[] = [
-  { label: 'Gallery', path: '/admin-gallery', icon: <Images size={16} />, disabled: true },
+  { label: 'Gallery', path: '/admin-gallery', icon: <Images size={16} /> },
+  { label: 'Amenities', path: '/admin-amenities', icon: <Sparkles size={16} /> },
   { label: 'Bulletin', path: '/admin-bulletin', icon: <Newspaper size={16} /> },
-  { label: 'Promotions', path: '/admin-promos', icon: <Tag size={16} />, disabled: true },
 ];
 
 const financeLinks: {
   label: string;
   path: string;
   icon: ReactNode;
+  disabled?: boolean;
 }[] = [
-  { label: 'Staffing', path: '/admin-staff', icon: <Briefcase size={16} /> },
+  { label: 'Metrics', path: '/admin-financial-metrics', icon: <BarChart3 size={16} /> },
+  { label: 'Channels', path: '/admin-payment-channels', icon: <Layers size={16} /> },
   { label: 'Payments', path: '/admin-payments', icon: <CreditCard size={16} /> },
-  { label: 'Subscriptions', path: '/admin-subscriptions', icon: <CreditCard size={16} /> },
+  { label: 'Staffing', path: '/admin-staff', icon: <Briefcase size={16} /> },
   { label: 'Policies', path: '/admin-policies', icon: <ShieldCheck size={16} /> },
 ];
 
@@ -101,6 +110,7 @@ function AdminSidebarNav({
   onNavigate: () => void;
 }) {
   const location = useLocation();
+  const coachRequestsPendingCount = useAdminCoachRequestsPendingCount();
   const isActive = (path: string) => isPublicNavActive(location.pathname, path);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(NAV_GROUPS.map((group) => [group.key, true])),
@@ -172,6 +182,9 @@ function AdminSidebarNav({
                         onNavigate={onNavigate}
                         disabled={link.disabled}
                         disabledTitle="Temporarily unavailable"
+                        pendingCount={
+                          link.path === COACH_REQUESTS_PATH ? coachRequestsPendingCount : undefined
+                        }
                       />
                     ))}
                   </div>
@@ -189,6 +202,7 @@ function AdminSidebarNav({
           label="System Feedback"
           active={isActive('/admin-feedback')}
           onNavigate={onNavigate}
+          appearance="gold"
         />
       </div>
     </div>
@@ -201,8 +215,16 @@ interface AdminSidebarProps {
 
 /** Logged-in admin portal chrome (sidebar). */
 export function AdminSidebar({ children }: AdminSidebarProps) {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    document.querySelector('[data-admin-main-scroll]')?.scrollTo(0, 0);
+  }, [pathname]);
+
   return (
     <AppSidebarLayout
+      sidebarWidthClass="w-60"
+      mainOverflow="desktop-hidden"
       renderSidebar={(closeMobile) => <AdminSidebarNav onNavigate={closeMobile} />}
       mobileBrand={
         <Link to="/admin-dashboard" className="flex min-w-0 items-center gap-2">
@@ -211,14 +233,16 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         </Link>
       }
       >
-      <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
-        <div className="mx-auto w-full max-w-7xl shrink-0 px-6">
-          <AdminGreetingHeader searchPlaceholder="Search clients, classes…" />
+      <AdminHeaderActionsProvider>
+        <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
+          <div className="mx-auto w-full max-w-7xl shrink-0 px-6">
+            <AdminGreetingHeader searchPlaceholder="Search clients, classes…" />
+          </div>
+          <div data-admin-main-scroll className="min-h-0 flex-1 overflow-y-auto flex flex-col">
+            {children}
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {children}
-        </div>
-      </div>
+      </AdminHeaderActionsProvider>
     </AppSidebarLayout>
   );
 }

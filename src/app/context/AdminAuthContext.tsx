@@ -21,6 +21,8 @@ export interface AdminUser {
 
 interface AdminAuthContextType {
   adminUser: AdminUser | null;
+  /** False until the initial Supabase session has been read (avoids logout on refresh). */
+  adminAuthReady: boolean;
   adminLogin: (email: string, password: string) => Promise<AuthResult>;
   adminLogout: () => Promise<void>;
   updateAdminImages: (images: { photo?: string; coverImage?: string }) => void;
@@ -40,6 +42,7 @@ const AdminAuthContext = createContext<AdminAuthContextType | null>(null);
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [adminAuthReady, setAdminAuthReady] = useState(false);
 
   const hydrateAdminSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
@@ -55,13 +58,17 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted && session?.user) {
-        await hydrateAdminSession(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted && session?.user) {
+          await hydrateAdminSession(session.user.id);
+        }
+      } finally {
+        if (mounted) setAdminAuthReady(true);
       }
     };
 
-    init();
+    void init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
@@ -119,7 +126,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AdminAuthContext.Provider value={{ adminUser, adminLogin, adminLogout, updateAdminImages }}>
+    <AdminAuthContext.Provider value={{ adminUser, adminAuthReady, adminLogin, adminLogout, updateAdminImages }}>
       {children}
     </AdminAuthContext.Provider>
   );

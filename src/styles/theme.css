@@ -238,6 +238,15 @@
   transition-timing-function: ease-in-out;
 }
 
+@layer components {
+  .action-button {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-card-hover-grow,
   .motion-card-hover-grow:hover,

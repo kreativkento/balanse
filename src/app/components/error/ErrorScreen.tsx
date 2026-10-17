@@ -81,8 +81,8 @@ export function ErrorScreen({
           <button
             type="button"
             onClick={goHome}
-            className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] active:scale-[0.97] transition-all"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+            className="action-button flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] active:scale-[0.97] transition-all"
+           
           >
             <Home size={15} />
             {homeLabel}

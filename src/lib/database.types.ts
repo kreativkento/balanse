@@ -8,9 +8,12 @@ export const STAFF_USER_ROLES: StaffUserRole[] = [
   'frontdesk',
   'marketing',
 ];
+/** @deprecated Legacy lifecycle enum; use ClassOpenStatus + ClassBlockStatus. */
 export type ClassStatus = 'draft' | 'published' | 'cancelled' | 'completed';
-/** @deprecated Use ClassStatus */
+/** @deprecated Use ClassOpenStatus */
 export type EventStatus = ClassStatus;
+export type ClassOpenStatus = 'open' | 'close' | 'pending';
+export type ClassBlockStatus = 'vacant' | 'occupied' | 'active' | 'closed';
 export type TicketType = 'bug' | 'feature' | 'support' | 'incident' | 'other';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -26,6 +29,8 @@ export type BulletinVisibility =
   | 'coach'
   | 'marketing'
   | 'frontdesk';
+export type GalleryTag = 'Studio' | 'Classes' | 'Events' | 'Community' | 'Amenities';
+export type GalleryMediaKind = 'image' | 'video';
 export type LogAction =
   | 'insert'
   | 'update'
@@ -163,6 +168,45 @@ export interface Database {
         } & Partial<Omit<BulletinPostRow, 'id' | 'title' | 'body' | 'category' | 'is_public' | 'created_at' | 'updated_at'>>;
         Update: Partial<Omit<BulletinPostRow, 'id' | 'is_public' | 'created_at'>>;
       };
+      staff_availability: {
+        Row: StaffAvailabilityRow;
+        Insert: {
+          account_id: string;
+          availability_date: string;
+        } & Partial<Omit<StaffAvailabilityRow, 'id' | 'account_id' | 'availability_date' | 'created_at' | 'updated_at'>>;
+        Update: Partial<Omit<StaffAvailabilityRow, 'id' | 'account_id' | 'created_at'>>;
+      };
+      portal_requests: {
+        Row: PortalRequestRow;
+        Insert: never;
+        Update: never;
+      };
+      gallery_posts: {
+        Row: GalleryPostRow;
+        Insert: {
+          caption: string;
+          tag: GalleryTag;
+        } & Partial<Omit<GalleryPostRow, 'id' | 'caption' | 'tag' | 'created_at' | 'updated_at'>>;
+        Update: Partial<Omit<GalleryPostRow, 'id' | 'created_at'>>;
+      };
+      studio_amenities_config: {
+        Row: StudioAmenitiesConfigRow;
+        Insert: {
+          id?: number;
+          selected_labels?: string[];
+        } & Partial<Omit<StudioAmenitiesConfigRow, 'id' | 'updated_at'>>;
+        Update: Partial<Omit<StudioAmenitiesConfigRow, 'id'>>;
+      };
+      gallery_post_media: {
+        Row: GalleryPostMediaRow;
+        Insert: {
+          post_id: string;
+          sort_order: number;
+          storage_path: string;
+          media_kind: GalleryMediaKind;
+        } & Partial<Omit<GalleryPostMediaRow, 'id' | 'post_id' | 'sort_order' | 'storage_path' | 'media_kind' | 'created_at'>>;
+        Update: Partial<Omit<GalleryPostMediaRow, 'id' | 'post_id' | 'created_at'>>;
+      };
     };
     Functions: {
       admin_delete_managed_account: {
@@ -188,14 +232,15 @@ export interface Database {
       };
       admin_create_class: {
         Args: {
-          p_name: string;
-          p_discipline_id: string;
           p_starts_at: string;
-          p_class_limit: number;
-          p_coach_account_ids: string[];
-          p_status?: ClassStatus;
-          p_description?: string;
           p_ends_at?: string | null;
+          p_class_limit?: number;
+          p_status_class?: ClassOpenStatus;
+          p_status_block?: ClassBlockStatus;
+          p_name?: string;
+          p_description?: string;
+          p_discipline_id?: string | null;
+          p_coach_account_ids?: string[];
           p_student_account_ids?: string[];
         };
         Returns: string;
@@ -203,14 +248,15 @@ export interface Database {
       admin_update_class: {
         Args: {
           p_class_id: string;
-          p_name: string;
-          p_discipline_id: string;
           p_starts_at: string;
-          p_class_limit: number;
-          p_coach_account_ids: string[];
-          p_status: ClassStatus;
-          p_description?: string;
           p_ends_at?: string | null;
+          p_class_limit?: number;
+          p_status_class?: ClassOpenStatus;
+          p_status_block?: ClassBlockStatus;
+          p_name?: string;
+          p_description?: string;
+          p_discipline_id?: string | null;
+          p_coach_account_ids?: string[];
           p_student_account_ids?: string[] | null;
         };
         Returns: undefined;
@@ -218,6 +264,36 @@ export interface Database {
       admin_delete_class: {
         Args: { p_class_id: string };
         Returns: undefined;
+      };
+      upsert_staff_availability: {
+        Args: {
+          p_availability_date: string;
+          p_day_off: boolean;
+          p_note?: string;
+          p_periods?: { start: string; end: string }[];
+        };
+        Returns: StaffAvailabilityRow;
+      };
+      delete_staff_availability: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      submit_portal_request: {
+        Args: {
+          p_request_type: PortalRequestType;
+          p_target_class_id: string;
+          p_payload: Record<string, unknown>;
+          p_requester_note?: string;
+        };
+        Returns: PortalRequestRow;
+      };
+      review_portal_request: {
+        Args: {
+          p_request_id: string;
+          p_status: PortalRequestStatus;
+          p_review_note?: string;
+        };
+        Returns: PortalRequestRow;
       };
       coach_directory_images: {
         Args: Record<string, never>;
@@ -315,6 +391,7 @@ export interface ProfileStaffRow {
   /** @deprecated Legacy free-text labels. Prefer coach_disciplines → disciplines.id */
   classes: string[];
   staff_type: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -368,6 +445,7 @@ export interface DisciplineRow {
   description: string;
   logo_url: string;
   image_url: string;
+  color_hex: string;
   sort_order: number;
   status: string;
   status_name: string;
@@ -379,16 +457,19 @@ export interface DisciplineRow {
 
 export interface ClassRow {
   id: string;
+  /** Present after migration 040_classes_uid.sql */
+  uid?: string;
   name: string;
   description: string;
-  discipline_id: string;
+  discipline_id: string | null;
   starts_at: string;
   ends_at: string | null;
   class_limit: number;
-  status: ClassStatus;
+  status_class: ClassOpenStatus;
+  status_block: ClassBlockStatus;
   created_by: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 /** @deprecated Use ClassRow */
@@ -399,6 +480,7 @@ export interface ClassCoachRow {
   account_id: string;
   assigned_at: string;
   assigned_by: string | null;
+  coach_confirmation: boolean;
 }
 
 export interface CoachDisciplineTag {
@@ -415,6 +497,7 @@ export interface ClassStudentRow {
   account_id: string;
   enrolled_at: string;
   enrolled_by: string | null;
+  wants_physical_receipt: boolean;
 }
 
 /** @deprecated Use ClassStudentRow */
@@ -477,6 +560,64 @@ export interface BulletinPostRow {
   active_until: string | null;
   is_active: boolean;
   updated_at: string;
+}
+
+export interface StaffAvailabilityRow {
+  id: string;
+  account_id: string;
+  availability_date: string;
+  day_off: boolean;
+  note: string;
+  periods: { start: string; end: string }[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type PortalRequestType = 'slot_request' | 'cancellation_request';
+export type PortalRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface PortalRequestRow {
+  id: string;
+  request_type: PortalRequestType;
+  status: PortalRequestStatus;
+  requester_account_id: string;
+  target_class_id: string | null;
+  result_class_id: string | null;
+  payload: Record<string, unknown>;
+  requester_note: string;
+  review_note: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudioAmenitiesConfigRow {
+  id: number;
+  selected_labels: string[];
+  updated_at: string;
+}
+
+export interface GalleryPostRow {
+  id: string;
+  caption: string;
+  tag: GalleryTag;
+  featured_in_gallery: boolean;
+  featured_in_home_studio: boolean;
+  featured_in_amenities: boolean;
+  masonry_tall: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GalleryPostMediaRow {
+  id: string;
+  post_id: string;
+  sort_order: number;
+  storage_path: string;
+  media_kind: GalleryMediaKind;
+  created_at: string;
 }
 
 export interface FeedbackRow {

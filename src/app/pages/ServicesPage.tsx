@@ -46,8 +46,8 @@ const RECOVERY_TIERS = [
 
 function SectionLabel({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
   return (
-    <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#c49a3c]">
-      <Icon size={11} strokeWidth={2.25} />
+    <p className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#c49a3c]">
+      <Icon size={14} strokeWidth={2.25} />
       {children}
     </p>
   );
@@ -63,18 +63,18 @@ function ServiceCardHeader({
   tagline: string;
 }) {
   return (
-    <div className="flex items-start gap-3 px-4 pb-3 pt-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
-        <Icon size={18} strokeWidth={2} />
+    <div className="flex items-start gap-3.5 px-5 pb-4 pt-5">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
+        <Icon size={22} strokeWidth={2} />
       </div>
       <div className="min-w-0 pt-0.5">
         <h2
           className="leading-none text-[#1E2A35]"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.45rem, 2.5vw, 1.65rem)', letterSpacing: '0.05em' }}
         >
           {title}
         </h2>
-        <p className="mt-1 text-[11px] leading-snug text-[#8A7E6E]">{tagline}</p>
+        <p className="mt-1.5 text-sm leading-snug text-[#8A7E6E]">{tagline}</p>
       </div>
     </div>
   );
@@ -95,28 +95,28 @@ function PriceRow({
 }) {
   return (
     <div
-      className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 ${
+      className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${
         highlight ? 'bg-[#c49a3c]/10 border border-[#c49a3c]/25' : 'bg-[#F8F3E8] border border-[#D4CDB5]/40'
       }`}
     >
       <div className="min-w-0 pr-1">
         {plain ? (
-          <p className={`text-xs leading-snug ${highlight ? 'text-[#1E2A35] font-medium' : 'text-[#5A5048]'}`}>{label}</p>
+          <p className={`text-sm leading-snug ${highlight ? 'text-[#1E2A35] font-semibold' : 'text-[#5A5048]'}`}>{label}</p>
         ) : (
           <>
             <p
               className="text-[#1E2A35] leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.04em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.04em' }}
             >
               {label}
             </p>
-            {note && <p className="text-[#8A7E6E] text-[11px] mt-0.5 leading-tight">{note}</p>}
+            {note && <p className="text-[#8A7E6E] text-xs mt-1 leading-snug">{note}</p>}
           </>
         )}
       </div>
       <span
-        className={`leading-none shrink-0 ${highlight ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
-        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.02em' }}
+        className={`leading-none shrink-0 tabular-nums ${highlight ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.02em' }}
       >
         {price}
       </span>
@@ -127,7 +127,7 @@ function PriceRow({
 export function ServicesOfferings({ onAction }: { onAction: () => void }) {
   return (
     <>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 items-stretch">
 
           <article className={SERVICE_CARD}>
             <ServiceCardHeader
@@ -135,33 +135,33 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
               title="Personal Coaching"
               tagline="1-on-1 programs & coach support"
             />
-            <div className="px-4 py-3 border-t border-[#D4CDB5]/35">
+            <div className="px-5 py-4 border-t border-[#D4CDB5]/35">
               <SectionLabel icon={Tag}>Pricing</SectionLabel>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 {COACHING_TIERS.map((tier) => (
                   <PriceRow key={`${tier.label}-${tier.note}`} label={tier.label} note={tier.note} price={tier.price} />
                 ))}
               </div>
             </div>
-            <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
+            <div className="px-5 py-4 border-t border-[#D4CDB5]/35 flex-1">
               <SectionLabel icon={Check}>Included</SectionLabel>
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex flex-col gap-2">
                 {COACHING_INCLUSIONS.map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-[#c49a3c]/12 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check size={9} className="text-[#c49a3c]" strokeWidth={3} />
+                  <li key={item} className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#c49a3c]/12 flex items-center justify-center shrink-0 mt-0.5">
+                      <Check size={11} className="text-[#c49a3c]" strokeWidth={3} />
                     </span>
-                    <span className="text-[#5A5048] text-xs leading-snug">{item}</span>
+                    <span className="text-[#5A5048] text-sm leading-snug">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="px-4 pb-4 pt-1">
+            <div className="px-5 pb-5 pt-2">
               <button
                 type="button"
                 onClick={onAction}
-                className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
+                className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
               >
                 Inquire Now
               </button>
@@ -174,33 +174,33 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
               title="Private Class"
               tagline="Solo or small group sessions"
             />
-            <div className="px-4 py-3 border-t border-[#D4CDB5]/35">
+            <div className="px-5 py-4 border-t border-[#D4CDB5]/35">
               <SectionLabel icon={Tag}>Pricing</SectionLabel>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 {PRIVATE_TIERS.map((tier) => (
                   <PriceRow key={tier.label} label={tier.label} note={tier.note} price={tier.price} />
                 ))}
               </div>
             </div>
-            <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
+            <div className="px-5 py-4 border-t border-[#D4CDB5]/35 flex-1">
               <SectionLabel icon={Grid3X3}>Classes</SectionLabel>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {PRIVATE_CLASSES.map((name) => (
                   <span
                     key={name}
-                    className="text-[10px] bg-[#F8F3E8] border border-[#D4CDB5]/50 text-[#5A5048] px-2 py-0.5 rounded-full"
+                    className="text-xs bg-[#F8F3E8] border border-[#D4CDB5]/50 text-[#5A5048] px-2.5 py-1 rounded-full leading-snug"
                   >
                     {name}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="px-4 pb-4 pt-1">
+            <div className="px-5 pb-5 pt-2">
               <button
                 type="button"
                 onClick={onAction}
-                className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
+                className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
               >
                 Inquire Now
               </button>
@@ -213,20 +213,20 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
               title="Sports Recovery"
               tagline="Mobility & recovery treatments"
             />
-            <div className="px-4 py-3 border-t border-[#D4CDB5]/35 flex-1">
+            <div className="px-5 py-4 border-t border-[#D4CDB5]/35 flex-1">
               <SectionLabel icon={HeartPulse}>Treatments</SectionLabel>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 {RECOVERY_TIERS.map((tier) => (
                   <PriceRow key={tier.label} label={tier.label} price={tier.price} highlight={tier.highlight} plain />
                 ))}
               </div>
             </div>
-            <div className="px-4 pb-4 pt-3">
+            <div className="px-5 pb-5 pt-3">
               <button
                 type="button"
                 onClick={onAction}
-                className="w-full py-2.5 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-xs font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.85rem', letterSpacing: '0.1em' }}
+                className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
               >
                 Inquire Now
               </button>
@@ -234,7 +234,7 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
           </article>
         </div>
 
-        <p className="pt-4 text-center text-[11px] text-[#8A7E6E]">
+        <p className="pt-5 text-center text-xs text-[#8A7E6E]">
           Rates in ₱ · confirm with our team for latest pricing.
         </p>
     </>

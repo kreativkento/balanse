@@ -68,7 +68,7 @@ export default function DisciplinesPage() {
 
   const handleEnroll = () => {
     if (isAuthenticated) {
-      navigate('/book');
+      navigate('/class-schedule');
       return;
     }
     setShowSignInPrompt(true);
@@ -121,8 +121,7 @@ export default function DisciplinesPage() {
                   setShowSignInPrompt(false);
                   navigate('/auth');
                 }}
-                className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white text-sm font-bold hover:bg-[#263545] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+                className="action-button flex-1 py-3 rounded-full bg-[#1E2A35] text-white text-sm hover:bg-[#263545] transition-all"
               >
                 Proceed
               </button>

@@ -194,11 +194,23 @@ export async function updateStaffDirectoryAccount(
     return { ok: false, error: 'Invalid staff role.' };
   }
 
-  const { error } = await supabase.from('accounts').update(update).eq('id', accountId);
+  const { data, error } = await supabase
+    .from('accounts')
+    .update(update)
+    .eq('id', accountId)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     console.error('Failed to update staff directory account:', error.message);
     return { ok: false, error: error.message };
+  }
+
+  if (!data) {
+    return {
+      ok: false,
+      error: 'Account not found or you do not have permission to update this staff member.',
+    };
   }
 
   return { ok: true };
@@ -240,14 +252,23 @@ export async function updateManagedStaffProfile(
   delete payload.created_at;
   delete payload.updated_at;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('profiles_staff')
     .update(payload)
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     console.error('Failed to update managed staff profile:', error.message);
     return { ok: false, error: error.message };
+  }
+
+  if (!data) {
+    return {
+      ok: false,
+      error: 'Staff profile not found or you do not have permission to update it.',
+    };
   }
 
   return { ok: true };
@@ -275,9 +296,14 @@ export async function updateManagedProfile(
   return updateManagedStaffProfile(accountId, update as Partial<ProfileStaffRow>);
 }
 
+/** Deletes auth user, public.accounts row, and profiles_client / profiles_staff (admin RPC). */
 export async function deleteManagedAccount(
   accountId: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  if (!accountId.trim()) {
+    return { ok: false, error: 'Account id is missing.' };
+  }
+
   const { error } = await supabase.rpc('admin_delete_managed_account', {
     p_account_id: accountId,
   });
@@ -302,6 +328,15 @@ export interface CreateStaffAccountInput {
   /** @deprecated Use staffRole */
   staffType?: 'Coach' | 'Administrator';
   disciplineIds?: string[];
+  status?: 'active' | 'inactive';
+}
+
+function staffDirectoryStatus(profile: ProfileStaffRow): 'active' | 'inactive' {
+  return profile.is_active === false ? 'inactive' : 'active';
+}
+
+function statusToIsActive(status?: 'active' | 'inactive'): boolean {
+  return status !== 'inactive';
 }
 
 function staffTypeToRole(staffType?: 'Coach' | 'Administrator', staffRole?: StaffUserRole): StaffUserRole {
@@ -366,7 +401,7 @@ export async function createStaffAccount(
 
   if (error) {
     const message = error.message.includes('ACCOUNT_EXISTS')
-      ? 'An account with this email already exists.'
+      ? 'An account with this email already exists as staff. Use a client email to promote, or choose a new email.'
       : error.message;
     console.error('Failed to create staff account:', error.message);
     return { ok: false, error: message };
@@ -374,13 +409,16 @@ export async function createStaffAccount(
 
   const accountId = data as string;
 
+  const postCreateProfile: Partial<ProfileStaffRow> = {
+    is_active: statusToIsActive(input.status),
+  };
   if (input.nationality?.trim()) {
-    const nationalityResult = await updateManagedStaffProfile(accountId, {
-      nationality: input.nationality.trim(),
-    });
-    if (!nationalityResult.ok) {
-      return { ok: false, accountId, error: nationalityResult.error };
-    }
+    postCreateProfile.nationality = input.nationality.trim();
+  }
+
+  const profileBootstrap = await updateManagedStaffProfile(accountId, postCreateProfile);
+  if (!profileBootstrap.ok) {
+    return { ok: false, accountId, error: profileBootstrap.error };
   }
 
   if (role === 'coach' && input.disciplineIds && input.disciplineIds.length > 0) {
@@ -443,7 +481,7 @@ export function staffRowToListItem(
       specialty: '—',
       disciplineIds: [],
       disciplineNames: [],
-      status: 'active',
+      status: staffDirectoryStatus(row.profile),
       accountRole: 'dev',
       ...profileExtras,
     };
@@ -458,7 +496,7 @@ export function staffRowToListItem(
       specialty: '—',
       disciplineIds: [],
       disciplineNames: [],
-      status: 'active',
+      status: staffDirectoryStatus(row.profile),
       accountRole: 'admin',
       ...profileExtras,
     };
@@ -473,7 +511,7 @@ export function staffRowToListItem(
       specialty: '—',
       disciplineIds: [],
       disciplineNames: [],
-      status: 'active',
+      status: staffDirectoryStatus(row.profile),
       accountRole: 'frontdesk',
       ...profileExtras,
     };
@@ -488,7 +526,7 @@ export function staffRowToListItem(
       specialty: '—',
       disciplineIds: [],
       disciplineNames: [],
-      status: 'active',
+      status: staffDirectoryStatus(row.profile),
       accountRole: 'marketing',
       ...profileExtras,
     };
@@ -515,7 +553,7 @@ export function staffRowToListItem(
     specialty: staffType === 'Administrator' ? '—' : (disciplineLabel !== '—' ? disciplineLabel : legacySpecialty),
     disciplineIds: staffType === 'Administrator' ? [] : disciplineIds,
     disciplineNames: resolvedDisciplineNames,
-    status: 'active',
+    status: staffDirectoryStatus(row.profile),
     accountRole: 'coach',
     ...profileExtras,
   };
@@ -706,6 +744,7 @@ export interface ClientDirectoryItem {
   firstName: string;
   lastName: string;
   middleInitial: string;
+  nickname: string;
   email: string;
   phone: string;
   nationality: string;
@@ -716,6 +755,9 @@ export interface ClientDirectoryItem {
   sex: string;
   weight: string;
   height: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  emergencyContactRelationship: string;
   healthDeclaration: string;
   profileComplete: boolean;
   healthDeclarationSigned: boolean;
@@ -747,6 +789,7 @@ export function clientRowToListItem(row: AccountWithClientProfile): ClientDirect
     firstName: profile.first_name ?? '',
     lastName: profile.last_name ?? '',
     middleInitial: profile.middle_initial ?? '',
+    nickname: profile.nickname ?? '',
     email: row.account.email,
     phone: profile.phone || '',
     nationality: profile.nationality || '',
@@ -757,6 +800,9 @@ export function clientRowToListItem(row: AccountWithClientProfile): ClientDirect
     sex: profile.sex || '',
     weight: profile.weight || '',
     height: profile.height || '',
+    emergencyContactName: profile.emergency_contact_name ?? '',
+    emergencyContactNumber: profile.emergency_contact_number ?? '',
+    emergencyContactRelationship: profile.emergency_contact_relationship ?? '',
     healthDeclaration: profile.health_declaration || '',
     profileComplete: isProfileComplete({
       firstName: profile.first_name ?? '',
@@ -786,6 +832,174 @@ export async function fetchClientDirectory(): Promise<ClientDirectoryItem[]> {
     rows
       .filter((row): row is AccountWithClientProfile => row.account.role === 'user')
       .map((row) => withBucketProfileImages(clientRowToListItem(row), row.account.auth_user_id)),
+  );
+}
+
+/** Coach-safe student profile from `coach_student_profile_for_class` (no PII beyond roster needs). */
+export interface CoachStudentProfileItem {
+  id: string;
+  authUserId: string;
+  name: string;
+  nickname: string;
+  joinDate: string;
+  nationality: string;
+  age: number | null;
+  sex: string;
+  height: string;
+  weight: string;
+  healthDeclaration: string;
+  photo: string;
+}
+
+type CoachStudentProfileRpcPayload = {
+  account?: {
+    id: string;
+    auth_user_id: string;
+    created_at: string;
+  };
+  profile?: {
+    name?: string | null;
+    first_name?: string | null;
+    middle_initial?: string | null;
+    last_name?: string | null;
+    nickname?: string | null;
+    photo?: string | null;
+    nationality?: string | null;
+    sex?: string | null;
+    height?: string | null;
+    weight?: string | null;
+    age?: number | string | null;
+    birthday?: string | null;
+    health_declaration?: string | null;
+  };
+};
+
+function parseCoachStudentAgeYears(value: unknown): number | null {
+  let n: number;
+  if (typeof value === 'number') {
+    n = value;
+  } else if (typeof value === 'string' && value.trim()) {
+    n = Number(value.trim());
+  } else {
+    return null;
+  }
+  if (!Number.isFinite(n)) return null;
+  const years = Math.floor(n);
+  if (years < 0 || years > 130) return null;
+  return years;
+}
+
+function ageYearsFromBirthdayIso(iso: string | null | undefined): number | null {
+  if (!iso?.trim()) return null;
+  const birth = new Date(iso.trim());
+  if (Number.isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - birth.getFullYear();
+  const monthDelta = today.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
+    years -= 1;
+  }
+  if (years < 0 || years > 130) return null;
+  return years;
+}
+
+function coachStudentProfileFromRpc(payload: CoachStudentProfileRpcPayload): CoachStudentProfileItem | null {
+  const account = payload.account;
+  const profile = payload.profile;
+  if (!account?.id || !account.auth_user_id || !profile) return null;
+
+  const fullName =
+    profile.name?.trim()
+    || [profile.first_name, profile.middle_initial, profile.last_name].filter(Boolean).join(' ').trim()
+    || 'Member';
+
+  const age =
+    parseCoachStudentAgeYears(profile.age)
+    ?? ageYearsFromBirthdayIso(profile.birthday);
+
+  return {
+    id: account.id,
+    authUserId: account.auth_user_id,
+    name: fullName,
+    nickname: profile.nickname?.trim() ?? '',
+    joinDate: formatClientJoinDate(account.created_at),
+    nationality: profile.nationality?.trim() ?? '',
+    age,
+    sex: profile.sex?.trim() ?? '',
+    height: profile.height?.trim() ?? '',
+    weight: profile.weight?.trim() ?? '',
+    healthDeclaration: profile.health_declaration?.trim() ?? '',
+    photo: profile.photo?.trim() ?? '',
+  };
+}
+
+/** Coach / admin: student on a class roster (uses coach_student_profile_for_class RPC). */
+export async function fetchCoachStudentProfileForClass(
+  classId: string,
+  accountId: string,
+): Promise<{ data: CoachStudentProfileItem | null; error: string | null }> {
+  const cid = classId.trim();
+  const aid = accountId.trim();
+  if (!cid || !aid) {
+    return { data: null, error: 'Missing class or student.' };
+  }
+
+  const { data, error } = await supabase.rpc('coach_student_profile_for_class', {
+    p_class_id: cid,
+    p_account_id: aid,
+  });
+
+  if (error) {
+    console.error('coach_student_profile_for_class:', error.message);
+    return { data: null, error: error.message };
+  }
+
+  const item = coachStudentProfileFromRpc((data ?? {}) as CoachStudentProfileRpcPayload);
+  if (!item) {
+    return { data: null, error: 'Profile data was incomplete.' };
+  }
+
+  const bucket = await loadProfileImageUrlsForUser(item.authUserId);
+  return {
+    data: { ...item, photo: item.photo || bucket.photo },
+    error: null,
+  };
+}
+
+/** Single member profile for admin views (subject to RLS). */
+export async function fetchClientByAccountId(accountId: string): Promise<ClientDirectoryItem | null> {
+  const id = accountId.trim();
+  if (!id) return null;
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (accountError || !account || account.role !== 'user') {
+    if (accountError) {
+      console.error('Failed to fetch client account:', accountError.message);
+    }
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles_client')
+    .select('*')
+    .eq('account_id', id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    if (profileError) {
+      console.error('Failed to fetch client profile:', profileError.message);
+    }
+    return null;
+  }
+
+  return withBucketProfileImages(
+    clientRowToListItem({ account, profile } satisfies AccountWithClientProfile),
+    account.auth_user_id,
   );
 }
 
@@ -887,6 +1101,7 @@ export async function updateClientAccountFromForm(
   });
 }
 
+/** Non-dev admins may not edit peer admin/dev accounts; coach/frontdesk/marketing are editable. */
 export function isStaffMemberLockedForAdmin(
   member: { accountRole: UserRole },
   viewerRole: UserRole | undefined,
@@ -894,13 +1109,7 @@ export function isStaffMemberLockedForAdmin(
   if (!viewerRole || !hasAdminPrivileges(viewerRole) || viewerRole === 'dev') {
     return false;
   }
-  // Ops admins cannot edit other privileged ops/dev accounts
-  return (
-    member.accountRole === 'dev'
-    || member.accountRole === 'admin'
-    || member.accountRole === 'frontdesk'
-    || member.accountRole === 'marketing'
-  );
+  return member.accountRole === 'dev' || member.accountRole === 'admin';
 }
 
 function splitFullName(fullName: string): { firstName: string; lastName: string } {
@@ -925,6 +1134,7 @@ export async function updateStaffAccountFromForm(
     staffType?: 'Coach' | 'Administrator';
     staffRole?: StaffUserRole;
     disciplineIds?: string[];
+    status?: 'active' | 'inactive';
   },
 ): Promise<{ ok: boolean; error?: string }> {
   const { firstName, lastName } = splitFullName(input.name);
@@ -948,7 +1158,7 @@ export async function updateStaffAccountFromForm(
   });
   if (!accountResult.ok) return accountResult;
 
-  const profileResult = await updateManagedStaffProfile(accountId, {
+  const profileUpdate: Partial<ProfileStaffRow> = {
     first_name: firstName,
     last_name: lastName,
     name: input.name.trim(),
@@ -957,7 +1167,12 @@ export async function updateStaffAccountFromForm(
     classes: specialty !== '—' ? [specialty] : [],
     experience: staffTypeLabel,
     staff_type: staffTypeLabel,
-  });
+  };
+  if (input.status !== undefined) {
+    profileUpdate.is_active = statusToIsActive(input.status);
+  }
+
+  const profileResult = await updateManagedStaffProfile(accountId, profileUpdate);
   if (!profileResult.ok) return profileResult;
 
   if (role === 'coach') {

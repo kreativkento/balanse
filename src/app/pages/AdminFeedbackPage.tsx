@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
 import {
   FEEDBACK_DESCRIPTION_MAX,
   FEEDBACK_MAX_BYTES,
@@ -49,6 +50,12 @@ import {
   type FeedbackStatus,
   type FeedbackTicketLevel,
 } from '../../lib/feedback-service';
+import {
+  toastCreated,
+  toastDeleted,
+  toastOperationFailed,
+  toastUpdated,
+} from '../../lib/operation-toast';
 
 const LABEL_OPTIONS: {
   value: FeedbackLabel;
@@ -104,8 +111,8 @@ function portalLabel(portal: FeedbackPortal): string {
 type FeedbackListMode = 'inbox' | 'mine';
 
 function inboxLevelsForPortal(portal: FeedbackPortal): FeedbackTicketLevel[] {
-  if (portal === 'staff') return [0, 1];
-  if (portal === 'admin') return [2];
+  if (portal === 'staff') return [];
+  if (portal === 'admin') return [1];
   if (portal === 'dev') return [3];
   return [];
 }
@@ -312,6 +319,7 @@ function FeedbackDetailModal({
   onDelete,
   showDelete = true,
   canEscalate = false,
+  escalateLabel = 'Pass to admin',
   onEscalate,
   escalating = false,
   actionError = '',
@@ -321,6 +329,7 @@ function FeedbackDetailModal({
   onDelete: (item: FeedbackDisplay) => void;
   showDelete?: boolean;
   canEscalate?: boolean;
+  escalateLabel?: string;
   onEscalate?: () => void;
   escalating?: boolean;
   actionError?: string;
@@ -503,10 +512,10 @@ function FeedbackDetailModal({
                 type="button"
                 disabled={escalating}
                 onClick={onEscalate}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
+                className="action-button inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {escalating ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
-                {item.ticketLevel === 1 ? 'Pass to admin' : 'Pass to dev'}
+                {escalateLabel}
               </button>
             )}
 
@@ -580,7 +589,7 @@ export default function AdminFeedbackPage() {
     ]);
     setListError(ownResult.error ?? inboxResult.error ?? '');
     setItems(ownResult.data);
-    setInboxItems(inboxResult.data.filter((item) => item.ticketLevel === 2));
+    setInboxItems(inboxResult.data.filter((item) => item.ticketLevel === 1));
     setListLoading(false);
   };
 
@@ -686,10 +695,13 @@ export default function AdminFeedbackPage() {
     setSaving(false);
 
     if (result.error || !result.data) {
-      setFormError(result.error ?? 'Could not send feedback. Try again.');
+      const message = result.error ?? 'Could not send feedback. Try again.';
+      setFormError(message);
+      toastOperationFailed(message);
       return;
     }
 
+    toastCreated('Feedback ticket');
     setTicketId(result.data.id);
     setItems((prev) => [result.data!, ...prev]);
     setPage(1);
@@ -716,9 +728,11 @@ export default function AdminFeedbackPage() {
 
     if (result.error) {
       setDeleteError(result.error);
+      toastOperationFailed(result.error);
       return;
     }
 
+    toastDeleted('Feedback ticket');
     setItems((prev) => prev.filter((item) => item.id !== pendingDelete.id));
     if (viewing?.id === pendingDelete.id) setViewing(null);
     setPendingDelete(null);
@@ -751,9 +765,11 @@ export default function AdminFeedbackPage() {
 
     if (result.error) {
       setActionError(result.error);
+      toastOperationFailed(result.error);
       return;
     }
 
+    toastUpdated('Ticket escalated');
     setViewing(null);
     await loadItems();
   };
@@ -769,7 +785,7 @@ export default function AdminFeedbackPage() {
   const canEscalateViewing = Boolean(
     viewing
     && listMode === 'inbox'
-    && ((portal === 'staff' && viewing.ticketLevel === 1) || (portal === 'admin' && viewing.ticketLevel === 2)),
+    && ((portal === 'staff' && viewing.ticketLevel === 1) || (portal === 'admin' && viewing.ticketLevel === 1)),
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
@@ -808,16 +824,7 @@ export default function AdminFeedbackPage() {
   const feedbackPageContent = (
         <>
         <div className="pt-6 mb-6">
-          <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">
-            {portalLabel(portal)}
-          </p>
-          <h2
-            className="leading-tight text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
-          >
-            System Feedback
-          </h2>
-          <p className="mt-1 max-w-xl text-sm text-[#8A7E6E]">
+          <p className="max-w-xl text-sm text-[#8A7E6E]">
             {hasInbox
               ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
               : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
@@ -875,7 +882,7 @@ export default function AdminFeedbackPage() {
           <button
             type="button"
             onClick={openModal}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#c49a3c] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#a67f2e]"
+            className="action-button inline-flex items-center justify-center gap-2 rounded-full bg-[#c49a3c] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#a67f2e]"
           >
             <Plus size={15} />
             Submit a Feedback
@@ -955,7 +962,7 @@ export default function AdminFeedbackPage() {
                   <button
                     type="button"
                     onClick={openModal}
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263545]"
+                    className="action-button mt-5 inline-flex items-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263545]"
                   >
                     <Plus size={14} />
                     Submit a Feedback
@@ -1007,20 +1014,11 @@ export default function AdminFeedbackPage() {
                 >
                   <ChevronLeft size={16} />
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setPage(n)}
-                    className={`min-w-9 h-9 rounded-full px-2.5 text-xs font-semibold transition-all ${
-                      n === currentPage
-                        ? 'bg-[#c49a3c] text-white'
-                        : 'border border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/40'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
+                <PaginationPageButtons
+                  page={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -1055,6 +1053,7 @@ export default function AdminFeedbackPage() {
           onDelete={setPendingDelete}
           showDelete={showDeleteControls}
           canEscalate={canEscalateViewing}
+          escalateLabel="Pass to dev"
           onEscalate={() => { void handleEscalate(); }}
           escalating={escalating}
           actionError={actionError}
@@ -1189,7 +1188,7 @@ export default function AdminFeedbackPage() {
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263545]"
+                      className="action-button inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263545]"
                     >
                       Done
                     </button>
@@ -1329,7 +1328,7 @@ export default function AdminFeedbackPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="mt-1 inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="action-button mt-1 inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                     {saving ? 'Sending…' : 'Send feedback'}

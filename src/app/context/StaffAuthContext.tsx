@@ -7,11 +7,18 @@ import {
   profileRowToCoachProfile,
   coachProfileToDbUpdate,
   validateEmailPassword,
-  wrongRoleMessage,
+  wrongStaffPortalMessage,
 } from '../../lib/auth-helpers';
-import { fetchAccountWithProfileByAuthUserId, isRoleMatch, updateOwnProfileImages, updateProfileByAuthUserId } from '../../lib/profile-service';
+import {
+  fetchDisciplinesForPublic,
+  saveCoachDisciplineTagsForProfile,
+  syncCoachDisciplinesFromProfileClasses,
+} from '../../lib/discipline-service';
+import { normalizeStaffPortalType } from '../components/staff/staffProfileShared';
+import { fetchAccountWithProfileByAuthUserId, updateOwnProfileImages, updateProfileByAuthUserId } from '../../lib/profile-service';
 import { loadOwnProfileImageUrls, mergeProfileImageUrls } from '../../lib/storage-service';
-import type { AccountWithStaffProfile } from '../../lib/database.types';
+import { isStaffUserRole, type AccountWithStaffProfile } from '../../lib/database.types';
+import { isStaffPortalRole, staffPortalHomePath, type StaffPortalRole } from '../../lib/staff-portal-routes';
 
 export interface CoachProfileData {
   displayName: string;
@@ -25,8 +32,13 @@ export interface CoachProfileData {
 }
 
 interface StaffUser {
+  accountId: string;
   name: string;
   email: string;
+  /** Account role from `accounts.role` (coach, frontdesk, marketing). */
+  accountRole: StaffPortalRole;
+  /** From `profiles_staff.staff_type` (Coach vs ops Administrator). */
+  staffType: 'Coach' | 'Administrator';
   role: 'Coach' | 'Administrator';
 }
 
@@ -34,9 +46,18 @@ interface StaffAuthContextType {
   staffUser: StaffUser | null;
   staffProfile: CoachProfileData | null;
   isStaffAuthenticated: boolean;
+  /** False until the initial Supabase session has been read (avoids logout on refresh). */
+  staffAuthReady: boolean;
   staffLogin: (email: string, password: string) => Promise<AuthResult>;
   staffLogout: () => Promise<void>;
   updateStaffProfile: (data: Partial<CoachProfileData>) => void;
+  /** Writes `coach_disciplines` and syncs `profiles_staff.classes`. */
+  saveStaffCoachDisciplines: (disciplineIds: string[]) => Promise<{
+    ok: boolean;
+    error?: string;
+    disciplineIds?: string[];
+    classNames?: string[];
+  }>;
 }
 
 function mapToStaffUser(data: AccountWithStaffProfile): StaffUser {
@@ -44,11 +65,20 @@ function mapToStaffUser(data: AccountWithStaffProfile): StaffUser {
     data.profile.name?.trim()
     || data.profile.display_name?.trim()
     || deriveNameFromEmail(data.account.email);
+  const staffType = normalizeStaffPortalType(data.profile.staff_type);
+  const accountRole = data.account.role as StaffPortalRole;
   return {
+    accountId: data.account.id,
     name,
     email: data.account.email.toLowerCase(),
-    role: 'Coach',
+    accountRole,
+    staffType,
+    role: staffType,
   };
+}
+
+function canUseStaffPortalSession(data: Awaited<ReturnType<typeof fetchAccountWithProfileByAuthUserId>>): data is AccountWithStaffProfile {
+  return Boolean(data && isStaffUserRole(data.account.role) && isStaffPortalRole(data.account.role));
 }
 
 const StaffAuthContext = createContext<StaffAuthContextType | null>(null);
@@ -56,17 +86,21 @@ const StaffAuthContext = createContext<StaffAuthContextType | null>(null);
 export function StaffAuthProvider({ children }: { children: ReactNode }) {
   const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
   const [staffProfile, setStaffProfile] = useState<CoachProfileData | null>(null);
+  const [staffAuthReady, setStaffAuthReady] = useState(false);
 
   const hydrateStaffSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
-    if (data && isRoleMatch(data.account, 'coach') && data.account.role !== 'user') {
-      const staffData = data as AccountWithStaffProfile;
+    if (canUseStaffPortalSession(data)) {
       const bucket = await loadOwnProfileImageUrls();
-      setStaffUser(mapToStaffUser(staffData));
-      setStaffProfile(mergeProfileImageUrls(
-        profileRowToCoachProfile(staffData.profile, staffData.account.email),
-        bucket,
-      ));
+      setStaffUser(mapToStaffUser(data));
+      if (data.account.role === 'coach') {
+        setStaffProfile(mergeProfileImageUrls(
+          profileRowToCoachProfile(data.profile, data.account.email),
+          bucket,
+        ));
+      } else {
+        setStaffProfile(null);
+      }
       return;
     }
     setStaffUser(null);
@@ -77,13 +111,17 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted && session?.user) {
-        await hydrateStaffSession(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted && session?.user) {
+          await hydrateStaffSession(session.user.id);
+        }
+      } finally {
+        if (mounted) setStaffAuthReady(true);
       }
     };
 
-    init();
+    void init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
@@ -117,19 +155,25 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const accountData = await fetchAccountWithProfileByAuthUserId(data.user.id);
-    if (!accountData || !isRoleMatch(accountData.account, 'coach') || accountData.account.role === 'user') {
+    if (!canUseStaffPortalSession(accountData)) {
       await supabase.auth.signOut();
-      return { success: false, error: wrongRoleMessage('coach') };
+      return { success: false, error: wrongStaffPortalMessage() };
     }
 
-    const staffData = accountData as AccountWithStaffProfile;
     const bucket = await loadOwnProfileImageUrls();
-    setStaffUser(mapToStaffUser(staffData));
-    setStaffProfile(mergeProfileImageUrls(
-      profileRowToCoachProfile(staffData.profile, staffData.account.email),
-      bucket,
-    ));
-    return { success: true };
+    setStaffUser(mapToStaffUser(accountData));
+    if (accountData.account.role === 'coach') {
+      setStaffProfile(mergeProfileImageUrls(
+        profileRowToCoachProfile(accountData.profile, accountData.account.email),
+        bucket,
+      ));
+    } else {
+      setStaffProfile(null);
+    }
+    return {
+      success: true,
+      redirectTo: staffPortalHomePath(accountData.account.role),
+    };
   };
 
   const staffLogout = async () => {
@@ -139,6 +183,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateStaffProfile = (data: Partial<CoachProfileData>) => {
+    if (staffUser?.accountRole !== 'coach') return;
     setStaffProfile((prev) => (prev ? { ...prev, ...data } : null));
     void (async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -151,11 +196,63 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      const dbUpdate = coachProfileToDbUpdate({ ...data, photo: undefined, coverImage: undefined });
+      const profilePayload = { ...data, photo: undefined, coverImage: undefined };
+      const dbUpdate = coachProfileToDbUpdate(profilePayload);
+
+      if (data.classes != null) {
+        delete dbUpdate.classes;
+      }
+
       if (Object.keys(dbUpdate).length > 0) {
         await updateProfileByAuthUserId(authUser.id, dbUpdate);
       }
+
+      if (data.classes != null) {
+        const { data: account } = await supabase
+          .from('accounts')
+          .select('id, role')
+          .eq('auth_user_id', authUser.id)
+          .maybeSingle();
+        if (account?.role === 'coach') {
+          const sync = await syncCoachDisciplinesFromProfileClasses(account.id, data.classes);
+          if (sync.ok && sync.classNames) {
+            setStaffProfile((prev) =>
+              prev ? { ...prev, classes: sync.classNames! } : null,
+            );
+          }
+        }
+      }
     })();
+  };
+
+  const saveStaffCoachDisciplines = async (
+    disciplineIds: string[],
+  ): Promise<{
+    ok: boolean;
+    error?: string;
+    disciplineIds?: string[];
+    classNames?: string[];
+  }> => {
+    if (!staffUser || staffUser.accountRole !== 'coach') return { ok: false, error: 'Not signed in.' };
+
+    const { data: catalog, error: catalogError } = await fetchDisciplinesForPublic();
+    if (catalogError) return { ok: false, error: catalogError };
+
+    const {
+      ok,
+      error,
+      classNames,
+      disciplineIds: savedIds,
+    } = await saveCoachDisciplineTagsForProfile(
+      staffUser.accountId,
+      disciplineIds,
+      catalog,
+    );
+
+    if (!ok) return { ok: false, error };
+
+    setStaffProfile((prev) => (prev ? { ...prev, classes: classNames } : null));
+    return { ok: true, disciplineIds: savedIds, classNames };
   };
 
   return (
@@ -164,9 +261,11 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         staffUser,
         staffProfile,
         isStaffAuthenticated: !!staffUser,
+        staffAuthReady,
         staffLogin,
         staffLogout,
         updateStaffProfile,
+        saveStaffCoachDisciplines,
       }}
     >
       {children}

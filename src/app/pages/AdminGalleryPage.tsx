@@ -1,408 +1,526 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Images, Plus, Pencil, Trash2, X, Check, Search, Upload } from 'lucide-react';
+import { ChevronDown, Images, Pencil, Trash2, X, Check, Upload, Star, Home, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
+import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import { IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
+import { GalleryLightbox } from '../components/gallery/GalleryLightbox';
+import { GalleryPostFormModal } from '../components/gallery/GalleryPostFormModal';
+import {
+  createGalleryPost,
+  deleteGalleryPost,
+  formatGalleryDate,
+  loadGalleryPostsForAdmin,
+  updateGalleryPost,
+  GALLERY_TAGS,
+  type GalleryPost,
+  type GalleryTag,
+} from '../../lib/gallery-service';
 
-// ── Types & Data ───────────────────────────────────────────────
+const FEATURE_FILTER_OPTIONS = ['gallery', 'home', 'amenities'] as const;
+type FeatureFilterOption = (typeof FEATURE_FILTER_OPTIONS)[number];
 
-type Category = 'Studio' | 'Classes' | 'Events' | 'Community';
+const FEATURE_FILTER_LABELS: Record<FeatureFilterOption, string> = {
+  gallery: 'Studio Gallery',
+  home: 'Balance in Motion',
+  amenities: 'Amenities',
+};
 
-interface GalleryPhoto {
-  id: number;
-  url: string;
-  caption: string;
-  category: Category;
-  uploadedAt: string;
-  uploadedBy: string;
-  tall: boolean;
+function toggleValue<T>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
-const INITIAL_PHOTOS: GalleryPhoto[] = [
-  { id: 1,  url: 'https://images.unsplash.com/photo-1761971975973-cbb3e59263de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Morning light in Studio 1',                 category: 'Studio',    uploadedAt: 'Apr 6, 2026',  uploadedBy: 'Studio Admin', tall: true  },
-  { id: 2,  url: 'https://images.unsplash.com/photo-1767611120077-3697335ec748?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Yoga Morning Session with Coach Jodi',      category: 'Classes',   uploadedAt: 'Apr 7, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 3,  url: 'https://images.unsplash.com/photo-1637157216470-d92cd2edb2e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Mat Pilates – Core Control',                category: 'Classes',   uploadedAt: 'Apr 6, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 4,  url: 'https://images.unsplash.com/photo-1699378281595-0d75e9e6a05a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'The serene reception lounge',               category: 'Studio',    uploadedAt: 'Apr 5, 2026',  uploadedBy: 'Studio Admin', tall: true  },
-  { id: 5,  url: 'https://images.unsplash.com/photo-1686133368810-24f662f65cad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Kickboxing power with Coach Wolf',          category: 'Classes',   uploadedAt: 'Apr 4, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 6,  url: 'https://images.unsplash.com/photo-1759352856072-985a4ddab82d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Capoeira – Art in Motion',                  category: 'Events',    uploadedAt: 'Apr 3, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 7,  url: 'https://images.unsplash.com/photo-1717500252780-036bfd89f810?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Animal Flow – April Community Session',     category: 'Community', uploadedAt: 'Apr 2, 2026',  uploadedBy: 'Studio Admin', tall: true  },
-  { id: 8,  url: 'https://images.unsplash.com/photo-1602827114685-efbb2717da9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Circuit Training – Full Energy',            category: 'Classes',   uploadedAt: 'Apr 1, 2026',  uploadedBy: 'Studio Admin', tall: false },
-  { id: 9,  url: 'https://images.unsplash.com/photo-1761971975724-31001b4de0bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Quiet mindfulness before class',            category: 'Studio',    uploadedAt: 'Mar 30, 2026', uploadedBy: 'Studio Admin', tall: false },
-  { id: 10, url: 'https://images.unsplash.com/photo-1583166614297-a97b68d5cead?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Capoeira Open Workshop 2026',               category: 'Events',    uploadedAt: 'Mar 28, 2026', uploadedBy: 'Studio Admin', tall: true  },
-  { id: 11, url: 'https://images.unsplash.com/photo-1758875569414-120ebc62ada3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Personal Coaching – One-on-One Progress',  category: 'Classes',   uploadedAt: 'Mar 25, 2026', uploadedBy: 'Studio Admin', tall: false },
-  { id: 12, url: 'https://images.unsplash.com/photo-1701824429245-ce783f1dc026?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800',  caption: 'Groundworks – Floor Movement Mastery',     category: 'Classes',   uploadedAt: 'Mar 22, 2026', uploadedBy: 'Studio Admin', tall: false },
-];
+function FilterDropdown<T extends string>({
+  label,
+  options,
+  selected,
+  onChange,
+  getLabel = (value) => value,
+  emptySummary,
+  resetLabel,
+}: {
+  label: string;
+  options: readonly T[];
+  selected: T[];
+  onChange: (next: T[]) => void;
+  getLabel?: (value: T) => string;
+  emptySummary?: string;
+  resetLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-const CATEGORIES: Category[] = ['Studio', 'Classes', 'Events', 'Community'];
-const FILTER_TABS = ['All', ...CATEGORIES];
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
 
-const EMPTY_FORM = { url: '', caption: '', category: 'Studio' as Category, tall: false };
+  const summary =
+    selected.length === 0
+      ? (emptySummary ?? `All ${label.toLowerCase()}`)
+      : selected.length === 1
+        ? getLabel(selected[0])
+        : `${selected.length} selected`;
 
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png'];
-const ACCEPTED_IMAGE_EXT = /\.(jpe?g|png)$/i;
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((current) => !current)}
+        className={`flex h-9 min-w-[9.5rem] items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all ${
+          selected.length > 0
+            ? 'border-[#c49a3c]/45 bg-[#c49a3c]/10 text-[#a67f2e]'
+            : 'border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/35'
+        }`}
+      >
+        <span className="text-[10px] uppercase tracking-widest text-[#B0A898]">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
+        {selected.length > 0 && (
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c49a3c] px-1 text-[9px] text-white">
+            {selected.length}
+          </span>
+        )}
+        <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
 
-function isAcceptedImage(file: File) {
-  if (ACCEPTED_IMAGE_TYPES.includes(file.type)) return true;
-  return ACCEPTED_IMAGE_EXT.test(file.name);
+      {open && (
+        <div
+          role="listbox"
+          aria-multiselectable="true"
+          className="absolute right-0 top-full z-30 mt-1.5 w-56 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1.5 shadow-[0_8px_28px_rgba(30,42,53,0.16)]"
+        >
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="mb-0.5 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold text-[#c49a3c] transition-colors hover:bg-[#F5F2E8]"
+          >
+            {resetLabel ?? `All ${label.toLowerCase()}`}
+          </button>
+          {options.map((option) => {
+            const isSelected = selected.includes(option);
+            return (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => onChange(toggleValue(selected, option))}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
+                  isSelected ? 'bg-[#c49a3c]/12 text-[#1E2A35]' : 'text-[#5A5048] hover:bg-[#F5F2E8]'
+                }`}
+              >
+                <span
+                  className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${
+                    isSelected ? 'border-[#c49a3c] bg-[#c49a3c] text-white' : 'border-[#D4CDB5]'
+                  }`}
+                >
+                  {isSelected && <span className="block h-1.5 w-1.5 rounded-[1px] bg-white" />}
+                </span>
+                {getLabel(option)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
-
-// ── Photo Card ─────────────────────────────────────────────────
 
 function PhotoCard({
-  photo,
+  post,
   onEdit,
   onDelete,
+  onView,
 }: {
-  photo: GalleryPhoto;
+  post: GalleryPost;
   onEdit: () => void;
   onDelete: () => void;
+  onView: () => void;
 }) {
   const [confirmDel, setConfirmDel] = useState(false);
 
-  const CAT_COLORS: Record<Category, string> = {
-    Studio:    'bg-[#EDE8D8] text-[#5A5048]',
-    Classes:   'bg-[#c49a3c]/12 text-[#a67f2e]',
-    Events:    'bg-[#3A4A5A]/10 text-[#3A4A5A]',
+  const CAT_COLORS: Record<GalleryTag, string> = {
+    Studio: 'bg-[#EDE8D8] text-[#5A5048]',
+    Classes: 'bg-[#c49a3c]/12 text-[#a67f2e]',
+    Events: 'bg-[#3A4A5A]/10 text-[#3A4A5A]',
     Community: 'bg-[#8A9E7A]/15 text-[#5A6E4A]',
+    Amenities: 'bg-[#6B8E9E]/15 text-[#3A5A6A]',
   };
 
+  const thumb = post.thumbnailUrl;
+
   return (
-    <div className={`group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md ${CARD_HOVER_GROW}`}>
-      {/* Image */}
-      <div className="relative overflow-hidden">
-        <img
-          src={photo.url}
-          alt={photo.caption}
-          className={`w-full object-cover ${IMAGE_HOVER_ZOOM} ${photo.tall ? 'h-60' : 'h-44'}`}
-        />
+    <div
+      data-gallery-card
+      className="group relative bg-white rounded-xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md h-full flex flex-col"
+    >
+      <button type="button" onClick={onView} className="relative block w-full overflow-hidden text-left shrink-0">
+        {thumb ? (
+          post.media[0]?.mediaKind === 'video' ? (
+            <video
+              src={thumb}
+              className={`w-full object-cover ${IMAGE_HOVER_ZOOM} h-32`}
+              muted
+              playsInline
+            />
+          ) : (
+            <img
+              src={thumb}
+              alt={post.caption}
+              className={`w-full object-cover ${IMAGE_HOVER_ZOOM} h-32`}
+            />
+          )
+        ) : (
+          <div className="w-full bg-[#EDE8D8] h-32" />
+        )}
         <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/20 transition-colors" />
 
-        {/* Category badge */}
-        <div className="absolute top-2.5 left-2.5">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${CAT_COLORS[photo.category]}`}>{photo.category}</span>
-        </div>
-
-        {/* Actions */}
-        <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onEdit}
-            className="w-7 h-7 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#1E2A35] hover:bg-white shadow-sm transition-all"
-          >
-            <Pencil size={12} />
-          </button>
-          {confirmDel ? (
-            <>
-              <button onClick={() => onDelete()} className="w-7 h-7 rounded-xl bg-red-500 flex items-center justify-center text-white hover:bg-red-600 shadow-sm"><Check size={12} /></button>
-              <button onClick={() => setConfirmDel(false)} className="w-7 h-7 rounded-xl bg-white/90 flex items-center justify-center text-[#8A7E6E] hover:bg-white shadow-sm"><X size={12} /></button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmDel(true)}
-              className="w-7 h-7 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-red-500 hover:bg-red-50 shadow-sm transition-all"
-            >
-              <Trash2 size={12} />
-            </button>
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[70%]">
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${CAT_COLORS[post.tag]}`}>
+            {post.tag}
+          </span>
+          {post.media.length > 1 && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/90 text-[#1E2A35]">
+              {post.media.length} items
+            </span>
           )}
         </div>
-      </div>
 
-      {/* Info */}
-      <div className="px-3 py-3">
-        <p className="text-[#1E2A35] text-sm font-medium leading-snug mb-1.5 line-clamp-2">{photo.caption}</p>
-        <p className="text-[#B0A898] text-xs">{photo.uploadedAt}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Upload / Edit Modal ────────────────────────────────────────
-
-function PhotoModal({
-  photo,
-  onClose,
-  onSave,
-}: {
-  photo: typeof EMPTY_FORM | null;
-  onClose: () => void;
-  onSave: (data: typeof EMPTY_FORM) => void;
-}) {
-  const [form, setForm] = useState(photo ?? EMPTY_FORM);
-  const [error, setError] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isEdit = photo !== null && 'url' in photo && photo.url !== '';
-  const hasPhoto = form.url.trim().length > 0;
-
-  const applyFile = (file: File) => {
-    if (!isAcceptedImage(file)) {
-      setError('Please upload a JPG, JPEG, or PNG image.');
-      return;
-    }
-    setError('');
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm(f => ({ ...f, url: String(reader.result ?? '') }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSave = () => {
-    if (!form.url.trim()) { setError('Please upload a photo.'); return; }
-    if (!form.caption.trim()) { setError('Caption is required.'); return; }
-    onSave(form);
-  };
-
-  const INP = 'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
-  const SEL = INP + ' appearance-none cursor-pointer';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
-            {isEdit ? 'Edit Photo' : 'Upload New Photo'}
-          </h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all">
-            <X size={16} />
-          </button>
+        <div className="absolute bottom-2 left-2 flex flex-wrap gap-0.5 max-w-[85%]">
+          {post.featuredInGallery && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#c49a3c] text-white flex items-center gap-0.5">
+              <Star size={8} /> Gallery
+            </span>
+          )}
+          {post.featuredInHomeStudio && post.tag === 'Studio' && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#1E2A35] text-white flex items-center gap-0.5">
+              <Home size={8} /> Home
+            </span>
+          )}
+          {post.featuredInAmenities && post.tag === 'Amenities' && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#3A5A6A] text-white flex items-center gap-0.5">
+              <Sparkles size={8} /> Amenities
+            </span>
+          )}
         </div>
+      </button>
 
-        <div className="px-7 py-6 flex flex-col gap-4">
-          {/* Photo Upload */}
-          <div>
-            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Photo Upload</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
-              className="hidden"
-              onChange={e => {
-                const file = e.target.files?.[0];
-                if (file) applyFile(file);
-                e.target.value = '';
-              }}
-            />
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={e => {
-                e.preventDefault();
-                setDragOver(false);
-                const file = e.dataTransfer.files[0];
-                if (file) applyFile(file);
-              }}
-              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed cursor-pointer transition-all overflow-hidden ${
-                hasPhoto ? 'h-44' : 'h-40 py-8 px-4'
-              } ${
-                dragOver
-                  ? 'border-[#c49a3c] bg-[#c49a3c]/06'
-                  : hasPhoto
-                    ? 'border-[#D4CDB5]/70 bg-[#F8F3E8]'
-                    : error && !hasPhoto
-                      ? 'border-red-300 bg-red-50/40'
-                      : 'border-[#D4CDB5]/70 bg-[#F8F3E8]/50 hover:border-[#c49a3c]/40 hover:bg-[#c49a3c]/04'
-              }`}
+      <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto z-10">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="w-7 h-7 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#1E2A35] hover:bg-white shadow-sm transition-all"
+        >
+          <Pencil size={12} />
+        </button>
+        {confirmDel ? (
+          <>
+            <button
+              type="button"
+              onClick={() => onDelete()}
+              className="w-7 h-7 rounded-xl bg-red-500 flex items-center justify-center text-white hover:bg-red-600 shadow-sm"
             >
-              {hasPhoto ? (
-                <>
-                  <img src={form.url} alt="Selected photo preview" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-[#1E2A35]/0 hover:bg-[#1E2A35]/35 transition-colors flex flex-col items-center justify-center opacity-0 hover:opacity-100">
-                    <p className="text-white text-sm">Click or drop to replace</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setForm(f => ({ ...f, url: '' }));
-                      setError('');
-                    }}
-                    className="absolute top-2.5 right-2.5 w-7 h-7 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#8A7E6E] hover:bg-red-50 hover:text-red-500 shadow-sm transition-all"
-                    aria-label="Remove photo"
-                  >
-                    <X size={12} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="w-12 h-12 rounded-2xl bg-[#EDE8D8] border border-[#D4CDB5]/60 flex items-center justify-center mb-3">
-                    <Upload size={22} className="text-[#9A8E7E]" />
-                  </div>
-                  <p className="text-[#1E2A35] text-sm">Drag & drop a photo here</p>
-                  <p className="text-[#8A7E6E] text-xs mt-1">or click to browse files</p>
-                  <p className="text-[#B0A898] text-[11px] mt-2">JPG, JPEG, or PNG</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Caption */}
-          <div>
-            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Caption</label>
-            <textarea value={form.caption} onChange={e => setForm(f => ({ ...f, caption: e.target.value }))} placeholder="Describe this photo…" rows={2} className={INP + ' resize-none'} />
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Category</label>
-            <div className="relative">
-              <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as Category }))} className={SEL}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-600 text-sm">{error}</p></div>}
-        </div>
-
-        <div className="px-7 pb-7 flex gap-3 sticky bottom-0 bg-white border-t border-[#D4CDB5]/40 pt-5">
-          <button onClick={onClose} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
+              <Check size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDel(false)}
+              className="w-7 h-7 rounded-xl bg-white/90 flex items-center justify-center text-[#8A7E6E] hover:bg-white shadow-sm"
+            >
+              <X size={12} />
+            </button>
+          </>
+        ) : (
           <button
-            onClick={handleSave}
-            disabled={!hasPhoto}
-            className="flex-1 py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-40 disabled:pointer-events-none disabled:active:scale-100"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.95rem' }}
+            type="button"
+            onClick={() => setConfirmDel(true)}
+            className="w-7 h-7 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-red-500 hover:bg-red-50 shadow-sm transition-all"
           >
-            {isEdit ? 'Save Changes' : 'Upload Photo'}
+            <Trash2 size={12} />
           </button>
-        </div>
+        )}
+      </div>
+
+      <div className="px-2.5 py-2 flex-1 flex flex-col min-h-0">
+        <p className="text-[#1E2A35] text-xs font-medium leading-snug mb-1 line-clamp-2">{post.caption}</p>
+        <p className="text-[#B0A898] text-[10px] mt-auto">{formatGalleryDate(post.createdAt)}</p>
       </div>
     </div>
   );
 }
-
-// ── Main Component ─────────────────────────────────────────────
 
 export default function AdminGalleryPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
-  const [photos, setPhotos]         = useState<GalleryPhoto[]>(INITIAL_PHOTOS);
-  const [filter, setFilter]         = useState('All');
-  const [search, setSearch]         = useState('');
-  const [showModal, setShowModal]   = useState(false);
-  const [editingPhoto, setEditingPhoto] = useState<GalleryPhoto | null>(null);
+  const [posts, setPosts] = useState<GalleryPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTags, setSelectedTags] = useState<GalleryTag[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<FeatureFilterOption[]>([]);
+  const [tablePage, setTablePage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<GalleryPost | null>(null);
+  const [viewingPost, setViewingPost] = useState<GalleryPost | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [measuredCardHeight, setMeasuredCardHeight] = useState<number | undefined>(undefined);
+
+  const { containerRef, pageSize } = useFitPageSize({
+    fallback: 12,
+    layout: 'gallery-card',
+    verticalInset: 48,
+    itemHeightOverride: measuredCardHeight,
+  });
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const data = await loadGalleryPostsForAdmin();
+    setPosts(data);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!adminUser) navigate('/admin-login');
   }, [adminUser, navigate]);
-  if (!adminUser) return null;
 
-  const filtered = photos.filter(p => {
-    const matchCat = filter === 'All' || p.category === filter;
-    const matchSearch = p.caption.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  useEffect(() => {
+    if (adminUser) void refresh();
+  }, [adminUser, refresh]);
 
-  const openUpload = () => { setEditingPhoto(null); setShowModal(true); };
-  const openEdit   = (p: GalleryPhoto) => { setEditingPhoto(p); setShowModal(true); };
+  useEffect(() => {
+    setTablePage(1);
+  }, [selectedTags, selectedFeatures]);
 
-  const handleSave = (data: typeof EMPTY_FORM) => {
-    if (editingPhoto) {
-      setPhotos(prev => prev.map(p => p.id === editingPhoto.id ? { ...p, ...data } : p));
-    } else {
-      setPhotos(prev => [{
-        id: Date.now(),
-        ...data,
-        uploadedAt: 'Apr 13, 2026',
-        uploadedBy: 'Studio Admin',
-      }, ...prev]);
-    }
-    setShowModal(false);
+  const filtered = useMemo(() => {
+    return posts.filter((p) => {
+      const matchTag = selectedTags.length === 0 || selectedTags.includes(p.tag);
+      const matchFeature =
+        selectedFeatures.length === 0
+          || (selectedFeatures.includes('gallery') && p.featuredInGallery)
+          || (selectedFeatures.includes('home') && p.featuredInHomeStudio && p.tag === 'Studio')
+          || (selectedFeatures.includes('amenities') && p.featuredInAmenities && p.tag === 'Amenities');
+      return matchTag && matchFeature;
+    });
+  }, [posts, selectedTags, selectedFeatures]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(tablePage, totalPages);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, filtered.length);
+  const pagedPosts = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useLayoutEffect(() => {
+    if (loading || pagedPosts.length === 0) return;
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const measure = () => {
+      const cards = grid.querySelectorAll<HTMLElement>('[data-gallery-card]');
+      let maxHeight = 0;
+      cards.forEach((el) => {
+        maxHeight = Math.max(maxHeight, el.getBoundingClientRect().height);
+      });
+      if (maxHeight > 0) {
+        setMeasuredCardHeight((prev) => (prev === maxHeight ? prev : maxHeight));
+      }
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    grid.querySelectorAll('[data-gallery-card]').forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [loading, pagedPosts.length, pageSize, currentPage]);
+
+  const openUpload = () => {
+    setEditingPost(null);
+    setShowModal(true);
   };
 
-  const handleDelete = (id: number) => setPhotos(prev => prev.filter(p => p.id !== id));
+  const openEdit = (post: GalleryPost) => {
+    setEditingPost(post);
+    setShowModal(true);
+  };
+
+  if (!adminUser) return null;
+
+  const handleSave = async (payload: Parameters<typeof createGalleryPost>[0]) => {
+    setSaving(true);
+    const result = editingPost
+      ? await updateGalleryPost(editingPost.id, payload)
+      : await createGalleryPost(payload);
+    setSaving(false);
+
+    if ('error' in result) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success(editingPost ? 'Post updated.' : 'Post created.');
+    setShowModal(false);
+    setEditingPost(null);
+    await refresh();
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await deleteGalleryPost(id);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    toast.success('Post deleted.');
+    await refresh();
+  };
 
   return (
     <>
       {showModal && (
-        <PhotoModal
-          photo={editingPhoto ? { url: editingPhoto.url, caption: editingPhoto.caption, category: editingPhoto.category, tall: editingPhoto.tall } : null}
-          onClose={() => setShowModal(false)}
-          onSave={handleSave}
+        <GalleryPostFormModal
+          initial={editingPost}
+          allPosts={posts}
+          saving={saving}
+          onClose={() => {
+            if (!saving) {
+              setShowModal(false);
+              setEditingPost(null);
+            }
+          }}
+          onSubmit={handleSave}
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      {viewingPost && <GalleryLightbox post={viewingPost} onClose={() => setViewingPost(null)} />}
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-7">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Images size={14} className="text-[#c49a3c]" />
-              <span className="text-[#8A7E6E] text-xs uppercase tracking-widest">Admin › Gallery</span>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col py-4">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+            <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-[#F8F3E8]/60 shrink-0">
+              <div className="min-w-0">
+                <h2
+                  className="text-[#1E2A35]"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
+                >
+                  Gallery Posts
+                </h2>
+                <p className="text-[#8A7E6E] text-xs mt-0.5">
+                  Photos and videos for the public studio gallery and home page · click a card to preview
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:justify-end">
+                <FilterDropdown
+                  label="Tags"
+                  options={GALLERY_TAGS}
+                  selected={selectedTags}
+                  onChange={setSelectedTags}
+                />
+                <FilterDropdown
+                  label="Featured in"
+                  options={FEATURE_FILTER_OPTIONS}
+                  selected={selectedFeatures}
+                  onChange={setSelectedFeatures}
+                  getLabel={(value) => FEATURE_FILTER_LABELS[value]}
+                  emptySummary="All posts"
+                  resetLabel="All posts"
+                />
+                <button
+                  type="button"
+                  onClick={openUpload}
+                  className="action-button flex items-center justify-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
+                >
+                  <Upload size={15} /> Add Media
+                </button>
+              </div>
             </div>
-            <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.4rem)', letterSpacing: '0.04em' }}>
-              Gallery Manager
-            </h1>
-          </div>
-          <button
-            onClick={openUpload}
-            className="flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em', fontSize: '0.9rem' }}
-          >
-            <Upload size={15} /> Upload Photo
-          </button>
-        </div>
 
-        {/* Filters + Search */}
-        <div className="flex items-center gap-4 mb-6 flex-wrap">
-          <div className="flex gap-1.5 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm">
-            {FILTER_TABS.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${filter === tab ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-          <div className="relative max-w-xs w-full">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search caption…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
-            />
-          </div>
-          <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} photo{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-
-        {/* Grid */}
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm">
-              <Images size={26} className="text-[#c49a3c]/50" />
-            </div>
-            <h3 className="text-[#1E2A35] mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>No Photos Found</h3>
-            <p className="text-[#8A7E6E] text-sm max-w-xs">Try adjusting your filters or upload a new photo.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map(photo => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                onEdit={() => openEdit(photo)}
-                onDelete={() => handleDelete(photo.id)}
-              />
-            ))}
-            {/* Upload placeholder card */}
-            <button
-              onClick={openUpload}
-              className="flex flex-col items-center justify-center h-44 rounded-2xl border-2 border-dashed border-[#D4CDB5]/70 text-[#B0A898] hover:border-[#c49a3c]/40 hover:text-[#c49a3c] hover:bg-[#c49a3c]/04 transition-all group"
+            <div
+              ref={containerRef}
+              className="relative flex-1 min-h-0 overflow-hidden"
             >
-              <Plus size={24} className={`mb-2 ${ICON_HOVER_GROW}`} />
-              <span className="text-xs font-medium">Upload Photo</span>
-            </button>
+              {loading && (
+                <div
+                  className="absolute inset-0 z-30 flex items-center justify-center bg-[#F8F3E8]/55 backdrop-blur-[2px]"
+                  role="status"
+                  aria-live="polite"
+                  aria-label="Loading gallery"
+                >
+                  <span
+                    className="h-9 w-9 rounded-full border-[3px] border-[#c49a3c]/25 border-t-[#c49a3c] animate-spin"
+                    aria-hidden
+                  />
+                </div>
+              )}
+
+              {!loading && filtered.length === 0 ? (
+                <div className="px-6 py-14 text-center h-full flex flex-col items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-[#F8F3E8] border border-[#D4CDB5]/60 flex items-center justify-center mb-4">
+                    <Images size={24} className="text-[#c49a3c]/60" />
+                  </div>
+                  <p className="text-[#1E2A35] text-sm font-semibold">
+                    {selectedTags.length === 0 && selectedFeatures.length === 0
+                      ? 'No gallery posts'
+                      : 'No matching posts'}
+                  </p>
+                  <p className="text-[#B0A898] text-xs mt-1 max-w-sm">
+                    {posts.length === 0
+                      ? 'Create your first gallery post with photos or videos.'
+                      : 'Switch filters or add a new post.'}
+                  </p>
+                  {posts.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={openUpload}
+                      className="action-button mt-4 inline-flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full text-sm"
+                    >
+                      <Upload size={15} /> Add Media
+                    </button>
+                  )}
+                </div>
+              ) : (
+                !loading && (
+                  <div
+                    ref={gridRef}
+                    className="p-6 h-full min-h-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 content-start"
+                  >
+                    {pagedPosts.map((post) => (
+                      <PhotoCard
+                        key={post.id}
+                        post={post}
+                        onEdit={() => openEdit(post)}
+                        onDelete={() => handleDelete(post.id)}
+                        onView={() => setViewingPost(post)}
+                      />
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+
+            {!loading && filtered.length > 0 && (
+              <div className="px-6 pb-4 shrink-0 border-t border-[#D4CDB5]/40 pt-3">
+                <AdminTablePagination
+                  page={currentPage}
+                  totalPages={totalPages}
+                  rangeStart={rangeStart}
+                  rangeEnd={rangeEnd}
+                  total={filtered.length}
+                  noun="posts"
+                  onPageChange={setTablePage}
+                />
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </>
   );

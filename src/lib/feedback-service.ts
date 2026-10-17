@@ -56,7 +56,10 @@ export function feedbackLevelLabel(level: number): string {
 }
 
 export function initialTicketLevelForRole(role: UserRole): FeedbackTicketLevel {
-  return role === 'user' ? 0 : 3;
+  if (role === 'user') return 0;
+  if (role === 'coach' || role === 'marketing') return 1;
+  if (role === 'frontdesk') return 2;
+  return 3;
 }
 
 export function canDeleteOwnFeedback(item: FeedbackDisplay): boolean {
@@ -376,9 +379,14 @@ export async function fetchFeedbackInbox(
   return { data: (data ?? []).map(mapFeedback), error: null };
 }
 
-/** Admin inbox: tickets escalated to ticket_level = 2. */
+/** Admin inbox: tickets at ticket_level = 1 in feedback_system. */
 export async function fetchAdminFeedbackInbox(): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
-  return fetchFeedbackInbox([2]);
+  return fetchFeedbackInbox([1]);
+}
+
+/** Front desk inbox: new submissions at ticket_level = 0. */
+export async function fetchFrontdeskFeedbackInbox(): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
+  return fetchFeedbackInbox([0]);
 }
 
 export async function openFeedbackTicket(

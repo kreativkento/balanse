@@ -31,8 +31,13 @@ const NEXT_STEPS = [
   },
   {
     icon: <CheckCircle2 size={16} className="text-[#8A9E7A]" />,
-    title: 'Booking Confirmed',
-    desc: 'Once verified, your spot will be officially reserved and confirmed.',
+    title: 'Waitlisted',
+    desc: 'You are on the waitlist until payment is approved. Your spot is not counted as enrolled yet.',
+  },
+  {
+    icon: <CheckCircle2 size={16} className="text-[#8A9E7A]" />,
+    title: 'Enrollment Confirmed',
+    desc: 'Once approved, you will be added to the class roster automatically.',
   },
   {
     icon: <Phone size={16} className="text-[#9A7A8A]" />,
@@ -48,7 +53,7 @@ const NEXT_STEPS = [
 export default function BookingPendingPage() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { booking, reference, fileName } = location.state || {};
+  const { booking, reference, fileName, paymentUid } = location.state || {};
 
   useEffect(() => {
     if (!booking) navigate('/dashboard');
@@ -87,8 +92,13 @@ export default function BookingPendingPage() {
             Booking Submitted!
           </h1>
           <p className="text-[#8A7E6E] text-sm max-w-md mx-auto leading-relaxed">
-            Your class request has been received. Our team will review your payment and confirm your spot within 24 hours.
+            Your payment proof has been received. You are on the waitlist while we verify your payment—usually within 24 hours.
           </p>
+          {paymentUid ? (
+            <p className="text-[#5A5048] text-xs mt-2 font-mono tracking-wide">
+              Reference no. {paymentUid}
+            </p>
+          ) : null}
         </div>
 
         {/* ── Booking Summary Card ── */}
@@ -213,15 +223,13 @@ export default function BookingPendingPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#c49a3c] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(196,154,60,0.35)] hover:bg-[#a67f2e] active:scale-[0.97] transition-all"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+            className="action-button flex-1 flex items-center justify-center gap-2 bg-[#c49a3c] text-white rounded-full py-4 shadow-[0_4px_20px_rgba(196,154,60,0.35)] hover:bg-[#a67f2e] active:scale-[0.97] transition-all"
           >
             <LayoutDashboard size={17} /> Back to Dashboard
           </button>
           <button
-            onClick={() => navigate('/book')}
-            className="flex-1 flex items-center justify-center gap-2 bg-white text-[#1E2A35] border border-[#D4CDB5]/70 rounded-full py-4 hover:border-[#c49a3c]/40 hover:bg-[#F8F3E8] active:scale-[0.97] transition-all"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+            onClick={() => navigate('/class-schedule')}
+            className="flex-1 flex items-center justify-center gap-2 bg-white text-[#1E2A35] border border-[#D4CDB5]/70 rounded-full py-4 text-sm font-semibold hover:border-[#c49a3c]/40 hover:bg-[#F8F3E8] active:scale-[0.97] transition-all"
           >
             Book Another Class <ArrowRight size={17} />
           </button>

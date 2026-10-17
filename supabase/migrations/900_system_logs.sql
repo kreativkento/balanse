@@ -400,7 +400,8 @@ begin
         ('class_students', 'trg_log_system_class_students'),
         ('class_coaches', 'trg_log_system_class_coaches'),
         ('bulletin_posts', 'trg_log_system_bulletin_posts'),
-        ('feedback_system', 'trg_log_system_feedback_system')
+        ('feedback_system', 'trg_log_system_feedback_system'),
+        ('payment_channels', 'trg_log_system_payment_channels')
     ) as t(table_name, trigger_name)
   loop
     if to_regclass('public.' || r.table_name) is null then
