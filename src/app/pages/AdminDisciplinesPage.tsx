@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AlertCircle, Loader2, Plus, Search } from 'lucide-react';
+import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import {
   AdminDisciplineCardsGrid,
@@ -38,7 +39,7 @@ function AddDisciplineTrigger({
       <button
         type="button"
         onClick={onClick}
-        className="action-button shrink-0 flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm font-bold shadow-sm h-[42px]"
+        className="action-button shrink-0 flex items-center gap-2 bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all rounded-full px-5 py-2.5 text-sm font-bold shadow-sm"
        
       >
         <Plus size={16} />
@@ -226,26 +227,31 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
         />
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col">
-      <div className="max-w-6xl mx-auto px-6 py-8 w-full flex min-h-0 flex-1 flex-col">
-        <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-            <DisciplineLayoutToggle layout={layout} onChange={setLayout} />
-            <div className="relative w-full min-w-[12rem] max-w-sm sm:w-56 sm:flex-none">
-              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search disciplines…"
-                disabled={loading}
-                className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8] disabled:opacity-60"
-              />
-            </div>
+      <div className="h-full min-h-0 overflow-hidden flex flex-col">
+      <div className="max-w-7xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col">
+        <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
+          <DisciplineLayoutToggle layout={layout} onChange={setLayout} />
+          <div className="relative flex-1 max-w-sm">
+            <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search disciplines…"
+              disabled={loading}
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8] disabled:opacity-60"
+            />
           </div>
-          {!loading && !viewOnly && (
-            <AddDisciplineTrigger onClick={openCreateModal} variant="button" />
-          )}
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            {!loading && (
+              <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
+                {filteredDisciplines.length} of {disciplines.length} disciplines
+              </span>
+            )}
+            {!loading && !viewOnly && (
+              <AddDisciplineTrigger onClick={openCreateModal} variant="button" />
+            )}
+          </div>
         </div>
 
         {loading && (
@@ -267,7 +273,7 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
 
         {!loading && !loadError && disciplines.length === 0 && (
           <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
-            <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-5 py-8 text-center shrink-0">
+            <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm px-5 py-8 text-center shrink-0">
               <p className="text-[#1E2A35] text-sm font-semibold">No disciplines found</p>
               <p className="text-[#8A7E6E] text-sm mt-1">
                 Add your first discipline below, or run{' '}
@@ -283,13 +289,13 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
         )}
 
         {!loading && disciplines.length > 0 && filteredDisciplines.length === 0 && (
-          <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
+          <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex items-center justify-center px-6 py-12 text-center text-[#B0A898] text-sm">
             No disciplines match your search.
           </div>
         )}
 
         {!loading && filteredDisciplines.length > 0 && (pageDisciplines.length > 0 || showTrailingSlot) && (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col">
             <AdminDisciplineCardsGrid
               hideCount
               fillContainer

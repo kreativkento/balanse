@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check, Pencil, Trash2, LayoutGrid, List, Newspaper } from 'lucide-react';
 import { SearchableIdSelect } from '../components/SearchableIdSelect';
+import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
@@ -506,7 +507,7 @@ export default function AdminStaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useAdminUrlSearchFilter();
   const [viewMode, setViewMode] = useState<StaffViewMode>('list');
   const [page, setPage] = useState(1);
   const { containerRef, pageSize } = useFitPageSize({
@@ -688,22 +689,22 @@ export default function AdminStaffPage() {
     const savedName = form.name.trim();
 
     try {
-      if (editingId !== null) {
-        const result = await updateStaffAccountFromForm(editingId, {
+    if (editingId !== null) {
+      const result = await updateStaffAccountFromForm(editingId, {
           name: savedName,
-          email: form.email.trim(),
+        email: form.email.trim(),
           specialty: specialtyLabel,
           nationality: form.nationality,
           staffRole: form.staffRole,
           disciplineIds: form.disciplineIds,
           status: form.status,
         });
-        if (!result.ok) {
+      if (!result.ok) {
           const message = result.error || 'Failed to update staff account.';
           setFormError(message);
           toast.error(message);
-          return;
-        }
+        return;
+      }
         await loadStaff();
         setShowModal(false);
         toast.success(`Staff profile updated for ${savedName}.`);
@@ -715,7 +716,6 @@ export default function AdminStaffPage() {
         password: form.password,
         name: savedName,
         specialty: specialtyLabel,
-        nationality: form.nationality,
         staffRole: form.staffRole,
         disciplineIds: form.disciplineIds,
         status: form.status,
@@ -726,8 +726,8 @@ export default function AdminStaffPage() {
         toast.error(message);
         return;
       }
-      await loadStaff();
-      setShowModal(false);
+    await loadStaff();
+    setShowModal(false);
       toast.success(`Staff account created for ${savedName}.`);
     } catch {
       const message = 'Something went wrong while saving. Please try again.';
@@ -1030,10 +1030,10 @@ export default function AdminStaffPage() {
                           onClick={(e) => e.stopPropagation()}
                           onKeyDown={(e) => e.stopPropagation()}
                         >
-                          {actionsLocked ? (
-                            <span className="text-[#B0A898] text-xs italic">Protected</span>
-                          ) : (
-                            <>
+                        {actionsLocked ? (
+                          <span className="text-[#B0A898] text-xs italic">Protected</span>
+                        ) : (
+                          <>
                               <button
                                 type="button"
                                 onClick={() => openEdit(member)}
@@ -1050,9 +1050,9 @@ export default function AdminStaffPage() {
                               >
                                 <Trash2 size={14} />
                               </button>
-                            </>
-                          )}
-                        </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                     );
                   })}
@@ -1404,18 +1404,20 @@ export default function AdminStaffPage() {
                 />
               </div>
 
-              {/* Nationality */}
-              <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Nationality</label>
-                <SearchableSelect
-                  value={form.nationality}
-                  onChange={(nationality) => setForm((f) => ({ ...f, nationality }))}
-                  options={[...NATIONALITIES]}
-                  placeholder="Select nationality…"
-                  searchPlaceholder="Search country…"
-                  emptyText="No match."
-                />
-              </div>
+              {/* Nationality (edit only) */}
+              {editingId !== null && (
+                <div>
+                  <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Nationality</label>
+                  <SearchableSelect
+                    value={form.nationality}
+                    onChange={(nationality) => setForm((f) => ({ ...f, nationality }))}
+                    options={[...NATIONALITIES]}
+                    placeholder="Select nationality…"
+                    searchPlaceholder="Search country…"
+                    emptyText="No match."
+                  />
+                </div>
+              )}
 
               {/* Password (add only) */}
               {editingId === null && (
@@ -1454,7 +1456,7 @@ export default function AdminStaffPage() {
                 <div>
                   <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Status</label>
                   <SearchableIdSelect
-                    value={form.status}
+                      value={form.status}
                     onChange={(status) =>
                       setForm((f) => ({
                         ...f,

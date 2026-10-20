@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { getAdminPageMeta } from '../../lib/admin-page-meta';
 import { getFrontdeskPageMeta } from '../../lib/frontdesk-page-meta';
@@ -14,7 +14,14 @@ import {
   getMemberPortalNavItems,
   searchMemberPortalNav,
 } from '../../lib/member-portal-nav-search';
+import { searchAdminGlobal } from '../../../lib/admin-global-search-service';
+import { searchFrontdeskGlobal } from '../../../lib/frontdesk-global-search-service';
+import { searchMarketingGlobal } from '../../../lib/marketing-global-search-service';
 import { AccountMenu } from './AccountMenu';
+
+const ADMIN_PORTAL_PATH_PREFIX = '/admin';
+const MARKETING_PORTAL_PATH_PREFIX = '/marketing';
+const FRONTDESK_PORTAL_PATH_PREFIX = '/frontdesk';
 
 const MEMBER_PORTAL_PATH_PREFIXES = [
   '/dashboard',
@@ -27,6 +34,7 @@ const MEMBER_PORTAL_PATH_PREFIXES = [
   '/feedback',
   '/performance',
   '/subscriptions',
+  '/credits',
 ] as const;
 
 function isMemberPortalNavPath(path: string): boolean {
@@ -46,6 +54,7 @@ export interface PortalNavSearchMatch {
   path: string;
   label: string;
   group: string;
+  subtitle?: string;
   disabled?: boolean;
 }
 
@@ -57,6 +66,8 @@ interface DashboardGreetingBarProps {
   /** When set, typing shows member-portal navigation matches (not used with page `onSearch`). */
   navSearchMatches?: (query: string) => PortalNavSearchMatch[];
   onPickNavMatch?: (path: string) => void;
+  /** Debounced Supabase / record search (e.g. admin global search). */
+  fetchSearchResults?: (query: string, signal: AbortSignal) => Promise<PortalNavSearchMatch[]>;
   accountMenu: ReactNode;
   leadingExtra?: ReactNode;
   compact?: boolean;
@@ -76,6 +87,7 @@ export function DashboardGreetingBar({
   onSearch,
   navSearchMatches,
   onPickNavMatch,
+  fetchSearchResults,
   accountMenu,
   leadingExtra,
   compact = false,
@@ -83,15 +95,87 @@ export function DashboardGreetingBar({
   headerActions,
 }: DashboardGreetingBarProps) {
   const [query, setQuery] = useState('');
+  const [remoteResults, setRemoteResults] = useState<PortalNavSearchMatch[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const searchFormRef = useRef<HTMLFormElement>(null);
   const searchId = useId();
-  const navMode = Boolean(navSearchMatches && onPickNavMatch && !onSearch);
+  const portalSearchMode = Boolean(onPickNavMatch && !onSearch && (navSearchMatches || fetchSearchResults));
 
   const navResults = useMemo(() => {
-    if (!navMode || !navSearchMatches) return [];
+    if (!portalSearchMode || !navSearchMatches) return [];
     return navSearchMatches(query);
-  }, [navMode, navSearchMatches, query]);
+  }, [portalSearchMode, navSearchMatches, query]);
 
-  const showNavDropdown = navMode && query.trim().length > 0 && navResults.length > 0;
+  useEffect(() => {
+    if (!fetchSearchResults || !portalSearchMode) {
+      setRemoteResults([]);
+      setRemoteLoading(false);
+      return;
+    }
+
+    const trimmed = query.trim();
+    if (trimmed.length < 1) {
+      setRemoteResults([]);
+      setRemoteLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setRemoteLoading(true);
+    const timer = window.setTimeout(() => {
+      void fetchSearchResults(trimmed, controller.signal)
+        .then((rows) => {
+          if (!controller.signal.aborted) setRemoteResults(rows);
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setRemoteResults([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setRemoteLoading(false);
+        });
+    }, 280);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [fetchSearchResults, portalSearchMode, query]);
+
+  const combinedResults = useMemo(() => {
+    if (!portalSearchMode) return [];
+    const seen = new Set<string>();
+    const merged: PortalNavSearchMatch[] = [];
+    for (const row of [...navResults, ...remoteResults]) {
+      const key = `${row.path}:${row.label}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(row);
+    }
+    return merged;
+  }, [portalSearchMode, navResults, remoteResults]);
+
+  const hasSuggestions =
+    portalSearchMode && query.trim().length > 0 && (combinedResults.length > 0 || remoteLoading);
+
+  const showNavDropdown = hasSuggestions && suggestionsOpen;
+
+  useEffect(() => {
+    if (!portalSearchMode) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const root = searchFormRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      setSuggestionsOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [portalSearchMode]);
+
+  const openSuggestionsIfEligible = () => {
+    if (portalSearchMode && query.trim().length > 0) {
+      setSuggestionsOpen(true);
+    }
+  };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -101,11 +185,13 @@ export function DashboardGreetingBar({
       onSearch(trimmed);
       return;
     }
-    if (navMode && onPickNavMatch) {
-      const pick = navResults.find((row) => !row.disabled) ?? navResults[0];
+    if (portalSearchMode && onPickNavMatch) {
+      const pick = combinedResults.find((row) => !row.disabled) ?? combinedResults[0];
       if (pick && !pick.disabled) {
         onPickNavMatch(pick.path);
         setQuery('');
+        setRemoteResults([]);
+        setSuggestionsOpen(false);
       }
     }
   };
@@ -114,6 +200,8 @@ export function DashboardGreetingBar({
     if (disabled || !onPickNavMatch) return;
     onPickNavMatch(path);
     setQuery('');
+    setRemoteResults([]);
+    setSuggestionsOpen(false);
   };
 
   return (
@@ -161,6 +249,7 @@ export function DashboardGreetingBar({
         </div>
 
         <form
+          ref={searchFormRef}
           onSubmit={handleSubmit}
           className="relative z-20 col-span-2 row-start-2 w-full min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:w-72"
           role="search"
@@ -177,7 +266,13 @@ export function DashboardGreetingBar({
             id={searchId}
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              if (event.target.value.trim().length > 0) setSuggestionsOpen(true);
+              else setSuggestionsOpen(false);
+            }}
+            onFocus={openSuggestionsIfEligible}
+            onClick={openSuggestionsIfEligible}
             placeholder={searchPlaceholder}
             className={`w-full rounded-xl border border-[#D4CDB5]/60 bg-white pl-9 pr-[4.75rem] text-sm text-[#1E2A35] placeholder:text-[#B0A898] shadow-sm outline-none transition-colors focus:border-[#c49a3c]/50 focus:ring-2 focus:ring-[#c49a3c]/25 ${compact ? 'h-9' : 'h-11'}`}
           />
@@ -189,12 +284,15 @@ export function DashboardGreetingBar({
           </button>
           {showNavDropdown ? (
             <ul
-              className="absolute left-0 right-0 top-[calc(100%+0.35rem)] max-h-64 overflow-y-auto rounded-xl border border-[#D4CDB5]/60 bg-white py-1 shadow-lg"
+              className="absolute left-0 right-0 top-[calc(100%+0.35rem)] max-h-72 overflow-y-auto rounded-xl border border-[#D4CDB5]/60 bg-white py-1 shadow-lg"
               role="listbox"
               aria-label="Portal navigation matches"
             >
-              {navResults.map((row) => (
-                <li key={row.path}>
+              {remoteLoading && combinedResults.length === 0 ? (
+                <li className="px-3 py-2 text-xs text-[#9A8E7E]">Searching…</li>
+              ) : null}
+              {combinedResults.map((row) => (
+                <li key={`${row.path}:${row.label}`}>
                   <button
                     type="button"
                     role="option"
@@ -211,6 +309,11 @@ export function DashboardGreetingBar({
                       {row.group}
                       {row.disabled ? ' · Unavailable' : ''}
                     </span>
+                    {row.subtitle ? (
+                      <span className="mt-0.5 line-clamp-1 text-[11px] normal-case tracking-normal text-[#8A7E6E]">
+                        {row.subtitle}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -304,6 +407,23 @@ export function FrontdeskGreetingHeader({
       }
     : undefined;
 
+  const handleFrontdeskPick = (path: string) => {
+    if (!path.startsWith(FRONTDESK_PORTAL_PATH_PREFIX)) return;
+    navigate(path);
+  };
+
+  const handleFrontdeskFetch = onSearch
+    ? undefined
+    : (q: string, signal: AbortSignal) =>
+        searchFrontdeskGlobal(q, signal).then((rows) =>
+          rows.map((row) => ({
+            path: row.path,
+            label: row.label,
+            group: row.group,
+            subtitle: row.subtitle,
+          })),
+        );
+
   return (
     <DashboardGreetingBar
       greeting={getPhilippinesGreeting()}
@@ -312,6 +432,8 @@ export function FrontdeskGreetingHeader({
       headerActions={pageHeader ? headerActionsCtx?.actions : undefined}
       searchPlaceholder={searchPlaceholder}
       onSearch={onSearch}
+      fetchSearchResults={handleFrontdeskFetch}
+      onPickNavMatch={onSearch ? undefined : handleFrontdeskPick}
       accountMenu={
         <AccountMenu
           onLogout={() => {
@@ -352,6 +474,23 @@ export function MarketingGreetingHeader({
       }
     : undefined;
 
+  const handleMarketingPick = (path: string) => {
+    if (!path.startsWith(MARKETING_PORTAL_PATH_PREFIX)) return;
+    navigate(path);
+  };
+
+  const handleMarketingFetch = onSearch
+    ? undefined
+    : (q: string, signal: AbortSignal) =>
+        searchMarketingGlobal(q, signal).then((rows) =>
+          rows.map((row) => ({
+            path: row.path,
+            label: row.label,
+            group: row.group,
+            subtitle: row.subtitle,
+          })),
+        );
+
   return (
     <DashboardGreetingBar
       greeting={getPhilippinesGreeting()}
@@ -360,6 +499,8 @@ export function MarketingGreetingHeader({
       headerActions={pageHeader ? headerActionsCtx?.actions : undefined}
       searchPlaceholder={searchPlaceholder}
       onSearch={onSearch}
+      fetchSearchResults={handleMarketingFetch}
+      onPickNavMatch={onSearch ? undefined : handleMarketingPick}
       accountMenu={
         <AccountMenu
           onLogout={() => {
@@ -400,6 +541,23 @@ export function AdminGreetingHeader({
       }
     : undefined;
 
+  const handleAdminPick = (path: string) => {
+    if (!path.startsWith(ADMIN_PORTAL_PATH_PREFIX)) return;
+    navigate(path);
+  };
+
+  const handleAdminFetch = onSearch
+    ? undefined
+    : (q: string, signal: AbortSignal) =>
+        searchAdminGlobal(q, signal).then((rows) =>
+          rows.map((row) => ({
+            path: row.path,
+            label: row.label,
+            group: row.group,
+            subtitle: row.subtitle,
+          })),
+        );
+
   return (
     <DashboardGreetingBar
       greeting={getPhilippinesGreeting()}
@@ -408,6 +566,8 @@ export function AdminGreetingHeader({
       headerActions={pageHeader ? headerActionsCtx?.actions : undefined}
       searchPlaceholder={searchPlaceholder}
       onSearch={onSearch}
+      fetchSearchResults={handleAdminFetch}
+      onPickNavMatch={onSearch ? undefined : handleAdminPick}
       accountMenu={
         <AccountMenu
           onLogout={() => {

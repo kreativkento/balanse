@@ -7,10 +7,13 @@ import {
   ClipboardList,
   ConciergeBell,
   CreditCard,
+  Images,
   Layers,
   LayoutDashboard,
   MessageSquare,
+  Newspaper,
   ShieldCheck,
+  Sparkles,
   Users,
   ChevronDown,
 } from 'lucide-react';
@@ -57,6 +60,16 @@ const enrollmentLinks: {
   { label: 'Cancellations', path: '/frontdesk-cancellations', icon: <Ban size={16} /> },
 ];
 
+const marketingLinks: {
+  label: string;
+  path: string;
+  icon: ReactNode;
+}[] = [
+  { label: 'Gallery', path: '/frontdesk-gallery', icon: <Images size={16} /> },
+  { label: 'Amenities', path: '/frontdesk-amenities', icon: <Sparkles size={16} /> },
+  { label: 'Bulletin', path: '/frontdesk-bulletin', icon: <Newspaper size={16} /> },
+];
+
 const financeLinks: {
   label: string;
   path: string;
@@ -75,6 +88,7 @@ const NAV_GROUPS: {
   { key: 'community', label: 'Community', links: communityLinks },
   { key: 'schedule', label: 'Schedule', links: scheduleLinks },
   { key: 'enrollments', label: 'Enrollments', links: enrollmentLinks },
+  { key: 'marketing', label: 'Marketing', links: marketingLinks },
   { key: 'finance', label: 'Finance', links: financeLinks },
 ];
 
@@ -166,6 +180,7 @@ function FrontdeskSidebarNav({ onNavigate }: { onNavigate: () => void }) {
           label="System Feedback"
           active={isActive('/frontdesk-feedback')}
           onNavigate={onNavigate}
+          appearance="gold"
         />
       </div>
     </div>
@@ -199,7 +214,7 @@ export function FrontdeskSidebar({ children }: FrontdeskSidebarProps) {
       <AdminHeaderActionsProvider>
         <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
           <div className="mx-auto w-full max-w-7xl shrink-0 px-6">
-            <FrontdeskGreetingHeader searchPlaceholder="Search clients, classes…" />
+            <FrontdeskGreetingHeader searchPlaceholder="Search gallery, amenities, bulletin…" />
           </div>
           <div data-frontdesk-main-scroll className="min-h-0 flex-1 overflow-y-auto flex flex-col">
             {children}

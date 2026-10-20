@@ -1,9 +1,13 @@
+/** Shared feedback portal UI; also default export for `/development/feedback`. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { useDevAuth } from '../context/DevAuthContext';
+import { DevSidebar } from '../components/layout/DevSidebar';
 import {
   ArrowUpRight,
   Bug,
   Check,
+  ClipboardCheck,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -26,21 +30,33 @@ import {
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
 import { STAFF_PAGE_CONTAINER_PADDED } from '../lib/staff-page-meta';
+import { FeedbackDetailViewModal } from '../components/feedback/FeedbackDetailViewModal';
+import { FeedbackIrreversibleConfirmDialog } from '../components/feedback/FeedbackIrreversibleConfirmDialog';
+import { FeedbackTicketDropdown } from '../components/feedback/FeedbackTicketDropdown';
+import { FEEDBACK_DETAIL_MODAL_PANEL } from '../components/feedback/feedback-detail-modal-styles';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import {
   FEEDBACK_DESCRIPTION_MAX,
   FEEDBACK_MAX_BYTES,
   FEEDBACK_MAX_VIDEO_SECONDS,
+  FEEDBACK_PRIORITY_DROPDOWN_OPTIONS,
   FEEDBACK_STATUSES,
   FEEDBACK_TITLE_MAX,
   canDeleteOwnFeedback,
+  canSetFeedbackPriority,
+  canSetFeedbackStatus,
+  feedbackDeleteBlockedMessage,
+  feedbackPriorityLabel,
+  updateFeedbackPriority,
+  updateFeedbackStatus,
   createFeedbackAttachmentUrl,
   deleteOwnFeedback,
   escalateFeedbackTicket,
-  feedbackLevelLabel,
+  fetchDevFeedbackInbox,
   fetchFeedbackInbox,
   fetchFeedbackSubmitter,
   fetchOwnFeedback,
+  feedbackPublicTicketId,
   formatFeedbackFileSize,
   isFeedbackVideo,
   isFeedbackVideoMime,
@@ -49,6 +65,7 @@ import {
   validateFeedbackAttachment,
   type FeedbackDisplay,
   type FeedbackLabel,
+  type FeedbackPriority,
   type FeedbackStatus,
   type FeedbackTicketLevel,
 } from '../../lib/feedback-service';
@@ -80,7 +97,7 @@ const INP =
 /** Keep the feedback list short enough to fit without page scroll. */
 const PAGE_SIZE = 4;
 
-type FeedbackPortal = 'member' | 'staff' | 'admin' | 'dev' | 'frontdesk';
+type FeedbackPortal = 'member' | 'staff' | 'admin' | 'dev' | 'frontdesk' | 'marketing';
 
 const PORTAL_PAGE_WRAP = 'min-h-full bg-[#F8F3E8]';
 const PORTAL_PAGE_INNER = 'mx-auto w-full min-w-0 max-w-6xl px-4 pb-16 md:px-8';
@@ -98,6 +115,7 @@ function loginPathForPortal(portal: FeedbackPortal): string {
     case 'staff':
       return '/staff-login';
     case 'admin':
+    case 'marketing':
       return '/admin-login';
     case 'frontdesk':
       return '/staff-login';
@@ -116,6 +134,8 @@ function portalLabel(portal: FeedbackPortal): string {
       return 'Admin Portal';
     case 'frontdesk':
       return 'Front Desk';
+    case 'marketing':
+      return 'Marketing';
     case 'dev':
       return 'Development';
     default:
@@ -125,26 +145,15 @@ function portalLabel(portal: FeedbackPortal): string {
 
 type FeedbackListMode = 'inbox' | 'mine';
 
-function inboxLevelsForPortal(portal: FeedbackPortal, role?: UserRole): FeedbackTicketLevel[] {
-  if (portal === 'frontdesk') return [0];
-  if (portal === 'staff') {
-    if (role === 'coach') return [];
-    return [0, 1];
-  }
-  if (portal === 'admin') return [2];
-  if (portal === 'dev') return [3];
+function inboxLevelsForPortal(portal: FeedbackPortal): FeedbackTicketLevel[] {
+  if (portal === 'frontdesk') return [0, 1];
+  if (portal === 'admin') return [2, 3];
+  if (portal === 'dev') return [4];
   return [];
 }
 
-function portalHasInbox(portal: FeedbackPortal, role?: UserRole): boolean {
-  return inboxLevelsForPortal(portal, role).length > 0;
-}
-
-function levelTone(level: number): string {
-  if (level === 0) return 'bg-amber-50 text-amber-800 border-amber-200';
-  if (level === 1) return 'bg-sky-50 text-sky-700 border-sky-200';
-  if (level === 2) return 'bg-violet-50 text-violet-700 border-violet-200';
-  return 'bg-[#1E2A35]/10 text-[#1E2A35] border-[#D4CDB5]';
+function portalHasInbox(portal: FeedbackPortal): boolean {
+  return inboxLevelsForPortal(portal).length > 0;
 }
 
 function labelMeta(value: FeedbackLabel) {
@@ -262,16 +271,18 @@ function FeedbackRowCard({
   onOpen,
   onDelete,
   showDelete = true,
+  submitterRole = null,
 }: {
   item: FeedbackDisplay;
   onOpen: (item: FeedbackDisplay) => void;
   onDelete: (item: FeedbackDisplay) => void;
   showDelete?: boolean;
+  submitterRole?: UserRole | null;
 }) {
   const meta = labelMeta(item.label);
   const Icon = meta.icon;
-  const shortId = item.id.slice(0, 8).toUpperCase();
-  const canDelete = showDelete && canDeleteOwnFeedback(item);
+  const ticketRef = feedbackPublicTicketId(item);
+  const canDelete = showDelete && canDeleteOwnFeedback(item, submitterRole);
 
   return (
     <article
@@ -292,9 +303,6 @@ function FeedbackRowCard({
             <span className="rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A5048]">
               {meta.label}
             </span>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${levelTone(item.ticketLevel)}`}>
-              {feedbackLevelLabel(item.ticketLevel)}
-            </span>
             {item.attachmentPath && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#8A7E6E]">
                 <Paperclip size={11} />
@@ -304,7 +312,7 @@ function FeedbackRowCard({
           </div>
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#8A7E6E]">{item.description}</p>
           <p className="mt-1.5 text-[11px] text-[#B0A898]">
-            Ticket <span className="font-mono text-[#5A5048]">#{shortId}</span>
+            Ticket <span className="font-mono text-[#5A5048]">#{ticketRef}</span>
             <span className="mx-1.5 text-[#D4CDB5]">·</span>
             {formatSubmittedAt(item.createdAt)}
           </p>
@@ -319,7 +327,7 @@ function FeedbackRowCard({
           <button
             type="button"
             disabled={!canDelete}
-            title={canDelete ? 'Delete ticket' : 'Only unopened tickets can be deleted'}
+            title={canDelete ? 'Delete ticket' : 'Delete unavailable'}
             onClick={() => onDelete(item)}
             className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-[#C4B8A0] disabled:hover:bg-transparent"
             aria-label={canDelete ? 'Delete feedback' : 'Delete unavailable'}
@@ -332,251 +340,42 @@ function FeedbackRowCard({
   );
 }
 
-function FeedbackDetailModal({
-  item,
-  onClose,
-  onDelete,
-  showDelete = true,
-  canEscalate = false,
-  escalateLabel = 'Pass to dev',
-  onEscalate,
-  escalating = false,
-  actionError = '',
+
+export type FeedbackInboxReceiveAction = {
+  label: string;
+  successMessage: string;
+};
+
+export type FeedbackInboxForwardAction = {
+  label: string;
+  successMessage: string;
+  /** Shown when forward is disabled (ticket still at level 0). */
+  disabledTitle: string;
+};
+
+export function FeedbackPortalPage({
+  forcedPortal,
+  inboxLevelsOverride,
+  inboxReceiveAction,
+  inboxForwardAction,
 }: {
-  item: FeedbackDisplay;
-  onClose: () => void;
-  onDelete: (item: FeedbackDisplay) => void;
-  showDelete?: boolean;
-  canEscalate?: boolean;
-  escalateLabel?: string;
-  onEscalate?: () => void;
-  escalating?: boolean;
-  actionError?: string;
-}) {
-  const meta = labelMeta(item.label);
-  const Icon = meta.icon;
-  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
-  const [attachmentError, setAttachmentError] = useState('');
-  const [attachmentLoading, setAttachmentLoading] = useState(Boolean(item.attachmentPath));
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!item.attachmentPath) {
-      setAttachmentUrl(null);
-      setAttachmentError('');
-      setAttachmentLoading(false);
-      return;
-    }
-
-    setAttachmentLoading(true);
-    createFeedbackAttachmentUrl(item.attachmentPath).then((result) => {
-      if (cancelled) return;
-      setAttachmentUrl(result.url);
-      setAttachmentError(result.error ?? '');
-      setAttachmentLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [item.attachmentPath]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
-  const copyTicketId = async () => {
-    try {
-      await navigator.clipboard.writeText(item.id);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="feedback-detail-title"
-        className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-[#D4CDB5]/60 bg-white shadow-2xl sm:rounded-3xl"
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 px-5 py-4">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F8F3E8] ${meta.tone}`}>
-              <Icon size={16} />
-            </div>
-            <div className="min-w-0">
-              <h2
-                id="feedback-detail-title"
-                className="leading-none text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
-              >
-                Feedback details
-              </h2>
-              <p className="mt-1 text-[11px] text-[#8A7E6E]">{formatSubmittedAt(item.createdAt)}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#8A7E6E] transition-colors hover:bg-[#EDE8D8] hover:text-[#1E2A35]"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-4 overflow-y-auto px-5 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1 text-[11px] font-semibold text-[#1E2A35]">
-              <Icon size={12} className={meta.tone} />
-              {meta.label}
-            </span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(item.status)}`}>
-              {statusLabel(item.status)}
-            </span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${levelTone(item.ticketLevel)}`}>
-              {feedbackLevelLabel(item.ticketLevel)}
-            </span>
-          </div>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Label</span>
-            <div className={`${INP} flex items-center gap-2.5`}>
-              <Icon size={16} className={meta.tone} />
-              <span className="font-medium">{meta.label}</span>
-            </div>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Title</span>
-            <div className={INP}>{item.title}</div>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Description</span>
-            <div className={`${INP} min-h-[140px] whitespace-pre-wrap`}>{item.description}</div>
-          </label>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Attachment</span>
-            {item.attachmentPath ? (
-              <div className="rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-4 py-4">
-                {attachmentLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-[#8A7E6E]">
-                    <Loader2 size={16} className="animate-spin text-[#c49a3c]" />
-                    Loading attachment…
-                  </div>
-                ) : attachmentError || !attachmentUrl ? (
-                  <p className="text-sm text-[#8A7E6E]">{attachmentError || 'Attachment is unavailable.'}</p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <div className="overflow-hidden rounded-xl border border-[#D4CDB5]/60 bg-white">
-                      {isFeedbackVideoMime(item.attachmentMime) ? (
-                        <video src={attachmentUrl} controls className="max-h-56 w-full bg-black object-contain" />
-                      ) : (
-                        <img src={attachmentUrl} alt={item.attachmentName ?? 'Attachment'} className="max-h-56 w-full object-contain" />
-                      )}
-                    </div>
-                    <p className="flex items-center gap-1.5 truncate text-sm font-medium text-[#1E2A35]">
-                      {isFeedbackVideoMime(item.attachmentMime) ? <Film size={14} /> : <ImagePlus size={14} />}
-                      {item.attachmentName || 'Attachment'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className={`${INP} text-[#8A7E6E]`}>No file attached</div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Ticket ID</p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <code className="min-w-0 flex-1 break-all text-sm font-semibold text-[#1E2A35]">{item.id}</code>
-              <button
-                type="button"
-                onClick={() => void copyTicketId()}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#D4CDB5]/80 bg-white px-2.5 py-1 text-xs font-semibold text-[#5A5048] transition-colors hover:bg-[#EDE8D8]"
-              >
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-          </div>
-
-          {actionError && (
-            <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {actionError}
-            </p>
-          )}
-
-          <div className="flex flex-col gap-2">
-            {canEscalate && onEscalate && (
-              <button
-                type="button"
-                disabled={escalating}
-                onClick={onEscalate}
-                className="action-button inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {escalating ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
-                {escalateLabel}
-              </button>
-            )}
-
-            {showDelete && (
-              <>
-                <button
-                  type="button"
-                  disabled={!canDeleteOwnFeedback(item)}
-                  title={canDeleteOwnFeedback(item) ? 'Delete ticket' : 'Only unopened tickets can be deleted'}
-                  onClick={() => onDelete(item)}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:border-[#D4CDB5]/70 disabled:bg-[#F8F3E8] disabled:text-[#C4B8A0] disabled:hover:bg-[#F8F3E8]"
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
-                {!canDeleteOwnFeedback(item) && (
-                  <p className="text-center text-xs leading-relaxed text-[#8A7E6E]">
-                    Staff have opened this ticket, so it can&apos;t be deleted anymore. Thank you for your feedback!
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPortal } = {}) {
+  forcedPortal?: FeedbackPortal;
+  /** When set (including `[]`), replaces default inbox levels for this portal. */
+  inboxLevelsOverride?: FeedbackTicketLevel[];
+  /** Inbox tickets at level 0: mark received (level → 1); member can no longer delete. */
+  inboxReceiveAction?: FeedbackInboxReceiveAction;
+  /** Inbox tickets at level 1: forward (front desk → level 3). Shown disabled at level 0. */
+  inboxForwardAction?: FeedbackInboxForwardAction;
+} = {}) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const portal = forcedPortal ?? feedbackPortalFromPath(pathname);
   const loginPath = loginPathForPortal(portal);
 
   const [submitterRole, setSubmitterRole] = useState<UserRole | null>(null);
-  const inboxLevels = useMemo(
-    () => inboxLevelsForPortal(portal, submitterRole ?? undefined),
-    [portal, submitterRole],
-  );
-  const hasInbox = inboxLevels.length > 0;
-
+  const [submitterAccountId, setSubmitterAccountId] = useState<string | null>(null);
+  const [prioritySaving, setPrioritySaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
   const [ready, setReady] = useState(false);
   const [listMode, setListMode] = useState<FeedbackListMode>('mine');
   const [items, setItems] = useState<FeedbackDisplay[]>([]);
@@ -600,20 +399,29 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [fileError, setFileError] = useState('');
+  const [priority, setPriority] = useState<FeedbackPriority>('medium');
+  const [pendingForwardConfirm, setPendingForwardConfirm] = useState(false);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const inboxLevels = useMemo(
+    () => inboxLevelsOverride ?? inboxLevelsForPortal(portal),
+    [portal, inboxLevelsOverride],
+  );
+  const hasInbox = inboxLevels.length > 0;
+
   const loadItems = async (levels: FeedbackTicketLevel[] = inboxLevels) => {
     setListLoading(true);
-    const [ownResult, inboxResult] = await Promise.all([
-      fetchOwnFeedback(),
-      levels.length > 0
-        ? fetchFeedbackInbox(levels)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
+    const inboxPromise =
+      levels.length === 0
+        ? Promise.resolve({ data: [], error: null })
+        : portal === 'dev' && levels.length === 1 && levels[0] === 4
+          ? fetchDevFeedbackInbox()
+          : fetchFeedbackInbox(levels);
+    const [ownResult, inboxResult] = await Promise.all([fetchOwnFeedback(), inboxPromise]);
     setListError(ownResult.error ?? inboxResult.error ?? '');
     setItems(ownResult.data);
     setInboxItems(inboxResult.data);
@@ -630,7 +438,8 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
         return;
       }
       setSubmitterRole(submitter.role);
-      const levels = inboxLevelsForPortal(portal, submitter.role);
+      setSubmitterAccountId(submitter.accountId);
+      const levels = inboxLevelsOverride ?? inboxLevelsForPortal(portal);
       if (levels.length === 0) {
         setListMode('mine');
       } else {
@@ -642,7 +451,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
     return () => {
       cancelled = true;
     };
-  }, [navigate, loginPath, portal]);
+  }, [navigate, loginPath, portal, inboxLevelsOverride]);
 
   useEffect(() => {
     return () => {
@@ -669,6 +478,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
 
   const resetFormFields = () => {
     setLabel('positive');
+    setPriority('medium');
     setTitle('');
     setDescription('');
     clearFile();
@@ -726,7 +536,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
     }
 
     setSaving(true);
-    const result = await submitFeedback({ title, description, label, file });
+    const result = await submitFeedback({ title, description, label, priority, file });
     setSaving(false);
 
     if (result.error || !result.data) {
@@ -737,7 +547,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
     }
 
     toastCreated('Feedback ticket');
-    setTicketId(result.data.id);
+    setTicketId(feedbackPublicTicketId(result.data));
     setItems((prev) => [result.data!, ...prev]);
     setPage(1);
   };
@@ -754,7 +564,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
   };
 
   const confirmDelete = async () => {
-    if (!pendingDelete || !canDeleteOwnFeedback(pendingDelete)) return;
+    if (!pendingDelete || !canDeleteOwnFeedback(pendingDelete, submitterRole)) return;
 
     setDeleting(true);
     setDeleteError('');
@@ -778,14 +588,47 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
     setViewing(item);
   };
 
-  const handleEscalate = async () => {
-    if (!viewing) return;
+  const patchFeedbackItem = (updated: FeedbackDisplay) => {
+    setViewing(updated);
+    setItems((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+    setInboxItems((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+  };
+
+  const handlePrioritySelect = async (priority: FeedbackPriority) => {
+    if (!viewing || priority === viewing.priority) return;
+    setPrioritySaving(true);
+    setActionError('');
+    const result = await updateFeedbackPriority(viewing.id, priority);
+    setPrioritySaving(false);
+    if (result.error || !result.data) {
+      setActionError(result.error ?? 'Could not update priority.');
+      toastOperationFailed(result.error ?? 'Could not update priority.');
+      return;
+    }
+    patchFeedbackItem(result.data);
+    toastUpdated('Priority updated');
+  };
+
+  const handleStatusSelect = async (status: FeedbackStatus) => {
+    if (!viewing || status === viewing.status) return;
+    setStatusSaving(true);
+    setActionError('');
+    const result = await updateFeedbackStatus(viewing.id, status);
+    setStatusSaving(false);
+    if (result.error || !result.data) {
+      setActionError(result.error ?? 'Could not update status.');
+      toastOperationFailed(result.error ?? 'Could not update status.');
+      return;
+    }
+    patchFeedbackItem(result.data);
+    toastUpdated('Status updated');
+  };
+
+  const handleReceive = async () => {
+    if (!viewing || viewing.ticketLevel !== 0) return;
     setEscalating(true);
     setActionError('');
-    const result =
-      portal === 'frontdesk' && viewing.ticketLevel === 0
-        ? await openFeedbackTicket(viewing.id)
-        : await escalateFeedbackTicket(viewing.id);
+    const result = await openFeedbackTicket(viewing.id);
     setEscalating(false);
 
     if (result.error) {
@@ -794,7 +637,39 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
       return;
     }
 
-    toastUpdated(portal === 'frontdesk' && viewing.ticketLevel === 0 ? 'Escalated to admin' : 'Ticket escalated');
+    toastUpdated(inboxReceiveAction?.successMessage ?? 'Ticket received');
+    if (result.data) {
+      setViewing(result.data);
+    } else {
+      setViewing(null);
+    }
+    await loadItems();
+  };
+
+  const handleEscalate = async () => {
+    if (!viewing) return;
+    const isFrontdeskForward = Boolean(
+      inboxForwardAction && listMode === 'inbox' && viewing.ticketLevel <= 1,
+    );
+    if (isFrontdeskForward && viewing.ticketLevel !== 1) return;
+
+    setEscalating(true);
+    setActionError('');
+    const result = await escalateFeedbackTicket(viewing.id);
+    setEscalating(false);
+
+    if (result.error) {
+      setActionError(result.error);
+      toastOperationFailed(result.error);
+      return;
+    }
+
+    toastUpdated(
+      isFrontdeskForward
+        ? (inboxForwardAction?.successMessage ?? 'Forwarded to admin')
+        : 'Ticket escalated',
+    );
+    setPendingForwardConfirm(false);
     setViewing(null);
     await loadItems();
   };
@@ -807,28 +682,50 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
     [activeItems, typeFilter],
   );
 
-  const canEscalateViewing = Boolean(
-    viewing
-    && (
-      (portal === 'frontdesk' && listMode === 'inbox' && viewing.ticketLevel === 0)
-      || (portal === 'staff'
-        && submitterRole === 'coach'
-        && viewing.ticketLevel === 1)
-      || (portal === 'staff'
-        && submitterRole !== 'coach'
-        && listMode === 'inbox'
-        && viewing.ticketLevel === 1)
-      || (portal === 'admin' && listMode === 'inbox' && viewing.ticketLevel === 2)
-    ),
+  const canReceiveViewing = Boolean(
+    inboxReceiveAction
+    && viewing
+    && listMode === 'inbox'
+    && viewing.ticketLevel === 0,
   );
 
-  const escalateLabelForViewing = viewing
-    ? portal === 'frontdesk' && viewing.ticketLevel === 0
-      ? 'Escalate to Admin'
-      : viewing.ticketLevel === 1
-        ? 'Pass to admin'
-        : 'Pass to dev'
-    : 'Pass to dev';
+  const showFrontdeskForward = Boolean(
+    inboxForwardAction
+    && viewing
+    && listMode === 'inbox'
+    && viewing.ticketLevel <= 1,
+  );
+
+  const showAdminEscalate = Boolean(
+    viewing
+    && portal === 'admin'
+    && listMode === 'inbox'
+    && viewing.ticketLevel === 2,
+  );
+
+  const showEscalateViewing = showFrontdeskForward || showAdminEscalate;
+
+  const escalateDisabledViewing = showFrontdeskForward && viewing?.ticketLevel !== 1;
+
+  const escalateLabelForViewing = showFrontdeskForward
+    ? (inboxForwardAction?.label ?? 'Forward to Admin')
+    : viewing?.ticketLevel === 1
+      ? 'Pass to admin'
+      : 'Pass to dev';
+
+  const canEditPriorityViewing = Boolean(
+    viewing
+    && submitterRole
+    && submitterAccountId
+    && canSetFeedbackPriority(submitterRole, viewing, submitterAccountId, listMode),
+  );
+
+  const canEditStatusViewing = Boolean(
+    viewing
+    && submitterRole
+    && submitterAccountId
+    && canSetFeedbackStatus(submitterRole, viewing, submitterAccountId, listMode),
+  );
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -863,7 +760,8 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
   const descriptionCount = description.length;
   const descriptionNearLimit = descriptionCount > FEEDBACK_DESCRIPTION_MAX * 0.9;
 
-  const usesShellPageHeader = portal === 'staff' || portal === 'admin' || portal === 'frontdesk';
+  const usesShellPageHeader =
+    portal === 'staff' || portal === 'admin' || portal === 'frontdesk' || portal === 'marketing';
   const feedbackPageContent = (
         <>
         {!usesShellPageHeader && (
@@ -878,17 +776,21 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
             System Feedback
           </h2>
           <p className="mt-1 max-w-xl text-sm text-[#8A7E6E]">
-            {hasInbox
-              ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
-              : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
+            {portal === 'dev' && hasInbox
+              ? 'Tickets forwarded from admin (level 4). Update status and priority from the inbox; open a ticket for details.'
+              : hasInbox
+                ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
+                : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
           </p>
         </div>
         )}
         {usesShellPageHeader && (
           <p className="mb-6 max-w-xl text-sm text-[#8A7E6E]">
-            {hasInbox
-              ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
-              : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
+            {portal === 'dev' && hasInbox
+              ? 'Tickets forwarded from admin (level 4). Update status and priority from the inbox; open a ticket for details.'
+              : hasInbox
+                ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
+                : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
           </p>
         )}
 
@@ -1054,6 +956,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
                   onOpen={(row) => { void handleOpenItem(row); }}
                   onDelete={setPendingDelete}
                   showDelete={showDeleteControls}
+                  submitterRole={submitterRole}
                 />
               ))
             )}
@@ -1102,7 +1005,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
       <MemberPageShell searchPlaceholder="Search feedback…">
         {feedbackPageContent}
       </MemberPageShell>
-    ) : portal === 'staff' || portal === 'admin' ? (
+    ) : portal === 'staff' || portal === 'admin' || portal === 'marketing' ? (
       <div className={STAFF_PAGE_CONTAINER_PADDED}>
         {feedbackPageContent}
       </div>
@@ -1116,20 +1019,59 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
       </div>
     )}
 
-      {viewing && (
-        <FeedbackDetailModal
-          item={viewing}
-          onClose={() => {
-            setViewing(null);
-            setActionError('');
-          }}
-          onDelete={setPendingDelete}
-          showDelete={showDeleteControls}
-          canEscalate={canEscalateViewing}
-          escalateLabel={escalateLabelForViewing}
-          onEscalate={() => { void handleEscalate(); }}
-          escalating={escalating}
-          actionError={actionError}
+      {viewing && (() => {
+        const meta = labelMeta(viewing.label);
+        const ViewIcon = meta.icon;
+        return (
+          <FeedbackDetailViewModal
+            item={viewing}
+            submittedAtLabel={formatSubmittedAt(viewing.createdAt)}
+            labelText={meta.label}
+            LabelIcon={ViewIcon}
+            labelTone={meta.tone}
+            onClose={() => {
+              setViewing(null);
+              setActionError('');
+            }}
+            onDelete={setPendingDelete}
+            showDelete={showDeleteControls}
+            submitterRole={submitterRole}
+            canReceive={canReceiveViewing}
+            receiveLabel={inboxReceiveAction?.label ?? 'Receive'}
+            onReceive={() => { void handleReceive(); }}
+            showForward={showEscalateViewing}
+            forwardDisabled={escalateDisabledViewing}
+            forwardLabel={escalateLabelForViewing}
+            forwardDisabledTitle={inboxForwardAction?.disabledTitle}
+            onForward={() => {
+              if (!escalateDisabledViewing) setPendingForwardConfirm(true);
+            }}
+            canEditPriority={canEditPriorityViewing}
+            canEditStatus={canEditStatusViewing}
+            prioritySaving={prioritySaving}
+            statusSaving={statusSaving}
+            onPrioritySelect={(priority) => { void handlePrioritySelect(priority); }}
+            onStatusSelect={(status) => { void handleStatusSelect(status); }}
+            actionBusy={escalating}
+            actionError={actionError}
+          />
+        );
+      })()}
+
+      {pendingForwardConfirm && viewing && (
+        <FeedbackIrreversibleConfirmDialog
+          title={`Confirm ${escalateLabelForViewing}?`}
+          message={
+            <>
+              This sends the ticket to the next queue and cannot be undone from your inbox.
+              {' '}
+              <span className="font-semibold text-[#1E2A35]">{viewing.title}</span>
+            </>
+          }
+          confirmLabel={escalateLabelForViewing}
+          busy={escalating}
+          onCancel={() => setPendingForwardConfirm(false)}
+          onConfirm={() => { void handleEscalate(); }}
         />
       )}
 
@@ -1195,10 +1137,10 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
             role="dialog"
             aria-modal="true"
             aria-labelledby="feedback-modal-title"
-            className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-[#D4CDB5]/60 bg-white shadow-2xl sm:rounded-3xl"
+            className={FEEDBACK_DETAIL_MODAL_PANEL}
           >
             <div className="flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 px-5 py-4">
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c49a3c]/10 text-[#c49a3c]">
                   <MessageSquare size={16} />
                 </div>
@@ -1247,7 +1189,7 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
                       </button>
                     </div>
                     <p className="mt-2 text-[11px] text-[#8A7E6E]">
-                      Label: {selectedLabel.label} · Status: Unresolved
+                      Label: {selectedLabel.label} · Priority: {feedbackPriorityLabel(priority)} · Status: Unresolved
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
@@ -1269,10 +1211,18 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
                 </div>
               ) : (
                 <form className="flex flex-col gap-4" onSubmit={(event) => void handleSubmit(event)}>
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Label</span>
-                    <LabelPicker value={label} onChange={setLabel} />
-                  </label>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Label</span>
+                      <LabelPicker value={label} onChange={setLabel} />
+                    </label>
+                    <FeedbackTicketDropdown
+                      fieldLabel="Priority"
+                      value={priority}
+                      options={FEEDBACK_PRIORITY_DROPDOWN_OPTIONS}
+                      onSelect={setPriority}
+                    />
+                  </div>
 
                   <label className="flex flex-col gap-1.5">
                     <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">
@@ -1413,5 +1363,29 @@ export function FeedbackPortalPage({ forcedPortal }: { forcedPortal?: FeedbackPo
         </div>
       )}
     </>
+  );
+}
+
+/** Development portal feedback (level 4 inbox + submissions). */
+export default function DevFeedbackPage() {
+  const navigate = useNavigate();
+  const { devUser } = useDevAuth();
+
+  useEffect(() => {
+    if (!devUser) navigate('/development');
+  }, [devUser, navigate]);
+
+  if (!devUser) {
+    return (
+      <div className="flex min-h-full min-h-dvh items-center justify-center bg-[#F8F3E8]">
+        <Loader2 size={20} className="animate-spin text-[#c49a3c]" />
+      </div>
+    );
+  }
+
+  return (
+    <DevSidebar>
+      <FeedbackPortalPage forcedPortal="dev" inboxLevelsOverride={[4]} />
+    </DevSidebar>
   );
 }

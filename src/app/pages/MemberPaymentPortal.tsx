@@ -2,18 +2,24 @@ import { useState, useRef, useEffect, type ComponentType, type ReactNode } from 
 import { useNavigate, useLocation } from 'react-router';
 import {
   ArrowLeft, Check, Upload, FileImage,
-  X, ShieldCheck, ChevronRight, Info, Receipt,
-  CreditCard, Smartphone, QrCode, Copy, Calendar, Clock, User, Tag,
+  X, ShieldCheck, ChevronRight, ChevronDown, Info, Receipt,
+  CreditCard, Smartphone, QrCode, Copy, Calendar, Clock, User, Tag, Coins,
 } from 'lucide-react';
 import { FALLBACK_PAYMENT_CHANNELS, type PaymentChannel } from '../data/paymentChannels';
 import { fetchActivePaymentChannelsForCheckout } from '../../lib/payment-channel-service';
-import { Switch } from '../components/ui/switch';
+import { cn } from '../components/ui/utils';
 import { toast } from 'sonner';
 import { toastCreated } from '../../lib/operation-toast';
 import {
   submitMemberClassPayment,
   uploadClassPaymentProof,
 } from '../../lib/class-payment-service';
+import {
+  enrollMemberClassWithCredit,
+  fetchMemberCreditWalletBalance,
+} from '../../lib/member-credits-service';
+
+type CheckoutMode = 'payment' | 'credit';
 
 // ─────────────────────────────────────────────
 // STEP INDICATOR
@@ -88,6 +94,60 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
+function PhysicalReceiptFields({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  onCheckedChange: (next: boolean) => void;
+}) {
+  return (
+    <SectionCard
+      title="Physical receipt"
+      subtitle="Saved on your payment record when you submit."
+      className={cn('overflow-visible', checked && 'ring-1 ring-[#c49a3c]/35')}
+    >
+      <label className="flex cursor-pointer items-start justify-between gap-4 select-none">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onCheckedChange(e.target.checked)}
+          className="sr-only"
+          aria-label="Request physical receipt at the studio"
+        />
+        <div className="flex items-start gap-2.5 min-w-0">
+          <Receipt size={18} className="text-[#c49a3c] shrink-0 mt-0.5" aria-hidden />
+          <div>
+            <p className="text-[#1E2A35] text-sm font-semibold">Pick up at the studio</p>
+            <p className="text-[#8A7E6E] text-xs mt-1 leading-relaxed">
+              An e-receipt is emailed when the cancellation window closes and the payment is cleared. Turn this on if you also want a printed copy.
+            </p>
+            {checked ? (
+              <p className="text-[#c49a3c] text-xs mt-2 font-medium">
+                Printed copy requested — we&apos;ll have it ready at the studio.
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <span
+          aria-hidden
+          className={cn(
+            'relative mt-0.5 flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors',
+            checked ? 'bg-[#c49a3c]' : 'bg-[#D4CDB5]',
+          )}
+        >
+          <span
+            className={cn(
+              'block size-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out',
+              checked ? 'translate-x-5' : 'translate-x-0',
+            )}
+          />
+        </span>
+      </label>
+    </SectionCard>
+  );
+}
+
 function SectionCard({
   title,
   subtitle,
@@ -101,7 +161,7 @@ function SectionCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden ${className}`}
+      className={cn('rounded-2xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden', className)}
     >
       <div className="border-b border-[#D4CDB5]/45 bg-[#FBF9F3]/80 px-4 py-3 sm:px-5">
         <p
@@ -225,8 +285,12 @@ export default function MemberPaymentPortal() {
   const [notes, setNotes] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [errors, setErrors] = useState<{ file?: string }>({});
-  const [requestReceipt, setRequestReceipt] = useState(false);
+  const [requestPhysicalReceipt, setRequestPhysicalReceipt] = useState(false);
+  const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>('payment');
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditsLoading, setCreditsLoading] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -252,7 +316,29 @@ export default function MemberPaymentPortal() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setCreditsLoading(true);
+      const { balance, error } = await fetchMemberCreditWalletBalance();
+      if (cancelled) return;
+      if (error) toast.error(error);
+      setCreditBalance(balance);
+      setCreditsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (!booking) return null;
+
+  const canUseCredits = !creditsLoading && creditBalance >= 1;
+  const hasPaymentProof = uploadedFile !== null;
+  const canSubmitCheckout =
+    checkoutMode === 'credit'
+      ? canUseCredits
+      : hasPaymentProof && !channelsLoading && Boolean(paymentMethod);
 
   const classColor = CLASS_COLORS[booking.className] || '#c49a3c';
   const channel: PaymentChannel | undefined =
@@ -281,7 +367,41 @@ export default function MemberPaymentPortal() {
     if (file) handleFileChange(file);
   };
 
+  const handleSubmitCredit = async () => {
+    const classId = booking.classId as string | undefined;
+    if (!classId) {
+      toast.error('Missing class information. Please go back and try enrolling again.');
+      return;
+    }
+    if (!canUseCredits) {
+      toast.error('You need at least 1 available credit to enroll.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await enrollMemberClassWithCredit(classId);
+      if (!result.success) {
+        toast.error(result.error ?? 'Could not enroll with credits.');
+        return;
+      }
+      toastCreated('Enrollment confirmed');
+      navigate('/booking-pending', {
+        state: {
+          booking,
+          creditEnrollment: true,
+          balanceAfter: result.balanceAfter,
+        },
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (checkoutMode === 'credit') {
+      await handleSubmitCredit();
+      return;
+    }
     if (!uploadedFile) {
       setErrors({ file: 'Please upload your proof of payment.' });
       return;
@@ -311,7 +431,7 @@ export default function MemberPaymentPortal() {
         proofOriginalFilename: uploadedFile.name,
         amountPaid: amount,
         memberNotes: notes.trim(),
-        requestPhysicalReceipt: requestReceipt,
+        requestPhysicalReceipt,
       });
       if (!result.success) {
         toast.error(result.error ?? 'Could not submit payment.');
@@ -324,7 +444,7 @@ export default function MemberPaymentPortal() {
           reference: reference.trim(),
           fileName: uploadedFile.name,
           notes: notes.trim(),
-          requestPhysicalReceipt: requestReceipt,
+          requestPhysicalReceipt,
           paymentMethod: channel?.label,
           paymentUid: result.uid,
           waitlisted: true,
@@ -340,7 +460,7 @@ export default function MemberPaymentPortal() {
   };
 
   return (
-    <div className="bg-[#F8F3E8] min-h-screen pb-28 lg:pb-10">
+    <div className="bg-[#F8F3E8] min-h-screen pb-40 lg:pb-10">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-[#D4CDB5]/60">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -365,10 +485,12 @@ export default function MemberPaymentPortal() {
                     letterSpacing: '0.05em',
                   }}
                 >
-                  Payment verification
+                  {checkoutMode === 'credit' ? 'Use session credit' : 'Payment verification'}
                 </h1>
                 <p className="text-[#8A7E6E] text-xs sm:text-sm mt-1 leading-relaxed">
-                  Pay using your preferred channel, then upload proof so we can confirm your spot.
+                  {checkoutMode === 'credit'
+                    ? 'Apply 1 credit from your wallet — enrollment is confirmed immediately.'
+                    : 'Pay online using your preferred channel, then upload proof so we can confirm your spot.'}
                 </p>
               </div>
             </div>
@@ -427,7 +549,7 @@ export default function MemberPaymentPortal() {
 
                 <div className="mt-4 rounded-xl bg-[#F8F3E8] border border-[#D4CDB5]/50 px-4 py-3 flex items-end justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8A7E6E]">
-                    Amount due
+                    {checkoutMode === 'credit' ? 'Credit cost' : 'Amount due'}
                   </span>
                   <span
                     className="leading-none tabular-nums"
@@ -438,21 +560,98 @@ export default function MemberPaymentPortal() {
                       color: classColor,
                     }}
                   >
-                    {amountDisplay}
+                    {checkoutMode === 'credit' ? '1 credit' : amountDisplay}
                   </span>
                 </div>
+                {checkoutMode === 'credit' ? (
+                  <p className="text-[#8A7E6E] text-[11px] mt-2">
+                    Balance: {creditsLoading ? '…' : creditBalance} credit{creditBalance === 1 ? '' : 's'}
+                  </p>
+                ) : null}
               </div>
             </div>
 
             <div className="flex items-start gap-2.5 rounded-xl border border-[#D4CDB5]/45 bg-white/70 px-3 py-2.5">
               <ShieldCheck size={15} className="text-[#6B8E6B] mt-0.5 shrink-0" />
               <p className="text-[#8A7E6E] text-[11px] leading-relaxed">
-                Payments are reviewed manually. We never auto-charge your account.
+                {checkoutMode === 'credit'
+                  ? 'Credits are deducted instantly. No payment proof is required.'
+                  : 'Payments are reviewed manually. We never auto-charge your account.'}
               </p>
             </div>
           </aside>
 
           <div className="flex flex-col gap-5 order-2 min-w-0">
+            <SectionCard title="How to enroll" subtitle="Pay online or use credits from your wallet.">
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+                role="radiogroup"
+                aria-label="Checkout method"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={checkoutMode === 'payment'}
+                  onClick={() => setCheckoutMode('payment')}
+                  className={`relative flex items-center gap-3 rounded-xl border-2 px-3 py-3 text-left transition-all ${
+                    checkoutMode === 'payment'
+                      ? 'border-[#c49a3c] bg-[#c49a3c]/08'
+                      : 'border-[#D4CDB5]/55 bg-[#FBF9F3] hover:border-[#c49a3c]/35'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[#3A4A5A] flex items-center justify-center shrink-0">
+                    <CreditCard size={18} className="text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#1E2A35]">Pay online</p>
+                    <p className="text-[#9A8E7E] text-xs">Choose your preferred payment channel</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={checkoutMode === 'credit'}
+                  disabled={!canUseCredits && !creditsLoading}
+                  onClick={() => setCheckoutMode('credit')}
+                  className={`relative flex items-center gap-3 rounded-xl border-2 px-3 py-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    checkoutMode === 'credit'
+                      ? 'border-[#c49a3c] bg-[#c49a3c]/08'
+                      : 'border-[#D4CDB5]/55 bg-[#FBF9F3] hover:border-[#c49a3c]/35'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[#c49a3c] flex items-center justify-center shrink-0">
+                    <Coins size={18} className="text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#1E2A35]">Use session credit</p>
+                    <p className="text-[#9A8E7E] text-xs">
+                      {creditsLoading
+                        ? 'Loading balance…'
+                        : canUseCredits
+                          ? `${creditBalance} available · instant enroll`
+                          : 'No credits available'}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </SectionCard>
+
+            {checkoutMode === 'credit' ? (
+              <SectionCard
+                title="Confirm credit enrollment"
+                subtitle="One credit will be deducted and you will be added to the class roster immediately."
+              >
+                <div className="rounded-xl border border-[#c49a3c]/30 bg-[#c49a3c]/08 px-4 py-4">
+                  <p className="text-[#1E2A35] text-sm font-semibold">1 credit → {booking.className}</p>
+                  <p className="text-[#8A7E6E] text-xs mt-2 leading-relaxed">
+                    This does not create a payment record. The deduction appears in your credit transaction history.
+                  </p>
+                </div>
+              </SectionCard>
+            ) : null}
+
+            {checkoutMode === 'payment' ? (
+            <>
             <SectionCard title="Payment method" subtitle="Choose where you sent or will send payment.">
               <div
                 className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3"
@@ -497,6 +696,11 @@ export default function MemberPaymentPortal() {
                 })}
               </div>
             </SectionCard>
+
+            <PhysicalReceiptFields
+              checked={requestPhysicalReceipt}
+              onCheckedChange={setRequestPhysicalReceipt}
+            />
 
             <SectionCard
               title={`${channel?.label ?? 'Payment'} details`}
@@ -634,107 +838,142 @@ export default function MemberPaymentPortal() {
               {errors.file ? <p className="text-red-600 text-xs mt-2 font-medium">{errors.file}</p> : null}
             </SectionCard>
 
-            <SectionCard title="Transaction details" subtitle="Optional but helps us verify faster.">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label
-                    htmlFor="payment-reference"
-                    className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E] mb-2"
-                  >
-                    Reference / transaction number
-                  </label>
-                  <input
-                    id="payment-reference"
-                    type="text"
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    placeholder="e.g. GCash-2026041234567"
-                    className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#FBF9F3] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/30 focus:border-[#c49a3c]/50 transition-all"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="payment-notes"
-                    className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E] mb-2"
-                  >
-                    Notes for our team
-                  </label>
-                  <textarea
-                    id="payment-notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                    placeholder="Anything else we should know…"
-                    className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#FBF9F3] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/30 focus:border-[#c49a3c]/50 transition-all resize-none"
-                  />
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Physical receipt"
-              className={`!overflow-visible${requestReceipt ? ' ring-1 ring-[#c49a3c]/35' : ''}`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <Receipt size={18} className="text-[#c49a3c] shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[#1E2A35] text-sm font-semibold">Pick up at the studio</p>
-                    <p className="text-[#8A7E6E] text-xs mt-1 leading-relaxed">
-                      An e-receipt is emailed when payment is approved. Turn this on if you also want a printed copy.
+            <section className="rounded-2xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden">
+              <button
+                type="button"
+                id="transaction-details-trigger"
+                aria-expanded={transactionDetailsOpen}
+                aria-controls="transaction-details-panel"
+                onClick={() => setTransactionDetailsOpen((open) => !open)}
+                className="flex w-full items-start justify-between gap-3 border-b border-[#D4CDB5]/45 bg-[#FBF9F3]/80 px-4 py-3 text-left transition-colors hover:bg-[#F8F3E8]/90 sm:px-5 sm:py-3.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p
+                      className="text-[#1E2A35] leading-none"
+                      style={{
+                        fontFamily: "'Bebas Neue', sans-serif",
+                        fontSize: '1.1rem',
+                        letterSpacing: '0.06em',
+                      }}
+                    >
+                      Transaction details
                     </p>
-                    {requestReceipt ? (
-                      <p className="text-[#c49a3c] text-xs mt-2 font-medium">
-                        Printed copy requested — we&apos;ll have it ready at the studio.
-                      </p>
+                    <span className="rounded-full border border-[#D4CDB5]/70 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9A8E7E]">
+                      Optional
+                    </span>
+                    {(reference.trim() || notes.trim()) && !transactionDetailsOpen ? (
+                      <span className="rounded-full border border-[#c49a3c]/35 bg-[#c49a3c]/10 px-2 py-0.5 text-[10px] font-semibold text-[#8a6824]">
+                        Added
+                      </span>
                     ) : null}
                   </div>
+                  <p className="text-[#8A7E6E] text-xs mt-1 leading-relaxed">
+                    Reference number and notes help us verify faster.
+                  </p>
                 </div>
-                <Switch
-                  checked={requestReceipt}
-                  onCheckedChange={setRequestReceipt}
-                  aria-label="Request physical receipt"
-                  className="data-[state=checked]:bg-[#c49a3c] data-[state=unchecked]:bg-[#D4CDB5] h-6 w-11 [&_[data-slot=switch-thumb]]:size-5"
+                <ChevronDown
+                  size={18}
+                  className={cn(
+                    'mt-0.5 shrink-0 text-[#9A8E7E] transition-transform duration-200',
+                    transactionDetailsOpen && 'rotate-180',
+                  )}
+                  aria-hidden
                 />
+              </button>
+              <div
+                id="transaction-details-panel"
+                role="region"
+                aria-labelledby="transaction-details-trigger"
+                hidden={!transactionDetailsOpen}
+              >
+                <div className="p-4 sm:p-5">
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <label
+                        htmlFor="payment-reference"
+                        className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E] mb-2"
+                      >
+                        Reference / transaction number
+                      </label>
+                      <input
+                        id="payment-reference"
+                        type="text"
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder="e.g. GCash-2026041234567"
+                        className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#FBF9F3] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/30 focus:border-[#c49a3c]/50 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="payment-notes"
+                        className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E] mb-2"
+                      >
+                        Notes for our team
+                      </label>
+                      <textarea
+                        id="payment-notes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        rows={3}
+                        placeholder="Anything else we should know…"
+                        className="w-full rounded-xl border border-[#D4CDB5]/70 px-4 py-3 text-sm text-[#1E2A35] bg-[#FBF9F3] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-[#c49a3c]/30 focus:border-[#c49a3c]/50 transition-all resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </SectionCard>
+            </section>
+            </>
+            ) : null}
 
             <div className="hidden lg:block rounded-2xl border border-[#D4CDB5]/60 bg-white p-5 shadow-sm">
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || !canSubmitCheckout}
                 className="action-button w-full flex items-center justify-center gap-2 bg-[#c49a3c] text-white rounded-full py-3.5 text-sm font-bold shadow-[0_4px_18px_rgba(196,154,60,0.32)] hover:bg-[#a67f2e] active:scale-[0.98] transition-all disabled:opacity-60 disabled:pointer-events-none"
               >
-                {submitting ? 'Submitting…' : 'Submit for verification'}
+                {submitting
+                  ? 'Submitting…'
+                  : checkoutMode === 'credit'
+                    ? 'Confirm with 1 credit'
+                    : 'Submit for verification'}
                 <ChevronRight size={18} />
               </button>
               <p className="text-[#B0A898] text-[11px] text-center mt-3 leading-relaxed">
-                By submitting, you confirm the payment details are accurate. Verification usually within 24 hours.
+                {checkoutMode === 'credit'
+                  ? 'Your credit balance updates right away and enrollment is confirmed.'
+                  : hasPaymentProof
+                    ? 'By submitting, you confirm the payment details are accurate. Verification usually within 24 hours.'
+                    : 'Upload proof of payment above to enable submission.'}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="fixed bottom-0 inset-x-0 z-50 border-t border-[#D4CDB5]/60 bg-[#FBF9F3]/95 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden shadow-[0_-8px_24px_rgba(30,42,53,0.08)]">
-        <div className="max-w-6xl mx-auto flex items-center gap-3">
+      <div className="fixed bottom-0 inset-x-0 z-50 pointer-events-none lg:hidden">
+        <div className="max-w-6xl mx-auto flex items-center gap-3 border-t border-[#D4CDB5]/60 bg-[#FBF9F3]/95 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(30,42,53,0.08)] pointer-events-auto">
           <div className="min-w-0 shrink">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#9A8E7E]">Due</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#9A8E7E]">
+              {checkoutMode === 'credit' ? 'Cost' : 'Due'}
+            </p>
             <p
               className="text-[#c49a3c] leading-none tabular-nums truncate"
               style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem' }}
             >
-              {amountDisplay}
+              {checkoutMode === 'credit' ? '1 credit' : amountDisplay}
             </p>
           </div>
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !canSubmitCheckout}
             className="action-button flex-1 flex items-center justify-center gap-1.5 bg-[#c49a3c] text-white rounded-full py-3 text-sm font-bold hover:bg-[#a67f2e] active:scale-[0.98] transition-all min-w-0 disabled:opacity-60 disabled:pointer-events-none"
           >
-            {submitting ? 'Submitting…' : 'Submit'}
+            {submitting ? 'Submitting…' : checkoutMode === 'credit' ? 'Use credit' : 'Submit'}
             <ChevronRight size={16} />
           </button>
         </div>

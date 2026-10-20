@@ -17,14 +17,19 @@ import StaffBulletinPage from './pages/StaffBulletinPage';
 import MemberServicesPage from './pages/MemberServicesPage';
 import LoginChoicePage from './pages/LoginChoicePage';
 import LoginPage from './pages/LoginPage';
+import MemberForgotPasswordPage from './pages/MemberForgotPasswordPage';
+import InternalForgotPasswordPage from './pages/InternalForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import SignupPage from './pages/SignupPage';
 import MemberDashboardPage from './pages/MemberDashboardPage';
 import MemberClasses from './pages/MemberClasses';
 import MemberClassSchedule from './pages/MemberClassSchedule';
 import MemberGuidelinesPage from './pages/MemberGuidelinesPage';
-import MemberSubscription from './pages/MemberSubscription';
+import MemberCreditsPage from './pages/MemberCreditsPage';
+import MemberCreditsCheckoutPage from './pages/MemberCreditsCheckoutPage';
 import PerformancePage from './pages/PerformancePage';
-import FeedbackPage from './pages/FeedbackPage';
+import CoachFeedbackPage from './pages/CoachFeedbackPage';
+import DevFeedbackPage from './pages/DevFeedbackPage';
 import MemberFeedbackPage from './pages/MemberFeedbackPage';
 import AdminFeedbackPage from './pages/AdminFeedbackPage';
 import MemberPaymentPortal from './pages/MemberPaymentPortal';
@@ -45,8 +50,9 @@ import AdminTimeBlockingPage from './pages/AdminTimeBlockingPage';
 import AdminClassSchedulePage from './pages/AdminClassSchedulePage';
 import AdminCoachRequestsPage from './pages/AdminCoachRequestsPage';
 import AdminPaymentsPage from './pages/AdminPaymentsPage';
+import AdminOfficialReceiptsPage from './pages/AdminOfficialReceiptsPage';
 import AdminPaymentChannelsPage from './pages/AdminPaymentChannelsPage';
-import AdminFinancialMetricsPage from './pages/AdminFinancialMetricsPage';
+import AdminCreditsPage from './pages/AdminCreditsPage';
 import AdminGalleryPage from './pages/AdminGalleryPage';
 import AdminAmenitiesPage from './pages/AdminAmenitiesPage';
 import AdminSubscriptionsPage from './pages/AdminSubscriptionsPage';
@@ -73,10 +79,12 @@ import FrontdeskPoliciesPage from './pages/FrontdeskPoliciesPage';
 import FrontdeskFeedbackPage from './pages/FrontdeskFeedbackPage';
 import FrontdeskAccountPage from './pages/FrontdeskAccountPage';
 import FrontdeskDashboardPage from './pages/FrontdeskDashboardPage';
+import FrontdeskGalleryPage from './pages/FrontdeskGalleryPage';
+import FrontdeskAmenitiesPage from './pages/FrontdeskAmenitiesPage';
+import FrontdeskBulletinPage from './pages/FrontdeskBulletinPage';
 import MarketingDashboardPage from './pages/MarketingDashboardPage';
 import MarketingGalleryPage from './pages/MarketingGalleryPage';
 import MarketingAmenitiesPage from './pages/MarketingAmenitiesPage';
-import MarketingBulletinPage from './pages/MarketingBulletinPage';
 import MarketingAccountPage from './pages/MarketingAccountPage';
 import MarketingFeedbackPage from './pages/MarketingFeedbackPage';
 import StaffAvailabilityPage from './pages/StaffAvailabilityPage';
@@ -126,6 +134,7 @@ export const router = createBrowserRouter([
               { path: 'events', Component: EventsPage },
               { path: 'auth', Component: LoginChoicePage },
               { path: 'login', Component: LoginPage },
+              { path: 'member-forgot-password', Component: MemberForgotPasswordPage },
               { path: 'signup', Component: SignupPage },
               { path: 'profile-setup', element: <Navigate to="/profile" replace /> },
               { path: 'book', element: <Navigate to="/class-schedule" replace /> },
@@ -142,7 +151,9 @@ export const router = createBrowserRouter([
               { path: 'documents', element: <Navigate to="/profile" replace /> },
               { path: 'payment-history', Component: MemberPaymentHistoryPage },
               { path: 'performance', Component: PerformancePage },
-              { path: 'subscriptions', Component: MemberSubscription },
+              { path: 'subscriptions', element: <Navigate to="/credits" replace /> },
+              { path: 'credits', Component: MemberCreditsPage },
+              { path: 'credits/checkout', Component: MemberCreditsCheckoutPage },
               { path: 'my-classes', Component: MemberClasses },
               { path: 'class-schedule', Component: MemberClassSchedule },
               { path: 'member-payment-portal', Component: MemberPaymentPortal },
@@ -155,6 +166,8 @@ export const router = createBrowserRouter([
             ],
           },
           { path: 'staff-login', Component: StaffLoginPage },
+          { path: 'internal-forgot-password', Component: InternalForgotPasswordPage },
+          { path: 'reset-password', Component: ResetPasswordPage },
           {
             Component: StaffSiteLayout,
             children: [
@@ -169,7 +182,7 @@ export const router = createBrowserRouter([
               { path: 'staff-availability', Component: StaffAvailabilityPage },
               { path: 'staff-profile', Component: StaffProfileRoutePage },
               { path: 'staff-bulletin', Component: StaffBulletinPage },
-              { path: 'staff-feedback', Component: FeedbackPage },
+              { path: 'staff-feedback', Component: CoachFeedbackPage },
             ],
           },
           { path: 'admin-login', Component: AdminLoginPage },
@@ -179,12 +192,14 @@ export const router = createBrowserRouter([
             children: [
               { path: 'admin-dashboard', Component: AdminDashboardPage },
               { path: 'admin-account', Component: AdminAccountPage },
-              { path: 'admin-financial-metrics', Component: AdminFinancialMetricsPage },
+              { path: 'admin-credits', Component: AdminCreditsPage },
+              { path: 'admin-financial-metrics', element: <Navigate to="/admin-credits" replace /> },
               { path: 'admin-staff', Component: AdminStaffPage },
               { path: 'admin-coaches', Component: AdminCoachesPage },
               { path: 'admin-students', Component: AdminStudentsPage },
               { path: 'admin-schedule', Component: AdminTimeBlockingPage },
               { path: 'admin-payments', Component: AdminPaymentsPage },
+              { path: 'admin-official-receipts', Component: AdminOfficialReceiptsPage },
               { path: 'admin-payment-channels', Component: AdminPaymentChannelsPage },
               { path: 'admin-gallery', Component: AdminGalleryPage },
               { path: 'admin-amenities', Component: AdminAmenitiesPage },
@@ -212,6 +227,9 @@ export const router = createBrowserRouter([
               { path: 'frontdesk-classes', Component: FrontdeskClassSchedulePage },
               { path: 'frontdesk-bookings', Component: FrontdeskBookingsPage },
               { path: 'frontdesk-cancellations', Component: FrontdeskCancellationsPage },
+              { path: 'frontdesk-gallery', Component: FrontdeskGalleryPage },
+              { path: 'frontdesk-amenities', Component: FrontdeskAmenitiesPage },
+              { path: 'frontdesk-bulletin', Component: FrontdeskBulletinPage },
               { path: 'frontdesk-payments', Component: FrontdeskPaymentsPage },
               { path: 'frontdesk-policies', Component: FrontdeskPoliciesPage },
               { path: 'frontdesk-feedback', Component: FrontdeskFeedbackPage },
@@ -225,7 +243,7 @@ export const router = createBrowserRouter([
               { path: 'marketing-account', Component: MarketingAccountPage },
               { path: 'marketing-gallery', Component: MarketingGalleryPage },
               { path: 'marketing-amenities', Component: MarketingAmenitiesPage },
-              { path: 'marketing-bulletin', Component: MarketingBulletinPage },
+              { path: 'marketing-bulletin', element: <Navigate to="/marketing-dashboard" replace /> },
               { path: 'marketing-feedback', Component: MarketingFeedbackPage },
             ],
           },
@@ -235,10 +253,7 @@ export const router = createBrowserRouter([
           { path: 'development/dashboard', Component: DevDashboardPage },
           { path: 'development/account', Component: DevAccountPage },
           { path: 'development/tickets', Component: DevTicketsPage },
-          { path: 'development/feedback', Component: FeedbackPage },
-          { path: 'development/ai-setup', Component: DevAiSetupPage },
-          { path: 'development/logs/accounts', Component: DevAccountLogsPage },
-          { path: 'development/logs/profiles', Component: DevProfileLogsPage },
+          { path: 'development/feedback', Component: DevFeedbackPage },
           { path: 'development/logs/disciplines', Component: DevDisciplineLogsPage },
           { path: 'development/logs/classes', Component: DevClassLogsPage },
           { path: 'development/logs/bulletin', Component: DevBulletinLogsPage },

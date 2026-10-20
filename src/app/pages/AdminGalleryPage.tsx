@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { ChevronDown, Images, Pencil, Trash2, X, Check, Upload, Star, Home, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 import { IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 import { GalleryLightbox } from '../components/gallery/GalleryLightbox';
@@ -263,6 +264,7 @@ export default function AdminGalleryPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
+  const urlSearchQuery = useAdminUrlSearchQuery();
   const [posts, setPosts] = useState<GalleryPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTags, setSelectedTags] = useState<GalleryTag[]>([]);
@@ -300,9 +302,10 @@ export default function AdminGalleryPage() {
 
   useEffect(() => {
     setTablePage(1);
-  }, [selectedTags, selectedFeatures]);
+  }, [selectedTags, selectedFeatures, urlSearchQuery]);
 
   const filtered = useMemo(() => {
+    const q = urlSearchQuery.trim().toLowerCase();
     return posts.filter((p) => {
       const matchTag = selectedTags.length === 0 || selectedTags.includes(p.tag);
       const matchFeature =
@@ -310,9 +313,13 @@ export default function AdminGalleryPage() {
           || (selectedFeatures.includes('gallery') && p.featuredInGallery)
           || (selectedFeatures.includes('home') && p.featuredInHomeStudio && p.tag === 'Studio')
           || (selectedFeatures.includes('amenities') && p.featuredInAmenities && p.tag === 'Amenities');
-      return matchTag && matchFeature;
+      const matchQuery =
+        !q
+        || p.caption.toLowerCase().includes(q)
+        || p.tag.toLowerCase().includes(q);
+      return matchTag && matchFeature && matchQuery;
     });
-  }, [posts, selectedTags, selectedFeatures]);
+  }, [posts, selectedTags, selectedFeatures, urlSearchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(tablePage, totalPages);

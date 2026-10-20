@@ -4,6 +4,7 @@ import {
   fetchClassPaymentReceiptHtml,
   markClassPaymentReceiptPrinted,
 } from '../../../lib/class-payment-service';
+import { wrapReceiptHtmlForOverlayPreview } from '../../../lib/class-payment-receipt-html';
 
 function printHtmlDocument(html: string): void {
   const iframe = document.createElement('iframe');
@@ -56,6 +57,7 @@ export function ClassPaymentReceiptPrintModal({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [printing, setPrinting] = useState(false);
+  const [previewFrameHeight, setPreviewFrameHeight] = useState<number | null>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -80,11 +82,43 @@ export function ClassPaymentReceiptPrintModal({
 
   useEffect(() => {
     if (!html || !previewRef.current) return;
-    const doc = previewRef.current.contentDocument;
+    const iframe = previewRef.current;
+    const doc = iframe.contentDocument;
     if (!doc) return;
+
+    const previewHtml = wrapReceiptHtmlForOverlayPreview(html);
     doc.open();
-    doc.write(html);
+    doc.write(previewHtml);
     doc.close();
+
+    const fitPreview = () => {
+      const contentH = Math.max(
+        doc.documentElement?.scrollHeight ?? 0,
+        doc.body?.scrollHeight ?? 0,
+      );
+      if (contentH <= 0) return;
+
+      const paperWidth = 560;
+      iframe.style.width = `${paperWidth}px`;
+      iframe.style.maxWidth = '100%';
+      iframe.style.height = `${contentH}px`;
+      iframe.style.transform = 'none';
+
+      const reservedVertical = 240;
+      const maxH = window.innerHeight - reservedVertical;
+      if (contentH > maxH && maxH > 160) {
+        const scale = maxH / contentH;
+        iframe.style.transform = `scale(${scale})`;
+        iframe.style.transformOrigin = 'top center';
+        setPreviewFrameHeight(Math.ceil(contentH * scale));
+      } else {
+        setPreviewFrameHeight(contentH);
+      }
+    };
+
+    requestAnimationFrame(fitPreview);
+    window.addEventListener('resize', fitPreview);
+    return () => window.removeEventListener('resize', fitPreview);
   }, [html]);
 
   const handlePrint = useCallback(async () => {
@@ -113,77 +147,86 @@ export function ClassPaymentReceiptPrintModal({
     URL.revokeObjectURL(url);
   }, [html, paymentUid]);
 
+  const overlayBtn =
+    'py-3 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 border border-white/25 text-white hover:bg-white/10';
+
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 overflow-y-auto"
-      style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 overflow-hidden"
+      style={{ backgroundColor: 'rgba(18, 26, 34, 0.88)', backdropFilter: 'blur(8px)' }}
+      role="presentation"
+      onClick={onClose}
     >
-      <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-lg my-4 flex flex-col max-h-[min(92vh,820px)]">
-        <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between shrink-0">
-          <div>
-            <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Official receipt</p>
-            <h3
-              className="text-[#1E2A35]"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
-            >
-              {paymentUid}
-            </h3>
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed top-4 right-4 z-[61] w-10 h-10 rounded-xl text-white/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+        aria-label="Close receipt preview"
+      >
+        <X size={20} />
+      </button>
+
+      <div
+        className="relative w-full max-w-[540px] flex flex-col items-center gap-5 my-auto"
+        role="dialog"
+        aria-labelledby="receipt-preview-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="text-center shrink-0 pt-2">
+          <p className="text-white/65 text-xs uppercase tracking-[0.2em] mb-1">Official Receipt</p>
+          <h3
+            id="receipt-preview-title"
+            className="text-white"
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.08em' }}
+          >
+            {paymentUid}
+          </h3>
+        </header>
+
+        {emailSent && (
+          <div className="flex items-start gap-2 text-center max-w-md shrink-0">
+            <Mail size={14} className="text-emerald-300 shrink-0 mt-0.5" />
+            <p className="text-emerald-100/90 text-sm">
+              E-receipt sent to <span className="font-semibold text-white">{studentEmail}</span>
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all"
+        )}
+
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-20 text-white/70 text-sm">
+            <Loader2 size={18} className="animate-spin" />
+            Loading receipt…
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <p className="text-red-300 text-sm text-center py-8 max-w-sm">{loadError}</p>
+        )}
+
+        {!loading && html && (
+          <div
+            className="w-full max-w-[560px] overflow-hidden flex justify-center shrink-0"
+            style={previewFrameHeight != null ? { height: previewFrameHeight } : undefined}
           >
-            <X size={16} />
-          </button>
-        </div>
+            <iframe
+              ref={previewRef}
+              title="Receipt preview"
+              className="block border-0 bg-transparent shadow-[0_12px_48px_rgba(0,0,0,0.45)]"
+              sandbox="allow-same-origin"
+              scrolling="no"
+            />
+          </div>
+        )}
 
-        <div className="px-7 py-4 flex flex-col gap-3 min-h-0 flex-1 overflow-hidden">
-          {emailSent && (
-            <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 shrink-0">
-              <Mail size={14} className="text-green-600 shrink-0 mt-0.5" />
-              <p className="text-green-700 text-sm">
-                E-receipt sent to <span className="font-semibold">{studentEmail}</span>
-              </p>
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center gap-2 py-16 text-[#8A7E6E] text-sm">
-              <Loader2 size={18} className="animate-spin" />
-              Loading receipt…
-            </div>
-          )}
-
-          {!loading && loadError && (
-            <p className="text-red-600 text-sm text-center py-8">{loadError}</p>
-          )}
-
-          {!loading && html && (
-            <div className="rounded-2xl border border-[#D4CDB5]/50 bg-[#eceae4] overflow-hidden flex-1 min-h-[280px]">
-              <iframe
-                ref={previewRef}
-                title="Receipt preview"
-                className="w-full h-full min-h-[280px] border-0 bg-[#eceae4]"
-                sandbox="allow-same-origin"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="px-7 pb-7 flex gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all"
-          >
+        <div className="flex gap-3 w-full max-w-md shrink-0 pb-2">
+          <button type="button" onClick={onClose} className={`flex-1 ${overlayBtn}`}>
             Close
           </button>
           <button
             type="button"
             disabled={!html || printing}
             onClick={handleDownload}
-            className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] transition-all disabled:opacity-50"
+            className={`flex-1 ${overlayBtn}`}
           >
             Download
           </button>
@@ -191,7 +234,7 @@ export function ClassPaymentReceiptPrintModal({
             type="button"
             disabled={!html || printing}
             onClick={() => void handlePrint()}
-            className="action-button flex-[1.2] py-3 rounded-full bg-[#1E2A35] text-white hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
+            className="action-button flex-[1.2] py-3 rounded-full bg-[#c49a3c] text-[#1E2A35] hover:bg-[#d4ab4d] transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 font-bold text-sm"
           >
             {printing ? (
               <>

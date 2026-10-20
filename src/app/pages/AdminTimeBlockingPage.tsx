@@ -33,6 +33,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 import { PageLoadingScreen } from '../components/layout/PageLoadingScreen';
+import { useClassesScheduleRealtimeSync } from '../hooks/useClassesScheduleRealtime';
 import {
   fetchDisciplinesForAdmin,
   fetchDisciplinesForPublic,
@@ -52,7 +53,11 @@ import {
 } from '../../lib/operation-toast';
 import {
   fetchPortalRequests,
+  fetchCancellationPortalRequests,
+  fetchPortalRequestsForClass,
   fetchMyPortalRequests,
+  mergePortalRequestRows,
+  portalRequestMatchesClassId,
   classIdsWithPendingPortalRequests,
   myPendingSlotRequestClassIds,
   myPendingSlotRequestIdForClass,
@@ -60,22 +65,26 @@ import {
   withdrawPortalRequest,
   PORTAL_REQUESTS_CHANGED,
   reviewPortalRequest,
+  isClassCancellationShortNotice,
   portalRequestStatusBadgeClass,
   type PortalRequestRow,
   type PortalRequestStatus,
 } from '../../lib/portal-request-service';
 import {
   CLASS_BLOCK_STATUSES,
+  isTerminalClassBlockStatus,
+  MEMBER_SCHEDULE_VISIBLE_BLOCK_STATUSES,
   classToUpsertInput,
   createClass,
   deleteClass,
   fetchClassesForAdmin,
   fetchClassesForMemberSchedule,
+  fetchClassesForPublicSchedule,
+  classSessionHasStarted,
   fetchClassesForStaffSchedule,
   updateClass,
   type ClassBlockStatus,
   type ClassDisplay,
-  type ClassOpenStatus,
   type ClassUpsertInput,
 } from '../../lib/class-service';
 import {
@@ -92,10 +101,22 @@ import {
   type ClassPersonOption,
 } from '../components/classes/AdminClassModal';
 import {
+  StaffCancellationRequestModal,
+  type StaffCancellationRequestContext,
+} from '../components/classes/StaffCancellationRequestModal';
+import {
   StaffSlotRequestModal,
   type StaffSlotRequestContext,
 } from '../components/classes/StaffSlotRequestModal';
 import { PendingPortalRequestWithdrawActions } from '../components/portal/PendingPortalRequestWithdrawActions';
+import { ClassBlockStatusLegend } from '../components/schedule/ClassBlockStatusLegend';
+import {
+  blockMatchesClassScheduleFilters,
+  ClassScheduleCalendarFilter,
+  countClassScheduleFilterSelections,
+  emptyClassScheduleCalendarFilters,
+  type ClassScheduleCalendarFilters,
+} from '../components/schedule/ClassScheduleCalendarFilter';
 import {
   allClassesToBlocks,
   buildDisciplineClassColors,
@@ -103,12 +124,12 @@ import {
   coachDisplayShort,
   localMinutesFromIso,
   mergeScheduleBlock,
-  OPERATIONS_BLOCK_FILLS,
   provisionalScheduleBlock,
   type AdminScheduleBlock,
   type ScheduleBlockColorMode,
 } from '../../lib/admin-schedule-map';
 import { findOverlappingScheduleRow } from '../../lib/schedule-overlap';
+import { sendScheduleCoachAssignedEmail } from '../../lib/schedule-coach-email';
 import {
   CALENDAR_BORDER_DIVIDER,
   CALENDAR_DATE_MUTED,
@@ -143,7 +164,13 @@ import {
   minutesFromIsoLocal,
   snapMinutesToStep,
 } from '../components/calendar/clock-time';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../components/ui/sheet';
 import {
   MONTH_NAMES,
   addDaysToDate,
@@ -329,6 +356,7 @@ function PortalPersonAvatar({
 
 interface CancelRequest {
   id: string;
+  isMemberEnrollmentCancel: boolean;
   coach: string;
   email: string;
   requesterPhoto: string;
@@ -442,10 +470,12 @@ function mapPortalCancellationRequest(
     : 0;
 
   const disciplineName = disciplineMeta.name || classRow?.disciplineName || '—';
+  const isMember = req.request_type === 'member_enrollment_cancellation';
 
   return {
     id: req.id,
-    coach: requesterLabel.name,
+    isMemberEnrollmentCancel: isMember,
+    coach: isMember ? `Member · ${requesterLabel.name}` : requesterLabel.name,
     email: requesterLabel.email,
     requesterPhoto: requesterLabel.photo?.trim() ?? '',
     className: classRow?.name || classRow?.disciplineName || 'Class',
@@ -477,8 +507,9 @@ const DEFAULT_START_MINUTES = 9 * 60;
 const DEFAULT_END_MINUTES = 10 * 60;
 
 /** Staff calendar: vacant block with the coach's pending slot request. */
-const STAFF_VACANT_REQUESTED_COLOR = '#D4A84B';
-const STAFF_VACANT_REQUESTED_RING = '#B8862E';
+/** Pending coach slot request — green, distinct from status_block fills (assigned/active/etc.). */
+const STAFF_VACANT_REQUESTED_COLOR = '#6B8E6B';
+const STAFF_VACANT_REQUESTED_RING = '#5A7A5A';
 /** Staff vacant-slot modal header when a pending slot request exists. */
 const STAFF_SLOT_REQUESTED_HEADER_BG = '#6B8E6B';
 const STAFF_SLOT_REQUESTED_HEADER_BORDER = '#5A7A5A';
@@ -488,31 +519,37 @@ const BLOCK_STATUS_LABELS: Record<
   string
 > = {
   vacant: 'Vacant',
-  occupied: 'Occupied',
+  assigned: 'Assigned',
   active: 'Active',
-  closed: 'Closed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
-function isStaffClassScheduleVisibleBlock(block: ScheduleBlock): boolean {
-  return block.statusBlock === 'occupied' || block.statusBlock === 'active';
+function isStaffClassScheduleVisibleBlock(
+  block: ScheduleBlock,
+  pendingSlotRequestClassIds: ReadonlySet<string>,
+): boolean {
+  if (block.statusBlock === 'assigned' || block.statusBlock === 'active') return true;
+  return block.statusBlock === 'vacant' && pendingSlotRequestClassIds.has(block.id);
 }
 
 function isAssignedScheduleBlock(statusBlock: ClassBlockStatus): boolean {
   return statusBlock !== 'vacant';
 }
 
-function isMemberClassScheduleVisibleBlock(block: ScheduleBlock): boolean {
-  return block.statusBlock === 'active';
+function scheduleBlockIncludesCoachAccount(
+  block: ScheduleBlock,
+  coachAccountId: string | undefined,
+): boolean {
+  const id = coachAccountId?.trim();
+  if (!id) return false;
+  if (block.coachAccountIds?.some((coachId) => coachId.trim() === id)) return true;
+  return block.coachAccountId?.trim() === id;
 }
 
-const CLASS_OPEN_STATUS_LABELS: Record<
-  import('../../lib/class-service').ClassOpenStatus,
-  string
-> = {
-  open: 'Open',
-  close: 'Closed',
-  pending: 'Pending',
-};
+function isMemberClassScheduleVisibleBlock(block: ScheduleBlock): boolean {
+  return MEMBER_SCHEDULE_VISIBLE_BLOCK_STATUSES.includes(block.statusBlock);
+}
 
 function classBlockStatusBadgeClass(
   status: import('../../lib/class-service').ClassBlockStatus,
@@ -520,28 +557,27 @@ function classBlockStatusBadgeClass(
   switch (status) {
     case 'vacant':
       return 'bg-[#F8F3E8] text-[#5A5048] border-[#D4CDB5] ring-1 ring-[#c49a3c]/25';
-    case 'occupied':
+    case 'assigned':
       return 'bg-amber-50 text-amber-900 border-amber-200 ring-1 ring-amber-300/40';
     case 'active':
       return 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300/40';
-    case 'closed':
+    case 'completed':
       return 'bg-[#1E2A35]/8 text-[#1E2A35] border-[#1E2A35]/15 ring-1 ring-[#1E2A35]/10';
+    case 'cancelled':
+      return 'bg-rose-50 text-rose-900 border-rose-200 ring-1 ring-rose-300/40';
     default:
       return 'bg-[#EDE8D8] text-[#5A5048] border-[#D4CDB5]';
   }
 }
 
-function classOpenStatusBadgeClass(status: ClassOpenStatus): string {
-  switch (status) {
-    case 'open':
-      return 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300/40';
-    case 'close':
-      return 'bg-[#1E2A35]/8 text-[#1E2A35] border-[#1E2A35]/15 ring-1 ring-[#1E2A35]/10';
-    case 'pending':
-      return 'bg-amber-50 text-amber-900 border-amber-200 ring-1 ring-amber-300/40';
-    default:
-      return 'bg-[#EDE8D8] text-[#5A5048] border-[#D4CDB5]';
-  }
+function classBookingLabel(open: boolean): string {
+  return open ? 'Open' : 'Closed';
+}
+
+function classBookingBadgeClass(open: boolean): string {
+  return open
+    ? 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300/40'
+    : 'bg-[#1E2A35]/8 text-[#1E2A35] border-[#1E2A35]/15 ring-1 ring-[#1E2A35]/10';
 }
 
 function ScheduleHourRangeFilter({
@@ -857,33 +893,6 @@ function disciplineDotColor(discipline: DisciplineDisplay): string {
   return hex || statusColorFromHue(discipline.status.hue);
 }
 
-function ScheduleOperationsColorLegend() {
-  const items = [
-    { label: 'Active', color: OPERATIONS_BLOCK_FILLS.active },
-    { label: 'Open', color: OPERATIONS_BLOCK_FILLS.open },
-    { label: 'Occupied', color: OPERATIONS_BLOCK_FILLS.occupied },
-    { label: 'Close', color: OPERATIONS_BLOCK_FILLS.close },
-  ] as const;
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      {items.map(({ label, color }) => (
-        <span
-          key={label}
-          className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#5A5048]"
-        >
-          <span
-            className="h-2.5 w-2.5 rounded-sm shadow-sm ring-1 ring-black/10"
-            style={{ backgroundColor: color }}
-            aria-hidden
-          />
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function CalendarDisciplineMultiSelect({
   disciplines: items,
   selectedIds,
@@ -1053,6 +1062,9 @@ function MemberClassBlockDetailModal({
   enrollHint,
   memberEnrollmentStatus,
   readOnly = false,
+  showMemberEnrollmentSummary = false,
+  onCancelSchedule,
+  cancelScheduleDisabled = false,
 }: {
   block: ScheduleBlock;
   classRow: ClassDisplay | null;
@@ -1066,9 +1078,16 @@ function MemberClassBlockDetailModal({
   memberEnrollmentStatus?: MemberClassEnrollmentStatus | null;
   /** Staff class schedule: same session details, no enrollment actions. */
   readOnly?: boolean;
+  /** Member schedule: show enrolled / waitlisted / not enrolled on past closed sessions. */
+  showMemberEnrollmentSummary?: boolean;
+  /** Staff: open schedule cancellation request for this assignment. */
+  onCancelSchedule?: () => void;
+  cancelScheduleDisabled?: boolean;
 }) {
   const { enrolled, limit, available } = slotCapacity;
   const capacityProgress = memberClassCapacityProgress(enrolled, limit);
+  /** `classes.status_class`: true = open for enrollment, false = closed. */
+  const enrollmentOpen = classRow?.statusClass ?? block.statusClass;
 
   return createPortal(
     <>
@@ -1079,14 +1098,21 @@ function MemberClassBlockDetailModal({
       />
       <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="pointer-events-auto flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-[#FBF9F3] shadow-2xl max-h-[min(90vh,36rem)]"
+          className="pointer-events-auto flex w-full max-w-md min-h-0 max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-[#FBF9F3] shadow-2xl"
           role="dialog"
           aria-modal="true"
           aria-labelledby="member-class-block-modal-title"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="h-1 shrink-0" style={{ backgroundColor: block.color }} />
-          {!readOnly && memberEnrollmentStatus === 'enrolled' ? (
+          <div
+            className="h-1 shrink-0"
+            style={{
+              backgroundColor: isTerminalClassBlockStatus(block.statusBlock)
+                ? '#A8A196'
+                : block.color,
+            }}
+          />
+          {showMemberEnrollmentSummary && memberEnrollmentStatus === 'enrolled' ? (
             <div className="shrink-0 flex items-center gap-2 border-b border-emerald-200/80 bg-emerald-50 px-4 py-2.5 text-emerald-900">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
                 <Check size={16} strokeWidth={2.75} aria-hidden />
@@ -1094,17 +1120,30 @@ function MemberClassBlockDetailModal({
               <div className="min-w-0">
                 <p className="text-xs font-bold leading-tight">You&apos;re enrolled in this class</p>
                 <p className="text-[10px] font-medium text-emerald-800/90 mt-0.5">
-                  View details below — enrollment is already confirmed.
+                  {isTerminalClassBlockStatus(block.statusBlock)
+                    ? 'This session has ended — your enrollment is on record.'
+                    : 'View details below — enrollment is already confirmed.'}
                 </p>
               </div>
             </div>
-          ) : !readOnly && memberEnrollmentStatus === 'waitlisted' ? (
+          ) : showMemberEnrollmentSummary && memberEnrollmentStatus === 'waitlisted' ? (
             <div className="shrink-0 flex items-center gap-2 border-b border-amber-200/80 bg-amber-50 px-4 py-2.5 text-amber-950">
               <Clock size={18} className="shrink-0 text-amber-700" strokeWidth={2.25} aria-hidden />
               <div className="min-w-0">
                 <p className="text-xs font-bold leading-tight">Payment pending — you&apos;re waitlisted</p>
                 <p className="text-[10px] font-medium text-amber-900/90 mt-0.5">
                   We&apos;ll confirm enrollment after your payment is reviewed.
+                </p>
+              </div>
+            </div>
+          ) : showMemberEnrollmentSummary && isTerminalClassBlockStatus(block.statusBlock) ? (
+            <div className="shrink-0 flex items-center gap-2 border-b border-[#D4CDB5]/60 bg-[#EDE8D8]/80 px-4 py-2.5 text-[#5A5048]">
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight">
+                  {block.statusBlock === 'cancelled' ? 'Session cancelled' : 'Session completed'}
+                </p>
+                <p className="text-[10px] font-medium text-[#8A7E6E] mt-0.5">
+                  You were not enrolled in this class.
                 </p>
               </div>
             </div>
@@ -1164,16 +1203,12 @@ function MemberClassBlockDetailModal({
                 </span>
               </div>
               <div className="rounded-xl border border-[#D4CDB5]/55 bg-white px-2.5 py-2 flex flex-col gap-1 min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#9A8E7E]">Class status</p>
-                {classRow?.statusClass ? (
-                  <span
-                    className={`self-start inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${classOpenStatusBadgeClass(classRow.statusClass)}`}
-                  >
-                    {CLASS_OPEN_STATUS_LABELS[classRow.statusClass]}
-                  </span>
-                ) : (
-                  <span className="text-[#B0A898] text-xs font-medium">—</span>
-                )}
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#9A8E7E]">Enrollment</p>
+                <span
+                  className={`self-start inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${classBookingBadgeClass(enrollmentOpen)}`}
+                >
+                  {classBookingLabel(enrollmentOpen)}
+                </span>
               </div>
             </div>
 
@@ -1255,13 +1290,34 @@ function MemberClassBlockDetailModal({
               <p className="text-[#8A7E6E] text-[10px] text-center leading-snug">{enrollHint}</p>
             ) : null}
             {readOnly ? (
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full py-2.5 rounded-xl border border-[#D4CDB5]/70 text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] transition-colors"
-              >
-                Close
-              </button>
+              onCancelSchedule ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={cancelScheduleDisabled}
+                    className="w-full py-2.5 rounded-xl border border-[#D4CDB5]/70 text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] transition-colors disabled:opacity-50"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelSchedule}
+                    disabled={cancelScheduleDisabled}
+                    className="w-full py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    Cancel Schedule
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-xl border border-[#D4CDB5]/70 text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] transition-colors"
+                >
+                  Close
+                </button>
+              )
             ) : (
               <div className="flex gap-2">
                 <button
@@ -1324,7 +1380,9 @@ function ScheduleBlockTimelineLabels({
   memberCapacity?: { available: number; limit: number; percent: number; barColor: string } | null;
 }) {
   const statusLabel = staffRequestPending ? 'Requested' : BLOCK_STATUS_LABELS[block.statusBlock];
-  const useDarkText = scheduleBlockUsesDarkText(isVacant, fillColor);
+  const useDarkText = staffRequestPending
+    ? false
+    : scheduleBlockUsesDarkText(isVacant, fillColor);
 
   if (memberCapacity) {
     const displayName = scheduleBlockDisplayName(block);
@@ -1472,13 +1530,13 @@ function ScheduleBlockTimelineLabels({
       <p className={timeClass}>{timeRange}</p>
       <p className={statusClass}>
         {statusLabel}
-        {block.statusClass === 'close' ? (
+        {!block.statusClass ? (
           <span
             className={`ml-1 rounded-full px-1 py-px text-[9px] font-bold ${
               useDarkText ? 'bg-[#5A5048]/15 text-[#5A5048]' : 'bg-black/35 text-white'
             }`}
           >
-            Close
+            Closed
           </span>
         ) : null}
       </p>
@@ -1508,6 +1566,7 @@ function ScheduleTimelineBlockCard({
   density,
   isVacant,
   staffRequestPending = false,
+  staffCoachAssignedToYou = false,
   adminPendingPortalRequest = false,
   isClosedBlock = false,
   variant,
@@ -1525,6 +1584,8 @@ function ScheduleTimelineBlockCard({
   density: 'timeline' | 'panel';
   isVacant: boolean;
   staffRequestPending?: boolean;
+  /** Staff time slots: logged-in coach is on this block's roster. */
+  staffCoachAssignedToYou?: boolean;
   /** Admin class schedule: pending slot/cancellation request on this class. */
   adminPendingPortalRequest?: boolean;
   isClosedBlock?: boolean;
@@ -1559,9 +1620,15 @@ function ScheduleTimelineBlockCard({
 
   const vacantRequested = isVacant && staffRequestPending;
 
+  const memberClosedOnCalendar =
+    emphasizeMemberEnrollment && isClosedBlock && !isVacant;
+
   const memberEnrollmentMarked =
-    emphasizeMemberEnrollment && memberSelfEnrollment && !isVacant;
+    emphasizeMemberEnrollment
+    && !isVacant
+    && (memberSelfEnrollment != null || memberClosedOnCalendar);
   const memberEnrolled = memberSelfEnrollment === 'enrolled';
+  const memberWaitlisted = memberSelfEnrollment === 'waitlisted';
 
   const memberTimelineShell = showMemberCapacity && variant === 'timeline';
   const timelinePositionClass = memberTimelineShell
@@ -1580,17 +1647,19 @@ function ScheduleTimelineBlockCard({
   } ${memberHighlightShell} ${
     disabled
       ? 'cursor-not-allowed opacity-55 saturate-[0.85] ring-black/10'
-      : memberEnrollmentMarked
-        ? ''
-        : vacantRequested
-          ? 'border-2 border-solid ring-2 shadow-sm'
-          : isVacant
-            ? 'border-2 border-dashed border-[#7A7268] bg-[#EDE8D8] ring-[#B8AB93]/60'
-            : variant === 'panel'
-              ? 'border border-[#D4CDB5]/40'
-              : isClosedBlock
-                ? 'opacity-70 ring-black/20'
-                : 'ring-black/25 hover:ring-black/35'
+      : memberClosedOnCalendar
+        ? 'cursor-pointer opacity-[0.82] grayscale-[0.5] saturate-[0.4] ring-black/15 hover:opacity-90'
+        : memberEnrollmentMarked
+          ? ''
+          : vacantRequested
+            ? 'border-2 border-solid ring-2 shadow-sm'
+            : isVacant
+              ? 'border-2 border-dashed border-[#7A7268] bg-[#EDE8D8] ring-[#B8AB93]/60'
+              : variant === 'panel'
+                ? 'border border-[#D4CDB5]/40'
+                : isClosedBlock
+                  ? 'opacity-70 ring-black/20'
+                  : 'ring-black/25 hover:ring-black/35'
   }`;
 
   const style = {
@@ -1599,7 +1668,9 @@ function ScheduleTimelineBlockCard({
       ? STAFF_VACANT_REQUESTED_COLOR
       : isVacant
         ? undefined
-        : block.color,
+        : memberClosedOnCalendar
+          ? '#A8A196'
+          : block.color,
     ...(vacantRequested
       ? {
           borderColor: STAFF_VACANT_REQUESTED_RING,
@@ -1613,7 +1684,7 @@ function ScheduleTimelineBlockCard({
       block={block}
       timeRange={timeRange}
       isVacant={isVacant}
-      fillColor={blockFillColor}
+      fillColor={vacantRequested ? STAFF_VACANT_REQUESTED_COLOR : blockFillColor}
       staffRequestPending={staffRequestPending}
       compact={compact}
       density={density}
@@ -1640,7 +1711,7 @@ function ScheduleTimelineBlockCard({
         <Check size={9} strokeWidth={2.5} aria-hidden className="shrink-0" />
         <span className="truncate">Enrolled</span>
       </span>
-    ) : (
+    ) : memberWaitlisted ? (
       <span
         className="pointer-events-none absolute top-0.5 right-0.5 z-[3] inline-flex max-w-[calc(100%-6px)] items-center gap-0.5 rounded px-1 py-px text-[8px] font-bold uppercase leading-none tracking-wide text-white bg-amber-600/95 shadow-sm ring-1 ring-white/80"
         title="Payment pending — waitlisted"
@@ -1649,7 +1720,15 @@ function ScheduleTimelineBlockCard({
         <Clock size={9} strokeWidth={2.5} aria-hidden className="shrink-0" />
         <span className="truncate">Waitlist</span>
       </span>
-    )
+    ) : memberClosedOnCalendar ? (
+      <span
+        className="pointer-events-none absolute top-0.5 right-0.5 z-[3] inline-flex max-w-[calc(100%-6px)] items-center rounded px-1 py-px text-[8px] font-bold uppercase leading-none tracking-wide text-[#5A5048] bg-white/90 shadow-sm ring-1 ring-[#D4CDB5]/80"
+        title="You were not enrolled in this class"
+        aria-label="Not enrolled in this class"
+      >
+        <span className="truncate">Not enrolled</span>
+      </span>
+    ) : null
   ) : null;
 
   const pendingRequestIndicator = adminPendingPortalRequest ? (
@@ -1658,6 +1737,18 @@ function ScheduleTimelineBlockCard({
       title="Pending request"
       aria-label="Pending request"
     />
+  ) : null;
+
+  const staffCoachAssignedIndicator = staffCoachAssignedToYou ? (
+    <span
+      className={`pointer-events-none absolute z-[3] flex shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm ring-2 ring-white/90 ${
+        compact ? 'top-0.5 right-0.5 h-4 w-4' : 'top-1 right-1 h-5 w-5'
+      }`}
+      title="Assigned to you"
+      aria-label="Assigned to you"
+    >
+      <UserCheck size={compact ? 9 : 11} strokeWidth={2.5} aria-hidden />
+    </span>
   ) : null;
 
   if (variant === 'panel') {
@@ -1677,6 +1768,7 @@ function ScheduleTimelineBlockCard({
         {memberEnrollmentAccentBar}
         {memberEnrollmentTopRightBadge}
         {pendingRequestIndicator}
+        {staffCoachAssignedIndicator}
         {labels}
       </button>
     );
@@ -1705,6 +1797,7 @@ function ScheduleTimelineBlockCard({
       {memberEnrollmentAccentBar}
       {memberEnrollmentTopRightBadge}
       {pendingRequestIndicator}
+      {staffCoachAssignedIndicator}
       {labels}
     </div>
   );
@@ -1754,10 +1847,13 @@ type ClassScheduleBlockPanelTab = 'info' | 'slot-requests' | 'cancellations';
 export default function AdminTimeBlockingPage({
   variant = 'time-blocking',
   onPublicBlockActivate,
+  showClassBlockStatusLegend = false,
 }: {
   variant?: SchedulePageVariant;
   /** Public class schedule: block tapped while browsing without member enroll UI. */
   onPublicBlockActivate?: (block: ScheduleBlock) => void;
+  /** Admin class schedule: multi-category calendar filter (discipline, status_block, status_class). */
+  showClassBlockStatusLegend?: boolean;
 }) {
   const isFrontdeskClassSchedule = variant === 'frontdesk-class-schedule';
   const isFrontdeskBookings = variant === 'frontdesk-bookings';
@@ -1768,6 +1864,11 @@ export default function AdminTimeBlockingPage({
   const isActiveClassCalendar = isMemberClassSchedule || isPublicClassSchedule;
   const isStaffClassSchedule = variant === 'staff-class-schedule';
   const isStaffTimeSlots = variant === 'staff-time-slots';
+  const useClassScheduleRealtimeSync =
+    variant === 'class-schedule'
+    || variant === 'staff-time-slots'
+    || variant === 'staff-class-schedule'
+    || variant === 'member-class-schedule';
   const isStaffSchedulePortal = isStaffClassSchedule || isStaffTimeSlots;
   const isReadOnlySchedule =
     isStaffSchedulePortal || isActiveClassCalendar || isFrontdeskClassSchedule;
@@ -1786,12 +1887,15 @@ export default function AdminTimeBlockingPage({
     : 'operations';
   const usesOperationsBlockColors = scheduleBlockColorMode === 'operations';
   const opensClassScheduleBlockPanel =
-    variant === 'class-schedule' || isMemberClassSchedule || isStaffClassSchedule;
+    variant === 'class-schedule'
+    || isMemberClassSchedule
+    || isStaffClassSchedule
+    || isStaffTimeSlots;
   const usesClassSessionDetailModal = isMemberClassSchedule || isStaffClassSchedule;
   const showCoachRequestTables = isCoachRequests;
   const isStaffVacantBlock = (block: ScheduleBlock) => block.statusBlock === 'vacant';
-  const isStaffBlockInteractive = (block: ScheduleBlock) =>
-    !isStaffTimeSlots || isStaffVacantBlock(block);
+  /** Staff time slots: all calendar blocks open the detail side panel. */
+  const isStaffBlockInteractive = (_block: ScheduleBlock) => true;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: memberUser } = useAuth();
@@ -1819,6 +1923,9 @@ export default function AdminTimeBlockingPage({
   const [loadingPortalRequests, setLoadingPortalRequests] = useState(false);
   const [showSlotRequestModal, setShowSlotRequestModal] = useState(false);
   const [slotRequestContext, setSlotRequestContext] = useState<StaffSlotRequestContext | null>(null);
+  const [showCancellationRequestModal, setShowCancellationRequestModal] = useState(false);
+  const [cancellationRequestContext, setCancellationRequestContext] =
+    useState<StaffCancellationRequestContext | null>(null);
   const [myPortalRequests, setMyPortalRequests] = useState<PortalRequestRow[]>([]);
   const [confirmWithdrawBlockSlot, setConfirmWithdrawBlockSlot] = useState(false);
   const [withdrawingBlockSlot, setWithdrawingBlockSlot] = useState(false);
@@ -1850,12 +1957,22 @@ export default function AdminTimeBlockingPage({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [selectedReqId, setSelectedReqId] = useState<string | null>(null);
   const [selectedCancelId, setSelectedCancelId] = useState<string | null>(null);
+  const [cancelApproveMode, setCancelApproveMode] = useState<'replace' | 'cancel_class'>('replace');
+  const [cancelReplacementCoachId, setCancelReplacementCoachId] = useState('');
   const [viewStartHour, setViewStartHour] = useState(SCHEDULE_START_HOUR);
   const [viewEndHour, setViewEndHour] = useState(SCHEDULE_END_HOUR);
   const [reqStatusFilter, setReqStatusFilter] = useState<'all' | ReqStatus>('all');
   const [cancelStatusFilter, setCancelStatusFilter] = useState<'all' | ReqStatus>('all');
   const [disciplineFilterIds, setDisciplineFilterIds] = useState<string[]>([]);
+  const [classScheduleFilters, setClassScheduleFilters] = useState<ClassScheduleCalendarFilters>(
+    emptyClassScheduleCalendarFilters,
+  );
   const [classAssignId, setClassAssignId] = useState<string | null>(null);
+  const [classAssignSession, setClassAssignSession] = useState<{
+    classId: string;
+    draft: ClassUpsertInput;
+    item: ClassDisplay;
+  } | null>(null);
   const [coachOptions, setCoachOptions] = useState<ClassPersonOption[]>([]);
   const [studentOptions, setStudentOptions] = useState<ClassPersonOption[]>([]);
 
@@ -1912,13 +2029,39 @@ export default function AdminTimeBlockingPage({
     }
   }, [classScheduleBlockPanelId]);
 
+  const closeClassAssignModal = useCallback(() => {
+    setClassAssignId(null);
+    setClassAssignSession(null);
+  }, []);
+
+  const openClassAssignModal = useCallback(
+    (classId: string) => {
+      const item = classesById.get(classId);
+      if (!item) return;
+      setClassAssignSession({
+        classId,
+        draft: classToUpsertInput(item),
+        item,
+      });
+      setClassAssignId(classId);
+    },
+    [classesById],
+  );
+
   useEffect(() => {
     if (!isClassSchedule || loadingSchedule) return;
     const assignId = searchParams.get('assign');
     if (!assignId || !classesById.has(assignId)) return;
-    setClassAssignId(assignId);
+    openClassAssignModal(assignId);
     setSearchParams({}, { replace: true });
-  }, [isClassSchedule, loadingSchedule, classesById, searchParams, setSearchParams]);
+  }, [
+    isClassSchedule,
+    loadingSchedule,
+    classesById,
+    searchParams,
+    setSearchParams,
+    openClassAssignModal,
+  ]);
 
   useEffect(() => {
     if (isCoachRequests) setLoadingSchedule(false);
@@ -1928,11 +2071,19 @@ export default function AdminTimeBlockingPage({
     if (!portalUser) return;
 
     if (isClassSchedule && !showCoachRequestTables) {
-      const [requestsResult, coachRows, userRows] = await Promise.all([
+      const [requestsResult, classesResult, coachRows, userRows] = await Promise.all([
         fetchPortalRequests(),
+        fetchClassesForAdmin(),
         fetchManagedAccountsWithProfiles('coach'),
         fetchManagedAccountsWithProfiles('user'),
       ]);
+      if (classesResult.data) {
+        setClassesById((prev) => {
+          const byId = new Map(prev);
+          for (const row of classesResult.data) byId.set(row.id, row);
+          return byId;
+        });
+      }
       const directory = new Map<string, { name: string; email: string; photo: string }>();
       for (const row of [...coachRows, ...userRows]) {
         const profile = row.profile as { photo?: string; name?: string; display_name?: string };
@@ -1985,6 +2136,57 @@ export default function AdminTimeBlockingPage({
     setLoadingPortalRequests(false);
   }, [showCoachRequestTables, isClassSchedule, portalUser]);
 
+  const loadCancellationPortalRequests = useCallback(async () => {
+    if (!portalUser || !showCoachRequestTables) return;
+
+    setLoadingPortalRequests(true);
+    const [requestsResult, classesResult, disciplinesResult, coachRows] = await Promise.all([
+      fetchCancellationPortalRequests(),
+      fetchClassesForAdmin(),
+      fetchDisciplinesForAdmin(),
+      fetchManagedAccountsWithProfiles('coach'),
+    ]);
+    if (classesResult.data) {
+      const byId = new Map(classesResult.data.map((row) => [row.id, row]));
+      setClassesById(byId);
+    }
+    setDisciplines(disciplinesResult.data);
+    const directory = new Map<string, { name: string; email: string; photo: string }>();
+    for (const row of coachRows) {
+      if (row.account.role !== 'coach') continue;
+      const profile = row.profile;
+      directory.set(row.account.id, {
+        name: profile.name || profile.display_name || row.account.email,
+        email: row.account.email,
+        photo: profile.photo?.trim() ?? '',
+      });
+    }
+    setRequesterDirectory(directory);
+    if (requestsResult.error) {
+      setScheduleError(requestsResult.error);
+    } else {
+      setPortalRequests((prev) => {
+        const keepNonCancellation = prev.filter((row) => row.request_type !== 'cancellation_request');
+        return mergePortalRequestRows(keepNonCancellation, requestsResult.requests);
+      });
+      notifyPortalRequestsChanged();
+    }
+    setLoadingPortalRequests(false);
+  }, [showCoachRequestTables, portalUser]);
+
+  const refreshBlockPanelPortalRequests = useCallback(
+    async (classId: string) => {
+      if (!portalUser || !classId.trim()) return;
+      const result = await fetchPortalRequestsForClass(classId);
+      if (result.error) {
+        setScheduleError(result.error);
+        return;
+      }
+      setPortalRequests((prev) => mergePortalRequestRows(prev, result.requests));
+    },
+    [portalUser],
+  );
+
   useEffect(() => {
     if (portalUser && (showCoachRequestTables || isClassSchedule)) {
       void loadPortalRequests();
@@ -1992,13 +2194,51 @@ export default function AdminTimeBlockingPage({
   }, [showCoachRequestTables, isClassSchedule, portalUser, loadPortalRequests]);
 
   useEffect(() => {
-    if (!isClassSchedule || !portalUser) return;
+    if (!showCoachRequestTables || !portalUser) return;
+    if (coachRequestTab !== 'cancellations') return;
+    void loadCancellationPortalRequests();
+  }, [
+    showCoachRequestTables,
+    portalUser,
+    coachRequestTab,
+    loadCancellationPortalRequests,
+  ]);
+
+  useEffect(() => {
+    if (!isClassSchedule || !classScheduleBlockPanelId || !portalUser) return;
+    void refreshBlockPanelPortalRequests(classScheduleBlockPanelId);
+  }, [
+    isClassSchedule,
+    classScheduleBlockPanelId,
+    portalUser,
+    refreshBlockPanelPortalRequests,
+  ]);
+
+  useEffect(() => {
+    if (!portalUser) return;
+    if (!isClassSchedule && !showCoachRequestTables) return;
     const onChange = () => {
-      void loadPortalRequests();
+      if (showCoachRequestTables && coachRequestTab === 'cancellations') {
+        void loadCancellationPortalRequests();
+      } else {
+        void loadPortalRequests();
+      }
+      if (isClassSchedule && classScheduleBlockPanelId) {
+        void refreshBlockPanelPortalRequests(classScheduleBlockPanelId);
+      }
     };
     window.addEventListener(PORTAL_REQUESTS_CHANGED, onChange);
     return () => window.removeEventListener(PORTAL_REQUESTS_CHANGED, onChange);
-  }, [isClassSchedule, portalUser, loadPortalRequests]);
+  }, [
+    isClassSchedule,
+    showCoachRequestTables,
+    portalUser,
+    coachRequestTab,
+    classScheduleBlockPanelId,
+    loadPortalRequests,
+    loadCancellationPortalRequests,
+    refreshBlockPanelPortalRequests,
+  ]);
 
   const disciplineCatalogById = useMemo(
     () => new Map(disciplines.map((d) => [d.id, d])),
@@ -2055,7 +2295,11 @@ export default function AdminTimeBlockingPage({
 
   const cancelReqs = useMemo(() => {
     return portalRequests
-      .filter((r) => r.request_type === 'cancellation_request')
+      .filter(
+        (r) =>
+          r.request_type === 'cancellation_request'
+          || r.request_type === 'member_enrollment_cancellation',
+      )
       .map((req) => {
         const requester = requesterDirectory.get(req.requester_account_id) ?? {
           name: 'Coach',
@@ -2088,19 +2332,21 @@ export default function AdminTimeBlockingPage({
   );
 
   const loadMySlotRequests = useCallback(async () => {
-    if (!isStaffTimeSlots || !staffUser?.accountId) {
+    if (!isStaffSchedulePortal || !staffUser?.accountId) {
       setMyPortalRequests([]);
       return;
     }
     const { requests } = await fetchMyPortalRequests();
     setMyPortalRequests(requests);
-  }, [isStaffTimeSlots, staffUser?.accountId]);
+  }, [isStaffSchedulePortal, staffUser?.accountId]);
 
   const loadSchedule = useCallback(
     async (options?: { silent?: boolean }) => {
       if (!options?.silent) setLoadingSchedule(true);
-      const fetchClasses = isActiveClassCalendar
+      const fetchClasses = isMemberClassSchedule
         ? fetchClassesForMemberSchedule
+        : isPublicClassSchedule
+          ? fetchClassesForPublicSchedule
         : isStaffSchedulePortal
           ? fetchClassesForStaffSchedule
           : fetchClassesForAdmin;
@@ -2109,11 +2355,11 @@ export default function AdminTimeBlockingPage({
         isStaffSchedulePortal || isActiveClassCalendar
           ? fetchDisciplinesForPublic()
           : fetchDisciplinesForAdmin(),
-        isStaffTimeSlots
+        isStaffSchedulePortal
           ? fetchMyPortalRequests()
           : Promise.resolve({ requests: [] as PortalRequestRow[] }),
       ]);
-      if (isStaffTimeSlots) {
+      if (isStaffSchedulePortal) {
         setMyPortalRequests(myRequestsResult.requests);
       }
       setDisciplines(disciplinesResult.data);
@@ -2129,7 +2375,7 @@ export default function AdminTimeBlockingPage({
       }
       if (!options?.silent) setLoadingSchedule(false);
     },
-    [applyClassesToState, isActiveClassCalendar, isStaffSchedulePortal, isStaffTimeSlots],
+    [applyClassesToState, isMemberClassSchedule, isPublicClassSchedule, isStaffSchedulePortal],
   );
 
   const focusCalendarOnDateKey = useCallback(
@@ -2159,6 +2405,16 @@ export default function AdminTimeBlockingPage({
     }
     if (portalUser) void loadSchedule();
   }, [portalUser, isCoachRequests, loadSchedule, isPublicClassSchedule]);
+
+  useClassesScheduleRealtimeSync(
+    useCallback(() => {
+      void loadSchedule({ silent: true });
+    }, [loadSchedule]),
+    useClassScheduleRealtimeSync
+      && !isCoachRequests
+      && Boolean(portalUser)
+      && !classAssignId,
+  );
 
   const isMultiDayTimeline =
     calendarView === 'weekly' || calendarView === 'threeDay';
@@ -2231,6 +2487,22 @@ export default function AdminTimeBlockingPage({
     [disciplines],
   );
 
+  const memberScheduleFilterCoaches = useMemo(() => {
+    if (!isMemberClassSchedule) return undefined;
+    const byId = new Map<string, string>();
+    for (const row of classesById.values()) {
+      for (const coach of row.coaches) {
+        const id = coach.accountId?.trim();
+        if (!id) continue;
+        const name = coach.name?.trim() || coach.email?.trim() || 'Coach';
+        if (!byId.has(id)) byId.set(id, name);
+      }
+    }
+    return [...byId.entries()]
+      .map(([accountId, name]) => ({ accountId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [isMemberClassSchedule, classesById]);
+
   const today = getTodayLocal();
   const todayKey = getTodayDateKey();
   const visibleDates = useMemo(() => {
@@ -2301,8 +2573,18 @@ export default function AdminTimeBlockingPage({
   );
 
   const staffPendingSlotRequest = useCallback(
-    (classId: string) => isStaffTimeSlots && pendingSlotRequestIds.has(classId),
-    [isStaffTimeSlots, pendingSlotRequestIds],
+    (classId: string) =>
+      isStaffSchedulePortal && pendingSlotRequestIds.has(classId),
+    [isStaffSchedulePortal, pendingSlotRequestIds],
+  );
+
+  const staffCoachAssignedOnBlock = useCallback(
+    (block: ScheduleBlock) => {
+      if (!isStaffSchedulePortal || !staffUser?.accountId) return false;
+      if (block.statusBlock === 'vacant') return false;
+      return scheduleBlockIncludesCoachAccount(block, staffUser.accountId);
+    },
+    [isStaffSchedulePortal, staffUser?.accountId],
   );
 
   const pendingPortalRequestClassIds = useMemo(
@@ -2343,13 +2625,26 @@ export default function AdminTimeBlockingPage({
     setConfirmWithdrawBlockSlot(false);
     setWithdrawBlockSlotError(null);
     setWithdrawingBlockSlot(false);
-  }, [editingBlock?.id]);
+  }, [editingBlock?.id, classScheduleBlockPanelId]);
 
   const handleWithdrawEditingBlockSlotRequest = useCallback(async () => {
-    if (!editingBlockPendingRequestId) return;
+    let requestId = editingBlockPendingRequestId;
+    if (
+      !requestId
+      && isStaffTimeSlots
+      && classScheduleBlockPanelId
+      && staffUser?.accountId
+    ) {
+      requestId = myPendingSlotRequestIdForClass(
+        myPortalRequests,
+        staffUser.accountId,
+        classScheduleBlockPanelId,
+      );
+    }
+    if (!requestId) return;
     setWithdrawingBlockSlot(true);
     setWithdrawBlockSlotError(null);
-    const { error } = await withdrawPortalRequest(editingBlockPendingRequestId);
+    const { error } = await withdrawPortalRequest(requestId);
     setWithdrawingBlockSlot(false);
     if (error) {
       setWithdrawBlockSlotError(error);
@@ -2359,7 +2654,14 @@ export default function AdminTimeBlockingPage({
     toastDeleted('Slot request');
     setConfirmWithdrawBlockSlot(false);
     void loadMySlotRequests();
-  }, [editingBlockPendingRequestId, loadMySlotRequests]);
+  }, [
+    editingBlockPendingRequestId,
+    isStaffTimeSlots,
+    classScheduleBlockPanelId,
+    staffUser?.accountId,
+    myPortalRequests,
+    loadMySlotRequests,
+  ]);
 
   const visibleBlocksInRange = isMultiDayTimeline
     ? blocks.filter((b) => weekDateKeys.includes(b.dateKey))
@@ -2371,15 +2673,27 @@ export default function AdminTimeBlockingPage({
   const visibleBlocksInRangeForView = isActiveClassCalendar
     ? visibleBlocksInRange.filter(isMemberClassScheduleVisibleBlock)
     : isStaffClassSchedule
-      ? visibleBlocksInRange.filter(isStaffClassScheduleVisibleBlock)
+      ? visibleBlocksInRange.filter((b) =>
+          isStaffClassScheduleVisibleBlock(b, pendingSlotRequestIds),
+        )
       : visibleBlocksInRange;
 
-  const visibleBlocks =
-    showClassScheduleFeatures && disciplineFilterIds.length > 0
-      ? visibleBlocksInRangeForView.filter(
-          (b) => b.disciplineId && disciplineFilterIds.includes(b.disciplineId),
-        )
-      : visibleBlocksInRangeForView;
+  const visibleBlocks = (() => {
+    if (showClassBlockStatusLegend) {
+      if (countClassScheduleFilterSelections(classScheduleFilters) === 0) {
+        return visibleBlocksInRangeForView;
+      }
+      return visibleBlocksInRangeForView.filter((b) =>
+        blockMatchesClassScheduleFilters(b, classScheduleFilters),
+      );
+    }
+    if (showClassScheduleFeatures && disciplineFilterIds.length > 0) {
+      return visibleBlocksInRangeForView.filter(
+        (b) => b.disciplineId && disciplineFilterIds.includes(b.disciplineId),
+      );
+    }
+    return visibleBlocksInRangeForView;
+  })();
 
   const blocksForWeekDay = (dayIndex: number) => {
     const key = weekDateKeys[dayIndex];
@@ -2409,9 +2723,7 @@ export default function AdminTimeBlockingPage({
         color: requested ? STAFF_VACANT_REQUESTED_COLOR : block.color,
         muted:
           !requested
-          && (block.statusBlock === 'closed'
-            || block.statusClass === 'close'
-            || block.statusClass === 'pending'),
+          && (isTerminalClassBlockStatus(block.statusBlock) || !block.statusClass),
       });
       result[block.dateKey] = list;
     }
@@ -2420,12 +2732,7 @@ export default function AdminTimeBlockingPage({
 
   const selectedMonthDate = selectedMonthKey ? dateKeyToDate(selectedMonthKey) : null;
   const selectedMonthBlocks = selectedMonthKey
-    ? blocks.filter(
-        (b) =>
-          b.dateKey === selectedMonthKey
-          && (!isActiveClassCalendar || isMemberClassScheduleVisibleBlock(b))
-          && (!isStaffClassSchedule || isStaffClassScheduleVisibleBlock(b)),
-      )
+    ? visibleBlocks.filter((b) => b.dateKey === selectedMonthKey)
     : [];
 
   const selectedMonthBlocksByTime = [...selectedMonthBlocks].sort(
@@ -2636,7 +2943,7 @@ export default function AdminTimeBlockingPage({
       startsAt,
       endsAt,
       classLimit: existing?.classLimit ?? null,
-      statusClass: existing?.statusClass ?? 'pending',
+      statusClass: existing?.statusClass ?? false,
       statusBlock: editingBlock ? form.statusBlock : 'vacant',
       coachAccountIds: coachIds,
       studentAccountIds: studentIds,
@@ -2696,21 +3003,19 @@ export default function AdminTimeBlockingPage({
     await persistScheduleBlock();
   };
 
-  const handleAssignSchedule = async () => {
+  const handleAssignSchedule = () => {
     if (!editingBlock || editingBlock.id.startsWith('req-')) return;
-    const classId = await persistScheduleBlock();
-    if (!classId) return;
+    const classId = editingBlock.id;
+    if (!classesById.has(classId)) return;
+    setShowModal(false);
+    setConfirmDeleteId(null);
+    setEditingBlock(null);
     if (showClassScheduleFeatures) {
-      setClassAssignId(classId);
+      openClassAssignModal(classId);
     } else {
       navigate(`/admin-classes?assign=${encodeURIComponent(classId)}`);
     }
   };
-
-  const classAssignItem = classAssignId ? classesById.get(classAssignId) ?? null : null;
-  const classAssignDraft: ClassUpsertInput | null = classAssignItem
-    ? classToUpsertInput(classAssignItem)
-    : null;
 
   const isDaySchedulePanelOpen =
     showMonthDayPanel &&
@@ -2733,6 +3038,15 @@ export default function AdminTimeBlockingPage({
     isClassScheduleBlockPanelOpen
     && (selectedReqId !== null || selectedCancelId !== null);
 
+  const isClassAssignModalOpen = isClassSchedule && classAssignId != null;
+
+  /** Side sheet must not trap focus / pointer events while a stacked modal is open. */
+  const isSheetObstructedByModal =
+    isBlockPanelReviewOpen
+    || isClassAssignModalOpen
+    || showSlotRequestModal
+    || showCancellationRequestModal;
+
   const scheduleSidePanelWidth = isClassScheduleBlockPanelOpen
     ? CLASS_SCHEDULE_BLOCK_PANEL_WIDTH
     : DAY_SCHEDULE_PANEL_WIDTH;
@@ -2743,6 +3057,78 @@ export default function AdminTimeBlockingPage({
   const classSchedulePanelClass = classScheduleBlockPanelId
     ? classesById.get(classScheduleBlockPanelId) ?? null
     : null;
+
+  const panelBlockPendingRequest = Boolean(
+    isStaffTimeSlots
+    && classSchedulePanelBlock
+    && staffPendingSlotRequest(classSchedulePanelBlock.id),
+  );
+
+  const panelBlockPendingRequestId = useMemo(() => {
+    if (!isStaffTimeSlots || !classScheduleBlockPanelId || !staffUser?.accountId) return null;
+    return myPendingSlotRequestIdForClass(
+      myPortalRequests,
+      staffUser.accountId,
+      classScheduleBlockPanelId,
+    );
+  }, [isStaffTimeSlots, classScheduleBlockPanelId, staffUser?.accountId, myPortalRequests]);
+
+  const openStaffPanelSlotRequest = useCallback(() => {
+    if (!classSchedulePanelBlock || !staffUser) return;
+    const row = classSchedulePanelClass;
+    const startMinutes = row?.startsAt
+      ? snapMinutesToStep(localMinutesFromIso(row.startsAt))
+      : classSchedulePanelBlock.startHour * 60;
+    const endMinutes = row?.endsAt
+      ? snapMinutesToStep(localMinutesFromIso(row.endsAt))
+      : startMinutes + classSchedulePanelBlock.duration;
+    setSlotRequestContext({
+      classId: classSchedulePanelBlock.id,
+      dateKey: classSchedulePanelBlock.dateKey,
+      startMinutes,
+      endMinutes,
+      ...(classSchedulePanelBlock.capacity > 0
+        ? { defaultClassLimit: classSchedulePanelBlock.capacity }
+        : {}),
+    });
+    setShowSlotRequestModal(true);
+  }, [classSchedulePanelBlock, classSchedulePanelClass, staffUser]);
+
+  const panelPendingCancellationRequest = useMemo(() => {
+    if (!isStaffSchedulePortal || !classScheduleBlockPanelId) return null;
+    return (
+      myPortalRequests.find(
+        (r) =>
+          r.request_type === 'cancellation_request'
+          && r.target_class_id === classScheduleBlockPanelId
+          && r.status === 'pending',
+      ) ?? null
+    );
+  }, [isStaffSchedulePortal, classScheduleBlockPanelId, myPortalRequests]);
+
+  const openStaffPanelCancellationRequest = useCallback(() => {
+    if (!classSchedulePanelBlock) return;
+    const startsAt =
+      classSchedulePanelClass?.startsAt ?? classSchedulePanelBlock.startsAt;
+    setCancellationRequestContext({
+      classId: classSchedulePanelBlock.id,
+      className:
+        classSchedulePanelBlock.title?.trim()
+        || classSchedulePanelClass?.name?.trim()
+        || 'Class',
+      startsAt,
+      enrolledCount:
+        classSchedulePanelClass?.students?.length
+        ?? classSchedulePanelBlock.enrolled
+        ?? 0,
+      statusClass:
+        classSchedulePanelClass?.statusClass ?? classSchedulePanelBlock.statusClass,
+    });
+    setShowCancellationRequestModal(true);
+  }, [classSchedulePanelBlock, classSchedulePanelClass]);
+
+  const staffTimeSlotsPanelHeaderActionClass =
+    'flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold active:scale-95 transition-all ml-auto disabled:opacity-50 disabled:pointer-events-none';
 
   const classSchedulePanelEnrolledStudents = useMemo(() => {
     const rows = classSchedulePanelClass?.students ?? [];
@@ -2834,8 +3220,24 @@ export default function AdminTimeBlockingPage({
     if (alreadyEnrolled) {
       return { disabled: true, hint: 'You are already enrolled in this class.' };
     }
-    if (classSchedulePanelClass?.statusClass === 'close') {
+    if (classSchedulePanelClass && !classSchedulePanelClass.statusClass) {
       return { disabled: true, hint: 'This class is closed for enrollment.' };
+    }
+    const blockStatus =
+      classSchedulePanelClass?.statusBlock ?? classSchedulePanelBlock.statusBlock;
+    if (isTerminalClassBlockStatus(blockStatus)) {
+      return {
+        disabled: true,
+        hint:
+          blockStatus === 'cancelled'
+            ? 'This class was cancelled.'
+            : 'This session has already ended.',
+      };
+    }
+    const sessionStartsAt =
+      classSchedulePanelClass?.startsAt ?? classSchedulePanelBlock.startsAt;
+    if (classSessionHasStarted(sessionStartsAt)) {
+      return { disabled: true, hint: 'This class has already started.' };
     }
     const { available, limit } = classSchedulePanelSlotCapacity;
     if (limit != null && available != null && available <= 0) {
@@ -2926,20 +3328,26 @@ export default function AdminTimeBlockingPage({
     navigate,
   ]);
 
-  const portalRequestTargetClassId = (requestId: string) => {
-    const row = portalRequests.find((r) => r.id === requestId);
-    return row?.target_class_id ?? null;
-  };
-
   const blockPanelSlotReqs = classScheduleBlockPanelId
-    ? scheduleReqs.filter(
-        (req) => portalRequestTargetClassId(req.id) === classScheduleBlockPanelId,
-      )
+    ? scheduleReqs.filter((req) => {
+        const row = portalRequests.find((r) => r.id === req.id);
+        return (
+          row != null
+          && row.request_type === 'slot_request'
+          && portalRequestMatchesClassId(row, classScheduleBlockPanelId)
+        );
+      })
     : [];
   const blockPanelCancelReqs = classScheduleBlockPanelId
-    ? cancelReqs.filter(
-        (req) => portalRequestTargetClassId(req.id) === classScheduleBlockPanelId,
-      )
+    ? cancelReqs.filter((req) => {
+        const row = portalRequests.find((r) => r.id === req.id);
+        return (
+          row != null
+          && (row.request_type === 'cancellation_request'
+            || row.request_type === 'member_enrollment_cancellation')
+          && portalRequestMatchesClassId(row, classScheduleBlockPanelId)
+        );
+      })
     : [];
   const blockPanelPendingSlotCount = blockPanelSlotReqs.filter((r) => r.status === 'pending').length;
   const blockPanelPendingCancelCount = blockPanelCancelReqs.filter((r) => r.status === 'pending').length;
@@ -2956,12 +3364,19 @@ export default function AdminTimeBlockingPage({
     const existing = classesById.get(classAssignId);
     const alreadyAssigned =
       existing != null && isAssignedScheduleBlock(existing.statusBlock);
-    const statusBlock = alreadyAssigned ? input.statusBlock : 'occupied';
+    const statusBlock = alreadyAssigned ? input.statusBlock : 'assigned';
     const result = await updateClass(classAssignId, {
       ...input,
       statusBlock,
     });
     if (result.success) {
+      if (input.coachAccountIds.length > 0) {
+        void sendScheduleCoachAssignedEmail(classAssignId).then(({ ok, error: emailError }) => {
+          if (!ok && emailError) {
+            console.warn('Coach assignment email:', emailError);
+          }
+        });
+      }
       await loadSchedule({ silent: true });
     }
     return { success: result.success, error: result.error };
@@ -2973,7 +3388,7 @@ export default function AdminTimeBlockingPage({
     }
     const result = await deleteClass(classAssignId);
     if (result.success) {
-      setClassAssignId(null);
+      closeClassAssignModal();
       await loadSchedule({ silent: true });
     }
     return { success: result.success, error: result.error };
@@ -3024,10 +3439,45 @@ export default function AdminTimeBlockingPage({
   const selectedReq = scheduleReqs.find(r => r.id === selectedReqId) ?? null;
   const selectedCancel = cancelReqs.find(r => r.id === selectedCancelId) ?? null;
 
+  const selectedCancelPortalRow = useMemo(
+    () => (selectedCancelId ? portalRequests.find((r) => r.id === selectedCancelId) ?? null : null),
+    [portalRequests, selectedCancelId],
+  );
+  const selectedCancelClassRow = useMemo(() => {
+    const classId = selectedCancelPortalRow?.target_class_id;
+    return classId ? classesById.get(classId) ?? null : null;
+  }, [selectedCancelPortalRow, classesById]);
+  const selectedCancelShortNotice = isClassCancellationShortNotice(
+    selectedCancelClassRow?.startsAt,
+  );
+  const cancelReplacementCoachOptions = useMemo(() => {
+    const requesterId = selectedCancelPortalRow?.requester_account_id ?? '';
+    return coachOptions.filter((coach) => coach.accountId !== requesterId);
+  }, [coachOptions, selectedCancelPortalRow?.requester_account_id]);
+  const canApproveCancellation = useMemo(() => {
+    if (!selectedCancel || selectedCancel.status !== 'pending') return false;
+    if (selectedCancel.isMemberEnrollmentCancel) return true;
+    if (!selectedCancelShortNotice) return true;
+    if (cancelApproveMode === 'cancel_class') return true;
+    return cancelReplacementCoachId.trim().length > 0;
+  }, [
+    selectedCancel,
+    selectedCancelShortNotice,
+    cancelApproveMode,
+    cancelReplacementCoachId,
+  ]);
+
   const closePortalReviewModal = useCallback(() => {
     setSelectedReqId(null);
     setSelectedCancelId(null);
+    setCancelApproveMode('replace');
+    setCancelReplacementCoachId('');
   }, []);
+
+  useEffect(() => {
+    setCancelApproveMode('replace');
+    setCancelReplacementCoachId('');
+  }, [selectedCancelId]);
 
   useEffect(() => {
     if (selectedReqId === null && selectedCancelId === null) return;
@@ -3038,11 +3488,35 @@ export default function AdminTimeBlockingPage({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedReqId, selectedCancelId, closePortalReviewModal]);
 
-  const setCancelStatus = (id: string, status: PortalRequestStatus) => {
-    void reviewPortalRequest({ requestId: id, status }).then(({ error }) => {
+  const submitCancellationReview = (id: string, status: PortalRequestStatus) => {
+    const replacementCoachAccountId =
+      status === 'approved'
+      && selectedCancelShortNotice
+      && cancelApproveMode === 'replace'
+        ? cancelReplacementCoachId.trim()
+        : null;
+    const cancelEntireClass =
+      status === 'approved'
+      && selectedCancelShortNotice
+      && cancelApproveMode === 'cancel_class';
+
+    void reviewPortalRequest({
+      requestId: id,
+      status,
+      replacementCoachAccountId: replacementCoachAccountId || null,
+      cancelEntireClass,
+    }).then(({ error }) => {
       if (error) {
         setScheduleError(error);
+        toastOperationFailed(error);
         return;
+      }
+      if (status === 'approved') {
+        toastUpdated('Cancellation approved');
+      } else if (status === 'rejected') {
+        toastUpdated('Cancellation declined');
+      } else {
+        toastSaved();
       }
       void loadPortalRequests();
       if (isClassSchedule) void loadSchedule({ silent: true });
@@ -3109,23 +3583,29 @@ export default function AdminTimeBlockingPage({
     onReject,
     onUndo,
     onClose,
+    approveDisabled = false,
+    compact = false,
   }: {
     status: ReqStatus;
     onApprove: () => void;
     onReject: () => void;
     onUndo: () => void;
     onClose: () => void;
+    approveDisabled?: boolean;
+    compact?: boolean;
   }) => {
     if (status === 'cancelled') {
       return (
-        <div className="px-7 pb-7 flex flex-col gap-3">
+        <div className={`flex flex-col gap-3 ${compact ? 'px-5 pb-4 pt-1' : 'px-7 pb-7'}`}>
           <p className="text-[#5A5048] text-xs leading-relaxed text-center">
             The coach cancelled this request before review. No admin action is required.
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 rounded-2xl bg-[#1E2A35] text-white text-sm font-semibold hover:bg-[#2A3A48] transition-colors"
+            className={`w-full rounded-2xl bg-[#1E2A35] text-white font-semibold hover:bg-[#2A3A48] transition-colors ${
+              compact ? 'py-2.5 text-xs' : 'py-3 text-sm'
+            }`}
           >
             Close
           </button>
@@ -3163,17 +3643,27 @@ export default function AdminTimeBlockingPage({
             icon: false,
           };
 
+    const pad = compact ? 'px-5 pb-4 pt-3' : 'px-7 pb-7';
+    const btnPy = compact ? 'py-2.5 text-xs' : 'py-3 text-sm';
+
     return (
-      <div className="px-7 pb-7">
-        <div className="flex gap-3">
-          <button type="button" onClick={left.onClick} className={left.className}>
+      <div className={pad}>
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={left.onClick}
+            className={`${left.className}${compact ? ` ${btnPy}` : ''}`}
+          >
             {left.icon && <Undo2 size={14} />}
             {left.label}
           </button>
           <button
             type="button"
             onClick={right.onClick}
-            className={right.className}
+            disabled={right.label === 'Approve' && approveDisabled}
+            className={`${right.className}${compact ? ` ${btnPy}` : ''}${
+              right.label === 'Approve' && approveDisabled ? ' opacity-50 pointer-events-none' : ''
+            }`}
           >
             {right.icon && <Undo2 size={14} />}
             {right.label}
@@ -3276,14 +3766,32 @@ export default function AdminTimeBlockingPage({
                     </button>
                   ))}
                   </div>
-                  {showClassScheduleFeatures && (
+                  {showClassScheduleFeatures && showClassBlockStatusLegend && (
+                    <ClassScheduleCalendarFilter
+                      disciplines={calendarFilterDisciplines}
+                      coaches={
+                        isMemberClassSchedule
+                          ? memberScheduleFilterCoaches
+                          : coachOptions.map((c) => ({
+                              accountId: c.accountId,
+                              name: c.name,
+                            }))
+                      }
+                      applied={classScheduleFilters}
+                      onApply={setClassScheduleFilters}
+                      statusBlockFilterOptions={
+                        isMemberClassSchedule ? MEMBER_SCHEDULE_VISIBLE_BLOCK_STATUSES : undefined
+                      }
+                    />
+                  )}
+                  {showClassScheduleFeatures && !showClassBlockStatusLegend && !isStaffTimeSlots && (
                     <CalendarDisciplineMultiSelect
                       disciplines={calendarFilterDisciplines}
                       selectedIds={disciplineFilterIds}
                       onChange={setDisciplineFilterIds}
                     />
                   )}
-                  {usesOperationsBlockColors && <ScheduleOperationsColorLegend />}
+                  {usesOperationsBlockColors && <ClassBlockStatusLegend />}
                 </div>
 
                 <div className="flex items-center justify-center gap-1.5 flex-1 min-w-[220px]">
@@ -3342,7 +3850,10 @@ export default function AdminTimeBlockingPage({
                 />
               </div>
 
-              {showClassScheduleFeatures && (
+              {showClassScheduleFeatures
+                && !showClassBlockStatusLegend
+                && !isFrontdeskClassSchedule
+                && !isStaffTimeSlots && (
                 <div className="flex items-center gap-x-3 gap-y-1.5 px-3 py-2 border-b border-[#D4CDB5]/30 flex-wrap bg-[#F8F3E8]/40">
                   {[
                     { label: 'Upcoming', dot: 'bg-[#6B8E6B]' },
@@ -3512,7 +4023,7 @@ export default function AdminTimeBlockingPage({
                               })()}
                             {dayBlocks.map((block) => {
                               const isVacant = block.statusBlock === 'vacant';
-                              const isClosedBlock = block.statusBlock === 'closed';
+                              const isClosedBlock = isTerminalClassBlockStatus(block.statusBlock);
                               const staffRequestPending = staffPendingSlotRequest(block.id);
                               const adminPendingPortalRequest = adminPendingPortalRequestOnBlock(block.id);
                               const timeline = weekBlockTimelineStyleInRange(
@@ -3532,6 +4043,7 @@ export default function AdminTimeBlockingPage({
                                   variant="timeline"
                                   isVacant={isVacant}
                                   staffRequestPending={staffRequestPending}
+                                  staffCoachAssignedToYou={staffCoachAssignedOnBlock(block)}
                                   adminPendingPortalRequest={adminPendingPortalRequest}
                                   isClosedBlock={isClosedBlock}
                                   showMemberCapacity={isActiveClassCalendar || isStaffClassSchedule}
@@ -3927,15 +4439,30 @@ export default function AdminTimeBlockingPage({
           <div
             role="dialog"
             aria-modal="true"
-            className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-[460px] max-h-[90vh] overflow-y-auto"
+            aria-labelledby="cancellation-review-title"
+            className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-2xl w-full overflow-hidden flex flex-col ${
+              selectedCancel.status === 'pending' && selectedCancelShortNotice
+                ? 'max-w-[min(96vw,36rem)]'
+                : 'max-w-[min(96vw,24rem)]'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">Class cancellation request</p>
-                <h3 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+            <div className="px-5 pt-4 pb-3 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-2 shrink-0">
+              <div className="min-w-0">
+                <p className="text-[#9A8E7E] text-[10px] uppercase tracking-widest mb-0.5">
+                  {selectedCancel.isMemberEnrollmentCancel ? 'Member cancellation' : 'Cancellation request'}
+                </p>
+                <h3
+                  id="cancellation-review-title"
+                  className="text-[#1E2A35] leading-tight truncate"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}
+                >
                   {selectedCancel.className}
                 </h3>
+                {selectedCancel.discipline.trim().toLowerCase()
+                  !== selectedCancel.className.trim().toLowerCase() ? (
+                  <p className="text-[#8A7E6E] text-[11px] mt-0.5 truncate">{selectedCancel.discipline}</p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -3947,66 +4474,153 @@ export default function AdminTimeBlockingPage({
               </button>
             </div>
 
-            <div className="px-7 py-6 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[#8A7E6E] text-xs">Requested by {selectedCancel.coach} · {selectedCancel.requestedAt}</p>
+            <div className="px-5 py-3 flex flex-col gap-2.5 shrink-0">
+              <div className="flex items-center gap-2.5 rounded-xl border border-[#D4CDB5]/60 bg-[#F8F3E8]/90 p-2.5">
+                <PortalPersonAvatar
+                  name={selectedCancel.coach}
+                  photo={selectedCancel.requesterPhoto}
+                  size={40}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[#1E2A35] text-xs font-semibold">{selectedCancel.coach}</p>
+                  <p className="text-[#B0A898] text-[10px] truncate">
+                    {selectedCancel.requestedAt}
+                    {selectedCancel.email ? ` · ${selectedCancel.email}` : ''}
+                  </p>
+                </div>
                 <StatusBadge s={selectedCancel.status} />
               </div>
 
               {selectedCancel.status === 'approved' && (
-                <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
-                  <Check size={15} className="text-green-600 shrink-0 mt-0.5" />
-                  <p className="text-green-700 text-xs leading-relaxed">This cancellation is approved. The class will be taken off the schedule. You can undo this decision below, or close to return to the schedule.</p>
-                </div>
-              )}
-              {selectedCancel.status === 'rejected' && (
-                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
-                  <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-red-700 text-xs leading-relaxed">This cancellation was rejected. The class stays on the schedule. You can undo this decision below, or close to return to the schedule.</p>
-                </div>
-              )}
-              {selectedCancel.status === 'pending' && (
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-                  <Clock size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-amber-700 text-xs leading-relaxed">Review the details below. Approve or reject when ready—you can close this dialog anytime without deciding.</p>
-                </div>
-              )}
-              {selectedCancel.status === 'cancelled' && (
-                <div className="flex items-start gap-2 bg-[#F8F3E8] border border-[#D4CDB5]/70 rounded-2xl px-4 py-3">
-                  <X size={15} className="text-[#8A7E6E] shrink-0 mt-0.5" />
-                  <p className="text-[#5A5048] text-xs leading-relaxed">
-                    Cancelled by the coach before review. The class remains on the schedule.
+                <div className="flex items-start gap-1.5 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                  <Check size={14} className="text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-green-700 text-[11px] leading-snug">
+                    Approved — schedule updated. Undo below or close.
                   </p>
                 </div>
               )}
-
-              <div className="bg-[#F8F3E8] rounded-2xl border border-[#D4CDB5]/50 overflow-hidden">
-                <div className="h-1.5" style={{ backgroundColor: CLASS_COLORS[selectedCancel.className] || '#c49a3c' }} />
-                <div className="p-4 flex flex-col gap-3">
-                  {[
-                    ['Coach', selectedCancel.coach],
-                    ['Class', selectedCancel.className],
-                    ['Date', selectedCancel.date],
-                    ['Time', selectedCancel.time],
-                    ['Enrolled', `${selectedCancel.enrolled} students`],
-                    ['Notice', `${selectedCancel.hoursUntilClass} hrs before class`],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex items-center justify-between gap-3">
-                      <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">{label}</span>
-                      <span className="text-[#1E2A35] text-sm font-semibold text-right">{value}</span>
-                    </div>
-                  ))}
+              {selectedCancel.status === 'rejected' && (
+                <div className="flex items-start gap-1.5 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-red-700 text-[11px] leading-snug">Rejected — class stays on schedule.</p>
                 </div>
+              )}
+              {selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && (
+                <div className="flex items-start gap-1.5 bg-sky-50 border border-sky-200 rounded-xl px-3 py-2">
+                  <Clock size={14} className="text-sky-700 shrink-0 mt-0.5" />
+                  <p className="text-sky-900 text-[11px] leading-snug">
+                    Approve to unenroll. Inside the cancellation window, drop-in cash is approved for a manual refund (no official receipt) or the session credit is restored. After the window, the fee or credit is forfeited and a drop-in payment is locked with an official receipt.
+                  </p>
+                </div>
+              )}
+              {!selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && selectedCancelShortNotice && (
+                <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                  <Clock size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-amber-800 text-[11px] leading-snug">
+                    Under 2 weeks — pick a replacement coach or cancel the session before approving.
+                  </p>
+                </div>
+              )}
+              {!selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && !selectedCancelShortNotice && (
+                <div className="flex items-start gap-1.5 bg-[#F8F3E8] border border-[#D4CDB5]/70 rounded-xl px-3 py-2">
+                  <Clock size={14} className="text-[#9A8E7E] shrink-0 mt-0.5" />
+                  <p className="text-[#5A5048] text-[11px] leading-snug">
+                    2+ weeks out — approve removes this coach from the block.
+                  </p>
+                </div>
+              )}
+              {selectedCancel.status === 'cancelled' && (
+                <div className="flex items-start gap-1.5 bg-[#F8F3E8] border border-[#D4CDB5]/70 rounded-xl px-3 py-2">
+                  <X size={14} className="text-[#8A7E6E] shrink-0 mt-0.5" />
+                  <p className="text-[#5A5048] text-[11px] leading-snug">Withdrawn by coach before review.</p>
+                </div>
+              )}
+
+              <div
+                className={`grid gap-2.5 ${
+                  selectedCancel.status === 'pending' && selectedCancelShortNotice
+                    ? 'grid-cols-1 sm:grid-cols-2'
+                    : 'grid-cols-1'
+                }`}
+              >
+                <div className="bg-[#F8F3E8] rounded-xl border border-[#D4CDB5]/50 overflow-hidden min-w-0">
+                  <div
+                    className="h-1"
+                    style={{
+                      backgroundColor: blockPanelRequestAccent(
+                        selectedCancel.discipline,
+                        selectedCancel.disciplineHue,
+                      ),
+                    }}
+                  />
+                  <div className="p-2.5 grid grid-cols-2 gap-x-3 gap-y-2">
+                    {[
+                      ['Date', selectedCancel.date],
+                      ['Time', selectedCancel.time],
+                      ['Enrolled', String(selectedCancel.enrolled)],
+                      ['Notice', `${selectedCancel.hoursUntilClass}h`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0">
+                        <p className="text-[#9A8E7E] text-[9px] uppercase tracking-wider font-bold">{label}</p>
+                        <p className="text-[#1E2A35] text-xs font-semibold truncate">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {!selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && selectedCancelShortNotice && (
+                  <div className="rounded-xl border border-[#D4CDB5]/60 bg-white p-2.5 flex flex-col gap-2 min-w-0">
+                    <p className="text-[#1E2A35] text-xs font-semibold">Approve as</p>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cancel-approve-mode"
+                        checked={cancelApproveMode === 'replace'}
+                        onChange={() => setCancelApproveMode('replace')}
+                        className="accent-[#c49a3c] shrink-0"
+                      />
+                      <span className="text-xs font-medium text-[#1E2A35]">Replacement coach</span>
+                    </label>
+                    {cancelApproveMode === 'replace' && (
+                      <select
+                        value={cancelReplacementCoachId}
+                        onChange={(e) => setCancelReplacementCoachId(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg border border-[#D4CDB5]/70 bg-[#F8F3E8] text-xs text-[#1E2A35] outline-none focus:ring-2 focus:ring-[#c49a3c]/25"
+                      >
+                        <option value="">Select coach…</option>
+                        {cancelReplacementCoachOptions.map((coach) => (
+                          <option key={coach.accountId} value={coach.accountId}>
+                            {coach.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cancel-approve-mode"
+                        checked={cancelApproveMode === 'cancel_class'}
+                        onChange={() => setCancelApproveMode('cancel_class')}
+                        className="accent-[#c49a3c] shrink-0"
+                      />
+                      <span className="text-xs font-medium text-[#1E2A35]">Cancel class</span>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
-            <ReviewActions
-              status={selectedCancel.status}
-              onApprove={() => setCancelStatus(selectedCancel.id, 'approved')}
-              onReject={() => setCancelStatus(selectedCancel.id, 'rejected')}
-              onUndo={() => setCancelStatus(selectedCancel.id, 'pending')}
-              onClose={closePortalReviewModal}
-            />
+            <div className="shrink-0 border-t border-[#D4CDB5]/40 bg-[#FBF9F3]/80">
+              <ReviewActions
+                status={selectedCancel.status}
+                onApprove={() => submitCancellationReview(selectedCancel.id, 'approved')}
+                onReject={() => submitCancellationReview(selectedCancel.id, 'rejected')}
+                onUndo={() => submitCancellationReview(selectedCancel.id, 'pending')}
+                onClose={closePortalReviewModal}
+                approveDisabled={!canApproveCancellation}
+                compact
+              />
+            </div>
           </div>
         </div>,
         document.body,
@@ -4015,9 +4629,11 @@ export default function AdminTimeBlockingPage({
       {/* ── Schedule side panel: day view or class-schedule block detail ── */}
       <Sheet
         open={isScheduleSidePanelOpen}
-        modal={!isBlockPanelReviewOpen}
+        modal={!isSheetObstructedByModal}
         onOpenChange={(open) => {
-          if (!open && !showModal && !isBlockPanelReviewOpen) {
+          if (!open && isClassAssignModalOpen) return;
+          if (!open && (showSlotRequestModal || showCancellationRequestModal)) return;
+          if (!open && !showModal && !isSheetObstructedByModal) {
             if (isClassScheduleBlockPanelOpen) closeClassScheduleBlockPanel();
             else closeMonthDayPanel();
           }
@@ -4027,35 +4643,73 @@ export default function AdminTimeBlockingPage({
           side="right"
           showCloseButton={false}
           overlayClassName={
-            isBlockPanelReviewOpen ? 'pointer-events-none bg-black/30' : undefined
+            isClassAssignModalOpen || showSlotRequestModal || showCancellationRequestModal
+              ? 'pointer-events-none'
+              : isBlockPanelReviewOpen
+                ? 'pointer-events-none bg-black/30'
+                : undefined
           }
           className={`bg-[#FBF9F3] border-l border-[#D4CDB5]/60 w-full flex flex-col gap-0 p-0 ${
             isClassScheduleBlockPanelOpen ? 'sm:max-w-[34rem]' : 'sm:max-w-md'
           } ${showModal ? 'z-[105]' : ''} ${
-            isBlockPanelReviewOpen ? 'pointer-events-none opacity-60' : ''
-          }`}
+            isClassAssignModalOpen || showSlotRequestModal || showCancellationRequestModal
+              ? 'pointer-events-none'
+              : ''
+          } ${isBlockPanelReviewOpen ? 'pointer-events-none opacity-60' : ''}`}
           aria-hidden={isBlockPanelReviewOpen || undefined}
+          onInteractOutside={(event) => {
+            if (
+              isClassAssignModalOpen
+              || isBlockPanelReviewOpen
+              || showSlotRequestModal
+              || showCancellationRequestModal
+            ) {
+              event.preventDefault();
+            }
+          }}
+          onPointerDownOutside={(event) => {
+            if (
+              isClassAssignModalOpen
+              || isBlockPanelReviewOpen
+              || showSlotRequestModal
+              || showCancellationRequestModal
+            ) {
+              event.preventDefault();
+            }
+          }}
+          onFocusOutside={(event) => {
+            if (
+              isClassAssignModalOpen
+              || isBlockPanelReviewOpen
+              || showSlotRequestModal
+              || showCancellationRequestModal
+            ) {
+              event.preventDefault();
+            }
+          }}
         >
           {isClassScheduleBlockPanelOpen && classSchedulePanelBlock ? (
             <>
               <SheetHeader className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50 text-left space-y-3 shrink-0">
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center gap-2">
                   <button
                     type="button"
                     onClick={closeClassScheduleBlockPanel}
-                    disabled={isBlockPanelReviewOpen}
+                    disabled={isSheetObstructedByModal}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-[#D4CDB5]/70 text-[#5A5048] text-xs font-semibold hover:bg-[#EDE8D8] transition-all disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <ChevronLeft size={14} />
                     Go Back
                   </button>
-                  {!isMemberClassSchedule && (
+                  {!isMemberClassSchedule && !isStaffTimeSlots && (
                   <button
                     type="button"
                     onClick={() => {
-                      if (classScheduleBlockPanelId) setClassAssignId(classScheduleBlockPanelId);
+                      if (classScheduleBlockPanelId) {
+                        openClassAssignModal(classScheduleBlockPanelId);
+                      }
                     }}
-                    disabled={isBlockPanelReviewOpen}
+                    disabled={isSheetObstructedByModal}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold active:scale-95 transition-all ml-auto disabled:opacity-50 disabled:pointer-events-none ${
                       isAssignedScheduleBlock(classSchedulePanelBlock.statusBlock)
                         ? 'bg-[#c49a3c] text-white hover:bg-[#a67f2e] shadow-sm'
@@ -4063,9 +4717,32 @@ export default function AdminTimeBlockingPage({
                     }`}
                   >
                     {isAssignedScheduleBlock(classSchedulePanelBlock.statusBlock)
-                      ? 'Update'
+                      ? 'Update Schedule'
                       : 'Assign Schedule'}
                   </button>
+                  )}
+                  {isStaffTimeSlots && classSchedulePanelBlock && staffCoachAssignedOnBlock(classSchedulePanelBlock) && (
+                    <button
+                      type="button"
+                      onClick={openStaffPanelCancellationRequest}
+                      disabled={isSheetObstructedByModal}
+                      className={`${staffTimeSlotsPanelHeaderActionClass} bg-red-500 text-white hover:bg-red-600`}
+                    >
+                      Cancel Assignment
+                    </button>
+                  )}
+                  {isStaffTimeSlots
+                    && classSchedulePanelBlock
+                    && isStaffVacantBlock(classSchedulePanelBlock)
+                    && !panelBlockPendingRequest && (
+                    <button
+                      type="button"
+                      onClick={openStaffPanelSlotRequest}
+                      disabled={!staffUser?.accountId || isSheetObstructedByModal}
+                      className={`${staffTimeSlotsPanelHeaderActionClass} bg-[#1E2A35] text-white hover:bg-[#263545]`}
+                    >
+                      Request Slot
+                    </button>
                   )}
                 </div>
                 <div className="min-w-0">
@@ -4076,6 +4753,9 @@ export default function AdminTimeBlockingPage({
                     >
                       {classSchedulePanelBlock.title?.trim() || 'Schedule block'}
                     </SheetTitle>
+                    <SheetDescription className="sr-only">
+                      Class schedule block details and actions for this time slot.
+                    </SheetDescription>
                     <p
                       className={`shrink-0 text-right truncate max-w-[45%] text-[11px] ${CALENDAR_PANEL_TIME_META}`}
                       title={
@@ -4091,7 +4771,7 @@ export default function AdminTimeBlockingPage({
                     <ClassScheduleBlockScheduleCard block={classSchedulePanelBlock} />
                   </div>
                 </div>
-                {!isMemberClassSchedule && (
+                {!isMemberClassSchedule && !isStaffTimeSlots && (
                 <div className="flex flex-row gap-2">
                   {([
                     ['info', 'Info', 0] as const,
@@ -4102,7 +4782,7 @@ export default function AdminTimeBlockingPage({
                       key={id}
                       type="button"
                       onClick={() => setClassScheduleBlockTab(id)}
-                      disabled={isBlockPanelReviewOpen}
+                      disabled={isSheetObstructedByModal}
                       className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50 ${
                         classScheduleBlockTab === id
                           ? 'border-[#1E2A35] bg-[#1E2A35] text-white shadow-sm'
@@ -4179,13 +4859,13 @@ export default function AdminTimeBlockingPage({
                           </div>
                           <div className="rounded-xl border border-[#D4CDB5]/60 bg-white px-3 py-2.5 flex flex-col gap-1.5 min-w-0">
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9A8E7E]">
-                              Class status
+                              Class booking
                             </p>
-                            {classSchedulePanelClass?.statusClass ? (
+                            {classSchedulePanelClass ? (
                               <span
-                                className={`self-start inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold shadow-sm ${classOpenStatusBadgeClass(classSchedulePanelClass.statusClass)}`}
+                                className={`self-start inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold shadow-sm ${classBookingBadgeClass(classSchedulePanelClass.statusClass)}`}
                               >
-                                {CLASS_OPEN_STATUS_LABELS[classSchedulePanelClass.statusClass]}
+                                {classBookingLabel(classSchedulePanelClass.statusClass)}
                               </span>
                             ) : (
                               <span className="self-start inline-flex items-center rounded-full border border-[#D4CDB5] bg-[#EDE8D8] px-2.5 py-0.5 text-xs font-bold text-[#5A5048] shadow-sm">
@@ -4209,7 +4889,7 @@ export default function AdminTimeBlockingPage({
                     <button
                       type="button"
                       onClick={() => setEnrolledStudentsModalOpen(true)}
-                      disabled={isBlockPanelReviewOpen}
+                      disabled={isSheetObstructedByModal}
                       className="w-full text-left bg-white rounded-2xl border border-[#D4CDB5]/60 overflow-hidden shadow-sm transition-all hover:border-[#c49a3c]/45 hover:shadow-md active:scale-[0.995] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/30"
                       aria-label="View enrolled students"
                     >
@@ -4372,6 +5052,32 @@ export default function AdminTimeBlockingPage({
                   </div>
                 )}
               </div>
+
+              {isStaffTimeSlots
+                && classSchedulePanelBlock
+                && isStaffVacantBlock(classSchedulePanelBlock)
+                && panelBlockPendingRequest
+                && panelBlockPendingRequestId && (
+                <div className="shrink-0 border-t border-[#D4CDB5]/50 bg-white px-4 py-4">
+                  <PendingPortalRequestWithdrawActions
+                    variant="panel"
+                    hideClose
+                    confirmingWithdraw={confirmWithdrawBlockSlot}
+                    withdrawing={withdrawingBlockSlot}
+                    withdrawError={withdrawBlockSlotError}
+                    onClose={closeClassScheduleBlockPanel}
+                    onStartWithdraw={() => {
+                      setWithdrawBlockSlotError(null);
+                      setConfirmWithdrawBlockSlot(true);
+                    }}
+                    onConfirmWithdraw={() => void handleWithdrawEditingBlockSlotRequest()}
+                    onKeepRequest={() => {
+                      setConfirmWithdrawBlockSlot(false);
+                      setWithdrawBlockSlotError(null);
+                    }}
+                  />
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -4404,6 +5110,9 @@ export default function AdminTimeBlockingPage({
               >
                 {selectedMonthKey ? formatDateLongFromKey(selectedMonthKey) : 'Day schedule'}
               </SheetTitle>
+              <SheetDescription className="sr-only">
+                Time blocks scheduled for the selected day.
+              </SheetDescription>
                 <p className={`text-xs mt-1 ${CALENDAR_PANEL_TIME_META}`}>
                   {selectedDayBlocksInPanelRange.length} block
                   {selectedDayBlocksInPanelRange.length === 1 ? '' : 's'} · Hours{' '}
@@ -4524,6 +5233,7 @@ export default function AdminTimeBlockingPage({
                       );
                       if (placement.hidden) return null;
                       const isVacant = block.statusBlock === 'vacant';
+                      const isClosedBlock = isTerminalClassBlockStatus(block.statusBlock);
                       const staffRequestPending = staffPendingSlotRequest(block.id);
                       const adminPendingPortalRequest = adminPendingPortalRequestOnBlock(block.id);
                       return (
@@ -4536,7 +5246,9 @@ export default function AdminTimeBlockingPage({
                           density="panel"
                           variant="panel"
                           isVacant={isVacant}
+                          isClosedBlock={isClosedBlock}
                           staffRequestPending={staffRequestPending}
+                          staffCoachAssignedToYou={staffCoachAssignedOnBlock(block)}
                           adminPendingPortalRequest={adminPendingPortalRequest}
                           showMemberCapacity={isActiveClassCalendar || isStaffClassSchedule}
                           memberSelfEnrollment={
@@ -4575,7 +5287,12 @@ export default function AdminTimeBlockingPage({
             onEnroll={handleMemberEnrollClass}
             enrollDisabled={memberClassEnrollState.disabled}
             enrollHint={memberClassEnrollState.hint}
-            readOnly={isStaffClassSchedule}
+            readOnly={
+              isStaffClassSchedule
+              || (isMemberClassSchedule
+                && isTerminalClassBlockStatus(classSchedulePanelBlock.statusBlock))
+            }
+            showMemberEnrollmentSummary={isMemberClassSchedule}
             memberEnrollmentStatus={
               isStaffClassSchedule
                 ? null
@@ -4583,6 +5300,15 @@ export default function AdminTimeBlockingPage({
                   ? memberClassEnrollmentGate
                   : memberEnrollmentByClassId.get(classSchedulePanelBlock.id) ?? null
             }
+            onCancelSchedule={
+              isStaffClassSchedule
+              && classSchedulePanelBlock
+              && staffCoachAssignedOnBlock(classSchedulePanelBlock)
+              && !isTerminalClassBlockStatus(classSchedulePanelBlock.statusBlock)
+                ? openStaffPanelCancellationRequest
+                : undefined
+            }
+            cancelScheduleDisabled={showCancellationRequestModal}
           />
         )
         : null}
@@ -4667,17 +5393,17 @@ export default function AdminTimeBlockingPage({
           document.body,
         )}
 
-      {isClassSchedule && classAssignId && classAssignDraft && classAssignItem && (
+      {isClassSchedule && classAssignSession && (
         <AdminClassModal
           mode="edit"
           assignSchedule
-          assignScheduleIsUpdate={isAssignedScheduleBlock(classAssignItem.statusBlock)}
-          initial={classAssignDraft}
-          classItem={classAssignItem}
+          assignScheduleIsUpdate={isAssignedScheduleBlock(classAssignSession.item.statusBlock)}
+          initial={classAssignSession.draft}
+          classItem={classAssignSession.item}
           disciplines={disciplines}
           coaches={coachOptions}
           students={studentOptions}
-          onClose={() => setClassAssignId(null)}
+          onClose={closeClassAssignModal}
           onSave={handleClassAssignSave}
           onDelete={handleClassAssignDelete}
         />
@@ -4877,7 +5603,7 @@ export default function AdminTimeBlockingPage({
                     />
                 </div>
                   <p className="mt-2 text-[#9A8E7E] text-xs leading-relaxed">
-                    Vacant blocks are open slots; active or occupied blocks show as scheduled classes on the calendar.
+                    Vacant blocks are open slots; active or assigned blocks show as scheduled classes on the calendar.
                   </p>
               </div>
               )}
@@ -4947,8 +5673,8 @@ export default function AdminTimeBlockingPage({
                         {!editingBlock.id.startsWith('req-') && (
                           <button
                             type="button"
-                            onClick={() => void handleAssignSchedule()}
-                            disabled={blockFormInvalid || saving}
+                            onClick={handleAssignSchedule}
+                            disabled={saving}
                             className={`action-button rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
                               blockFormInvalid || saving
                                 ? 'cursor-not-allowed border-[#D4CDB5]/60 text-[#B0A898]'
@@ -5054,6 +5780,25 @@ export default function AdminTimeBlockingPage({
           onClose={() => {
             setShowSlotRequestModal(false);
             setSlotRequestContext(null);
+          }}
+          onSubmitted={() => {
+            void loadMySlotRequests();
+          }}
+          onWithdrawn={() => {
+            void loadMySlotRequests();
+          }}
+        />
+      )}
+
+      {isStaffSchedulePortal && staffUser && (
+        <StaffCancellationRequestModal
+          open={showCancellationRequestModal}
+          context={cancellationRequestContext}
+          pendingRequestId={panelPendingCancellationRequest?.id ?? null}
+          pendingStatus={panelPendingCancellationRequest?.status ?? null}
+          onClose={() => {
+            setShowCancellationRequestModal(false);
+            setCancellationRequestContext(null);
           }}
           onSubmitted={() => {
             void loadMySlotRequests();

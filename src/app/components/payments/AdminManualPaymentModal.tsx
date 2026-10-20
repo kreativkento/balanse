@@ -84,8 +84,8 @@ export function AdminManualPaymentModal({
       classes
         .filter(
           (c) =>
-            (c.statusBlock === 'active' || c.statusBlock === 'occupied')
-            && c.statusClass !== 'close',
+            (c.statusBlock === 'active' || c.statusBlock === 'assigned')
+            && c.statusClass,
         )
         .sort(
           (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
@@ -401,7 +401,7 @@ export function AdminManualPaymentModal({
             <div>
               <p className="text-[#1E2A35] text-sm font-semibold">Verify &amp; enroll now</p>
               <p className="text-[#8A7E6E] text-xs mt-0.5">
-                When off, the record stays pending until you approve it like other submissions.
+                When off, the record stays pending until you approve it. Drop-in payments stay held until the studio cancellation window; they are not an official receipt until cleared.
               </p>
             </div>
             <Switch

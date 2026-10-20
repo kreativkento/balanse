@@ -1,4 +1,4 @@
--- Submit levels: member 0, coach/marketing 1, frontdesk 2, admin/dev 3.
+-- Submit levels: member 0, coach/marketing/frontdesk 2, admin/dev 3 (see 094).
 -- Safe to re-run after 077_feedback_member_insert_rls.sql.
 
 drop policy if exists "Feedback insert own" on public.feedback_system;

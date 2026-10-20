@@ -2,7 +2,7 @@ import { CalendarRange } from 'lucide-react';
 import { MemberGreetingHeader } from '../components/layout/DashboardGreetingBar';
 import AdminTimeBlockingPage from './AdminTimeBlockingPage';
 
-/** Member class calendar — same views as admin Class Schedule; Active blocks only. */
+/** Member class calendar — admin-style filters; active, completed, and cancelled blocks only. */
 export default function MemberClassSchedule() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
@@ -17,7 +17,11 @@ export default function MemberClassSchedule() {
         />
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <AdminTimeBlockingPage key="member-class-schedule" variant="member-class-schedule" />
+        <AdminTimeBlockingPage
+          key="member-class-schedule"
+          variant="member-class-schedule"
+          showClassBlockStatusLegend
+        />
       </div>
     </div>
   );

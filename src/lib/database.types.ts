@@ -12,8 +12,14 @@ export const STAFF_USER_ROLES: StaffUserRole[] = [
 export type ClassStatus = 'draft' | 'published' | 'cancelled' | 'completed';
 /** @deprecated Use ClassOpenStatus */
 export type EventStatus = ClassStatus;
-export type ClassOpenStatus = 'open' | 'close' | 'pending';
-export type ClassBlockStatus = 'vacant' | 'occupied' | 'active' | 'closed';
+/** True when the class is open for enrollment (`classes.status_class`). */
+export type ClassStatusClass = boolean;
+export type ClassBlockStatus =
+  | 'vacant'
+  | 'assigned'
+  | 'active'
+  | 'completed'
+  | 'cancelled';
 export type TicketType = 'bug' | 'feature' | 'support' | 'incident' | 'other';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -235,7 +241,7 @@ export interface Database {
           p_starts_at: string;
           p_ends_at?: string | null;
           p_class_limit?: number;
-          p_status_class?: ClassOpenStatus;
+          p_status_class?: boolean;
           p_status_block?: ClassBlockStatus;
           p_name?: string;
           p_description?: string;
@@ -251,7 +257,7 @@ export interface Database {
           p_starts_at: string;
           p_ends_at?: string | null;
           p_class_limit?: number;
-          p_status_class?: ClassOpenStatus;
+          p_status_class?: boolean;
           p_status_block?: ClassBlockStatus;
           p_name?: string;
           p_description?: string;
@@ -263,6 +269,10 @@ export interface Database {
       };
       admin_delete_class: {
         Args: { p_class_id: string };
+        Returns: undefined;
+      };
+      close_started_class_blocks: {
+        Args: Record<string, never>;
         Returns: undefined;
       };
       upsert_staff_availability: {
@@ -292,6 +302,8 @@ export interface Database {
           p_request_id: string;
           p_status: PortalRequestStatus;
           p_review_note?: string;
+          p_replacement_coach_account_id?: string | null;
+          p_cancel_entire_class?: boolean;
         };
         Returns: PortalRequestRow;
       };
@@ -303,6 +315,35 @@ export interface Database {
           cover_image: string;
           auth_user_id: string;
         }[];
+      };
+      password_reset_eligible: {
+        Args: { p_email: string; p_portal: string };
+        Returns: boolean;
+      };
+      admin_force_lock_escrow_payment: {
+        Args: { p_escrow_id: string };
+        Returns: string;
+      };
+      admin_mark_cash_refund_disbursed: {
+        Args: { p_escrow_payment_id: string; p_note?: string };
+        Returns: unknown;
+      };
+      admin_grant_courtesy_credits: {
+        Args: {
+          p_account_id: string;
+          p_quantity: number;
+          p_expires_at: string;
+          p_reason: string;
+        };
+        Returns: unknown;
+      };
+      admin_extend_credit_lot: {
+        Args: { p_lot_id: string; p_expires_at: string; p_reason: string };
+        Returns: unknown;
+      };
+      admin_adjust_credit_lot: {
+        Args: { p_lot_id: string; p_delta: number; p_reason: string };
+        Returns: unknown;
       };
       coach_directory: {
         Args: Record<string, never>;
@@ -465,7 +506,7 @@ export interface ClassRow {
   starts_at: string;
   ends_at: string | null;
   class_limit: number;
-  status_class: ClassOpenStatus;
+  status_class: boolean;
   status_block: ClassBlockStatus;
   created_by: string;
   created_at: string;
@@ -573,7 +614,10 @@ export interface StaffAvailabilityRow {
   updated_at: string;
 }
 
-export type PortalRequestType = 'slot_request' | 'cancellation_request';
+export type PortalRequestType =
+  | 'slot_request'
+  | 'cancellation_request'
+  | 'member_enrollment_cancellation';
 export type PortalRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface PortalRequestRow {
@@ -622,6 +666,7 @@ export interface GalleryPostMediaRow {
 
 export interface FeedbackRow {
   id: string;
+  uid: string;
   account_id: string;
   title: string;
   description: string;

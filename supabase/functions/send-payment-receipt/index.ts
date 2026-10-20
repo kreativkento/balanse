@@ -13,11 +13,10 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
-const PAYMENT_SELECT = `
+const FINAL_SELECT = `
   id,
   uid,
-  status,
-  verified,
+  escrow_payment_id,
   buyer_name,
   buyer_email,
   buyer_address,
@@ -71,6 +70,53 @@ function mapPaymentToReceiptRow(payment: Record<string, unknown>): ClassPaymentR
     receipt_issued_at: payment.receipt_issued_at as string | null,
     class_name: className ?? null,
   };
+}
+
+async function loadFinalTransaction(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  paymentId: string,
+): Promise<{ row: Record<string, unknown> | null; error: string | null }> {
+  const { data: byFinalId, error: byFinalError } = await supabaseAdmin
+    .from('final_transactions')
+    .select(FINAL_SELECT)
+    .eq('id', paymentId)
+    .maybeSingle();
+
+  if (byFinalError) {
+    return { row: null, error: byFinalError.message };
+  }
+  if (byFinalId) {
+    return { row: byFinalId as Record<string, unknown>, error: null };
+  }
+
+  const { data: byEscrow, error: byEscrowError } = await supabaseAdmin
+    .from('final_transactions')
+    .select(FINAL_SELECT)
+    .eq('escrow_payment_id', paymentId)
+    .maybeSingle();
+
+  if (byEscrowError) {
+    return { row: null, error: byEscrowError.message };
+  }
+  if (byEscrow) {
+    return { row: byEscrow as Record<string, unknown>, error: null };
+  }
+
+  const { data: escrow } = await supabaseAdmin
+    .from('class_payments_escrow')
+    .select('id, status, verified, escrow_state, refundable_until')
+    .eq('id', paymentId)
+    .maybeSingle();
+
+  if (escrow && escrow.status === 'approved' && escrow.verified) {
+    return {
+      row: null,
+      error:
+        'Payment is still in escrow. Official receipts are issued after the cancellation refund window (see studio policies).',
+    };
+  }
+
+  return { row: null, error: 'Finalized transaction not found.' };
 }
 
 Deno.serve(async (req) => {
@@ -142,31 +188,24 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, error: 'Admin access required' }, 403);
   }
 
-  const { data: payment, error: paymentError } = await supabaseAdmin
-    .from('class_payments')
-    .select(PAYMENT_SELECT)
-    .eq('id', paymentId)
-    .maybeSingle();
+  const { row: payment, error: loadError } = await loadFinalTransaction(supabaseAdmin, paymentId);
 
-  if (paymentError || !payment) {
-    return jsonResponse({ ok: false, error: 'Payment not found' }, 404);
+  if (loadError || !payment) {
+    return jsonResponse({ ok: false, error: loadError ?? 'Payment not found' }, loadError?.includes('escrow') ? 400 : 404);
   }
 
-  if (payment.status !== 'approved' || !payment.verified) {
-    return jsonResponse({ ok: false, error: 'Payment must be approved before issuing a receipt.' }, 400);
-  }
-
+  const finalId = payment.id as string;
   const existingHtml = (payment.receipt_html as string)?.trim();
   let html = existingHtml;
 
   if (!html) {
-    const receiptRow = mapPaymentToReceiptRow(payment as Record<string, unknown>);
+    const receiptRow = mapPaymentToReceiptRow(payment);
     html = buildClassPaymentReceiptHtml(receiptRow, siteUrl);
 
     const { error: saveError } = await supabaseAdmin
-      .from('class_payments')
+      .from('final_transactions')
       .update({ receipt_html: html })
-      .eq('id', paymentId);
+      .eq('id', finalId);
 
     if (saveError) {
       console.error('receipt_html update:', saveError.message);
@@ -175,7 +214,7 @@ Deno.serve(async (req) => {
   }
 
   if (storeOnly) {
-    return jsonResponse({ ok: true, stored: true, htmlLength: html.length });
+    return jsonResponse({ ok: true, stored: true, htmlLength: html.length, finalTransactionId: finalId });
   }
 
   if (!resendApiKey) {
@@ -192,7 +231,7 @@ Deno.serve(async (req) => {
   }
 
   if (payment.email_receipt_sent) {
-    return jsonResponse({ ok: true, alreadySent: true, stored: true });
+    return jsonResponse({ ok: true, alreadySent: true, stored: true, finalTransactionId: finalId });
   }
 
   const subject = `Your Balansé official receipt — ${payment.uid as string}`;
@@ -222,13 +261,13 @@ Deno.serve(async (req) => {
   }
 
   const { error: updateError } = await supabaseAdmin
-    .from('class_payments')
+    .from('final_transactions')
     .update({ email_receipt_sent: true })
-    .eq('id', paymentId);
+    .eq('id', finalId);
 
   if (updateError) {
     console.error('email_receipt_sent update:', updateError.message);
   }
 
-  return jsonResponse({ ok: true, sent: true, to: toEmail, stored: true });
+  return jsonResponse({ ok: true, sent: true, to: toEmail, stored: true, finalTransactionId: finalId });
 });

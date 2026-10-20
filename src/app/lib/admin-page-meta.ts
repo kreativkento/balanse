@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Award,
-  BarChart3,
   Briefcase,
+  Coins,
   CalendarDays,
   CalendarRange,
   ClipboardList,
@@ -32,10 +32,10 @@ const ADMIN_PAGE_META: Record<string, AdminPageMeta> = {
   '/admin-schedule': { crumb: 'Admin › Time Blocking', title: 'Time Blocking', icon: CalendarDays },
   '/admin-classes': { crumb: 'Admin › Class Schedule', title: 'Class Schedule', icon: CalendarRange },
   '/admin-coach-requests': { crumb: 'Admin › Schedule', title: 'Coach Requests', icon: ClipboardList },
-  '/admin-financial-metrics': {
+  '/admin-credits': {
     crumb: 'Admin › Finance',
-    title: 'Financial Metrics',
-    icon: BarChart3,
+    title: 'Credits',
+    icon: Coins,
   },
   '/admin-staff': { crumb: 'Admin › Staffing', title: 'Staffing Management', icon: Briefcase },
   '/admin-payments': { crumb: 'Admin › Payments', title: 'Payments & Receipts', icon: CreditCard },

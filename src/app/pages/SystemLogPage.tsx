@@ -75,6 +75,7 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
 
   useEffect(() => {
     if (!devUser) navigate('/development');
+    else navigate('/development/dashboard', { replace: true });
   }, [devUser, navigate]);
 
   useEffect(() => {

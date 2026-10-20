@@ -1,5 +1,5 @@
 import AdminBulletinPage from './AdminBulletinPage';
 
-export default function MarketingBulletinPage() {
+export default function FrontdeskBulletinPage() {
   return <AdminBulletinPage />;
 }

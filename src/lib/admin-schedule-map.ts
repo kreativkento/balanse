@@ -1,4 +1,4 @@
-import type { ClassBlockStatus, ClassDisplay, ClassOpenStatus } from './class-service';
+import type { ClassBlockStatus, ClassDisplay } from './class-service';
 import { normalizeDisciplineColorHex } from './default-assets';
 import { statusColorFromHue, type DisciplineDisplay } from './discipline-service';
 
@@ -13,11 +13,13 @@ export interface AdminScheduleBlock {
   title: string;
   coach: string;
   coachAccountId: string;
+  /** All coaches assigned to the class (class_coaches). */
+  coachAccountIds: string[];
   disciplineId: string;
   capacity: number;
   enrolled: number;
   color: string;
-  statusClass: ClassOpenStatus;
+  statusClass: boolean;
   statusBlock: ClassBlockStatus;
   startsAt: string;
   endsAt: string | null;
@@ -25,33 +27,60 @@ export interface AdminScheduleBlock {
 
 const DEFAULT_DURATION_MIN = 60;
 
+/** Calendar `status_block` fills (class schedule legend + vacant / terminal blocks). */
 export const BLOCK_STATUS_COLORS: Record<ClassBlockStatus, string> = {
   vacant: '#B0A898',
-  occupied: '#3A4A5A',
-  active: '#6B8E6B',
-  closed: '#8A7E6E',
+  assigned: '#745b3c',
+  active: '#c49a3c',
+  completed: '#1E2A35',
+  cancelled: '#A84A4A',
 };
 
-/** Admin time-blocking & staff slots — brand palette, not discipline calendar colors. */
+export const CLASS_BLOCK_STATUS_LABELS: Record<ClassBlockStatus, string> = {
+  vacant: 'Vacant',
+  assigned: 'Assigned',
+  active: 'Active',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+export const CLASS_BLOCK_STATUS_LEGEND: {
+  status: ClassBlockStatus;
+  label: string;
+  color: string;
+}[] = (
+  ['vacant', 'assigned', 'active', 'completed', 'cancelled'] as ClassBlockStatus[]
+).map((status) => ({
+  status,
+  label: CLASS_BLOCK_STATUS_LABELS[status],
+  color: BLOCK_STATUS_COLORS[status],
+}));
+
+/** Admin time-blocking — aligned with {@link BLOCK_STATUS_COLORS} (legacy keys kept for imports). */
 export const OPERATIONS_BLOCK_FILLS = {
-  active: '#c49a3c',
+  active: BLOCK_STATUS_COLORS.active,
   open: '#DDB864',
-  close: '#1E2A35',
-  occupied: '#745b3c',
+  closed: BLOCK_STATUS_COLORS.completed,
+  assigned: BLOCK_STATUS_COLORS.assigned,
   pending: '#8A7E6E',
+  completed: BLOCK_STATUS_COLORS.completed,
+  cancelled: BLOCK_STATUS_COLORS.cancelled,
 } as const;
 
 export type ScheduleBlockColorMode = 'discipline' | 'operations';
 
 export function operationsBlockFillFromStatus(
   statusBlock: ClassBlockStatus,
-  statusClass: ClassOpenStatus,
+  statusClass: boolean,
 ): string {
   if (statusBlock === 'vacant') return BLOCK_STATUS_COLORS.vacant;
-  if (statusBlock === 'closed' || statusClass === 'close') return OPERATIONS_BLOCK_FILLS.close;
-  if (statusBlock === 'active') return OPERATIONS_BLOCK_FILLS.active;
-  if (statusClass === 'open') return OPERATIONS_BLOCK_FILLS.open;
-  if (statusBlock === 'occupied') return OPERATIONS_BLOCK_FILLS.occupied;
+  if (statusBlock === 'cancelled') return BLOCK_STATUS_COLORS.cancelled;
+  if (statusBlock === 'completed') return BLOCK_STATUS_COLORS.completed;
+  if (statusBlock === 'assigned') return BLOCK_STATUS_COLORS.assigned;
+  if (statusBlock === 'active') {
+    if (statusClass) return OPERATIONS_BLOCK_FILLS.open;
+    return BLOCK_STATUS_COLORS.active;
+  }
   return OPERATIONS_BLOCK_FILLS.pending;
 }
 
@@ -90,6 +119,9 @@ function blockDisplayColor(
   colorMode: ScheduleBlockColorMode,
 ): string {
   if (row.statusBlock === 'vacant') return BLOCK_STATUS_COLORS.vacant;
+  if (row.statusBlock === 'completed' || row.statusBlock === 'cancelled') {
+    return BLOCK_STATUS_COLORS[row.statusBlock];
+  }
   if (colorMode === 'operations') return operationsBlockFillColor(row);
   if (row.disciplineName && row.disciplineName !== '—') {
     return resolveColor(classColors, row.disciplineName);
@@ -178,6 +210,7 @@ function rowToBlock(
     title: row.name.trim() || (row.uid ? `#${row.uid}` : 'Vacant slot'),
     coach: coachName,
     coachAccountId: primaryCoach?.accountId ?? '',
+    coachAccountIds: row.coaches.map((person) => person.accountId).filter(Boolean),
     disciplineId: row.disciplineId ?? '',
     capacity: row.classLimit ?? 0,
     enrolled: row.enrolledCount,
@@ -215,9 +248,8 @@ export function provisionalScheduleBlock(params: {
   startsAt: string;
   endsAt: string | null;
   startHour: number;
-  statusClass?: ClassOpenStatus;
+  statusClass?: boolean;
   statusBlock?: ClassBlockStatus;
-  statusClass?: ClassOpenStatus;
   classLimit?: number;
   uid?: string;
   name?: string;
@@ -234,7 +266,7 @@ export function provisionalScheduleBlock(params: {
     : 60;
 
   const statusBlock = params.statusBlock ?? 'vacant';
-  const statusClass = params.statusClass ?? 'pending';
+  const statusClass = params.statusClass ?? false;
   const colorMode = params.colorMode ?? 'operations';
 
   return {
@@ -248,6 +280,7 @@ export function provisionalScheduleBlock(params: {
     title: params.name?.trim() || (params.uid ? `#${params.uid}` : 'Vacant slot'),
     coach: '—',
     coachAccountId: '',
+    coachAccountIds: [],
     disciplineId: '',
     capacity: params.classLimit ?? 0,
     enrolled: params.enrolled ?? 0,

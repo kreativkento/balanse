@@ -1,6 +1,14 @@
+import { sendEnrollmentCancellationDecisionEmail } from './enrollment-cancellation-email';
+import {
+  sendClassCancellationMemberEmails,
+  sendScheduleCoachPortalDecisionEmail,
+} from './schedule-coach-email';
 import { supabase } from './supabase';
 
-export type PortalRequestType = 'slot_request' | 'cancellation_request';
+export type PortalRequestType =
+  | 'slot_request'
+  | 'cancellation_request'
+  | 'member_enrollment_cancellation';
 export type PortalRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export const PORTAL_REQUEST_STATUSES: PortalRequestStatus[] = [
@@ -33,6 +41,21 @@ export interface SlotRequestPayload {
 
 export interface CancellationRequestPayload {
   reason?: string;
+  replacement_coach_account_id?: string | null;
+  cancel_entire_class?: boolean;
+}
+
+/** Coach cancellation within this window requires replacement or full class cancel. */
+export const CLASS_CANCELLATION_REPLACEMENT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function isClassCancellationShortNotice(
+  startsAt: string | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  if (!startsAt) return true;
+  const startMs = new Date(startsAt).getTime();
+  if (!Number.isFinite(startMs)) return true;
+  return startMs - nowMs < CLASS_CANCELLATION_REPLACEMENT_WINDOW_MS;
 }
 
 export interface PortalRequestRow {
@@ -110,6 +133,70 @@ export async function fetchPortalRequests(): Promise<{
   }
 
   return { requests: (data ?? []).map((r) => rowToPortalRequest(r as PortalRequestDbRow)) };
+}
+
+export async function fetchCancellationPortalRequests(): Promise<{
+  requests: PortalRequestRow[];
+  error?: string;
+}> {
+  const { data, error } = await supabase
+    .from('portal_requests')
+    .select('*')
+    .eq('request_type', 'cancellation_request')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('fetchCancellationPortalRequests:', error.message);
+    return { requests: [], error: error.message };
+  }
+
+  return { requests: (data ?? []).map((r) => rowToPortalRequest(r as PortalRequestDbRow)) };
+}
+
+/** Portal requests tied to a schedule block (`target_class_id` or `result_class_id`). */
+export async function fetchPortalRequestsForClass(classId: string): Promise<{
+  requests: PortalRequestRow[];
+  error?: string;
+}> {
+  const trimmedId = classId.trim();
+  if (!trimmedId) {
+    return { requests: [] };
+  }
+
+  const { data, error } = await supabase
+    .from('portal_requests')
+    .select('*')
+    .or(`target_class_id.eq.${trimmedId},result_class_id.eq.${trimmedId}`)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('fetchPortalRequestsForClass:', error.message);
+    return { requests: [], error: error.message };
+  }
+
+  return { requests: (data ?? []).map((r) => rowToPortalRequest(r as PortalRequestDbRow)) };
+}
+
+export function portalRequestMatchesClassId(
+  row: PortalRequestRow,
+  classId: string,
+): boolean {
+  const trimmedId = classId.trim();
+  if (!trimmedId) return false;
+  return row.target_class_id === trimmedId || row.result_class_id === trimmedId;
+}
+
+export function mergePortalRequestRows(
+  existing: PortalRequestRow[],
+  incoming: PortalRequestRow[],
+): PortalRequestRow[] {
+  const byId = new Map(existing.map((row) => [row.id, row]));
+  for (const row of incoming) {
+    byId.set(row.id, row);
+  }
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
 }
 
 /** Fired after admin/staff portal request lists change (e.g. review or reload). */
@@ -240,6 +327,28 @@ export async function submitSlotRequest(input: {
   return { request: rowToPortalRequest(data as PortalRequestDbRow) };
 }
 
+export async function submitMemberEnrollmentCancellation(input: {
+  classId: string;
+  note?: string;
+}): Promise<{ request?: PortalRequestRow; error?: string }> {
+  const { data, error } = await supabase.rpc('submit_member_enrollment_cancellation', {
+    p_class_id: input.classId,
+    p_requester_note: input.note?.trim() ?? '',
+  });
+
+  if (error) {
+    console.error('submit_member_enrollment_cancellation:', error.message);
+    return { error: error.message };
+  }
+
+  if (!data) {
+    return { error: 'Request failed — no row returned.' };
+  }
+
+  notifyPortalRequestsChanged();
+  return { request: rowToPortalRequest(data as PortalRequestDbRow) };
+}
+
 export async function submitCancellationRequest(input: {
   targetClassId: string;
   reason?: string;
@@ -294,11 +403,15 @@ export async function reviewPortalRequest(input: {
   requestId: string;
   status: PortalRequestStatus;
   reviewNote?: string;
+  replacementCoachAccountId?: string | null;
+  cancelEntireClass?: boolean;
 }): Promise<{ request?: PortalRequestRow; error?: string }> {
   const { data, error } = await supabase.rpc('review_portal_request', {
     p_request_id: input.requestId,
     p_status: input.status,
     p_review_note: input.reviewNote?.trim() ?? '',
+    p_replacement_coach_account_id: input.replacementCoachAccountId ?? null,
+    p_cancel_entire_class: input.cancelEntireClass ?? false,
   });
 
   if (error) {
@@ -310,5 +423,50 @@ export async function reviewPortalRequest(input: {
     return { error: 'Review failed — no row returned.' };
   }
 
-  return { request: rowToPortalRequest(data as PortalRequestDbRow) };
+  const request = rowToPortalRequest(data as PortalRequestDbRow);
+
+  if (
+    request.request_type === 'slot_request'
+    && (input.status === 'approved' || input.status === 'rejected')
+  ) {
+    void sendScheduleCoachPortalDecisionEmail(request.id);
+  }
+
+  if (
+    request.request_type === 'member_enrollment_cancellation'
+    && (input.status === 'approved' || input.status === 'rejected')
+  ) {
+    void sendEnrollmentCancellationDecisionEmail(request.id);
+    if (input.status === 'approved') {
+      const payload = request.payload as { escrow_refund?: { outcome?: string } };
+      if (payload.escrow_refund?.outcome === 'forfeited') {
+        void supabase.rpc('finalize_due_escrow_payments').then(() =>
+          supabase.functions.invoke('lock-due-escrow', { body: {} }),
+        );
+      }
+    }
+  }
+
+  if (
+    request.request_type === 'cancellation_request'
+    && input.status === 'approved'
+    && request.target_class_id
+  ) {
+    if (input.cancelEntireClass) {
+      void sendClassCancellationMemberEmails({
+        classId: request.target_class_id,
+        variant: 'class_cancelled',
+      });
+    } else if (input.replacementCoachAccountId) {
+      void sendClassCancellationMemberEmails({
+        classId: request.target_class_id,
+        variant: 'coach_replaced',
+        replacementCoachAccountId: input.replacementCoachAccountId,
+      });
+    }
+  }
+
+  notifyPortalRequestsChanged();
+
+  return { request };
 }

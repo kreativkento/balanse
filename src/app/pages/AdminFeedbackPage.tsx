@@ -23,33 +23,49 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { FeedbackDetailViewModal } from '../components/feedback/FeedbackDetailViewModal';
+import { FeedbackIrreversibleConfirmDialog } from '../components/feedback/FeedbackIrreversibleConfirmDialog';
+import { FeedbackTicketDropdown } from '../components/feedback/FeedbackTicketDropdown';
+import { FEEDBACK_DETAIL_MODAL_PANEL } from '../components/feedback/feedback-detail-modal-styles';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
+import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import {
   FEEDBACK_DESCRIPTION_MAX,
   FEEDBACK_MAX_BYTES,
   FEEDBACK_MAX_VIDEO_SECONDS,
+  FEEDBACK_PRIORITY_DROPDOWN_OPTIONS,
   FEEDBACK_STATUSES,
   FEEDBACK_TITLE_MAX,
   canDeleteOwnFeedback,
-  createFeedbackAttachmentUrl,
+  canSetFeedbackPriority,
+  canSetFeedbackStatus,
+  canAdminDeescalateFeedbackToFrontdesk,
+  deescalateFeedbackToFrontdesk,
   deleteOwnFeedback,
-  escalateFeedbackTicket,
-  feedbackLevelLabel,
+  feedbackDeleteBlockedMessage,
+  feedbackPriorityLabel,
+  feedbackPublicTicketId,
   fetchAdminFeedbackInbox,
   fetchFeedbackSubmitter,
+  fetchFeedbackTicketCreatorRole,
   fetchOwnFeedback,
+  forwardFeedbackToDev,
+  receiveAdminFeedbackTicket,
+  updateFeedbackPriority,
+  updateFeedbackStatus,
   formatFeedbackFileSize,
   isFeedbackVideo,
   isFeedbackVideoMime,
-  openFeedbackTicket,
   submitFeedback,
   validateFeedbackAttachment,
   type FeedbackDisplay,
   type FeedbackLabel,
+  type FeedbackPriority,
   type FeedbackStatus,
   type FeedbackTicketLevel,
 } from '../../lib/feedback-service';
+import type { UserRole } from '../../lib/database.types';
 import {
   toastCreated,
   toastDeleted,
@@ -112,20 +128,13 @@ type FeedbackListMode = 'inbox' | 'mine';
 
 function inboxLevelsForPortal(portal: FeedbackPortal): FeedbackTicketLevel[] {
   if (portal === 'staff') return [];
-  if (portal === 'admin') return [1];
-  if (portal === 'dev') return [3];
+  if (portal === 'admin') return [2, 3];
+  if (portal === 'dev') return [4];
   return [];
 }
 
 function portalHasInbox(portal: FeedbackPortal): boolean {
   return inboxLevelsForPortal(portal).length > 0;
-}
-
-function levelTone(level: number): string {
-  if (level === 0) return 'bg-amber-50 text-amber-800 border-amber-200';
-  if (level === 1) return 'bg-sky-50 text-sky-700 border-sky-200';
-  if (level === 2) return 'bg-violet-50 text-violet-700 border-violet-200';
-  return 'bg-[#1E2A35]/10 text-[#1E2A35] border-[#D4CDB5]';
 }
 
 function labelMeta(value: FeedbackLabel) {
@@ -251,7 +260,7 @@ function FeedbackRowCard({
 }) {
   const meta = labelMeta(item.label);
   const Icon = meta.icon;
-  const shortId = item.id.slice(0, 8).toUpperCase();
+  const ticketRef = feedbackPublicTicketId(item);
   const canDelete = showDelete && canDeleteOwnFeedback(item);
 
   return (
@@ -273,9 +282,6 @@ function FeedbackRowCard({
             <span className="rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5A5048]">
               {meta.label}
             </span>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${levelTone(item.ticketLevel)}`}>
-              {feedbackLevelLabel(item.ticketLevel)}
-            </span>
             {item.attachmentPath && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#8A7E6E]">
                 <Paperclip size={11} />
@@ -285,7 +291,7 @@ function FeedbackRowCard({
           </div>
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#8A7E6E]">{item.description}</p>
           <p className="mt-1.5 text-[11px] text-[#B0A898]">
-            Ticket <span className="font-mono text-[#5A5048]">#{shortId}</span>
+            Ticket <span className="font-mono text-[#5A5048]">#{ticketRef}</span>
             <span className="mx-1.5 text-[#D4CDB5]">·</span>
             {formatSubmittedAt(item.createdAt)}
           </p>
@@ -313,237 +319,6 @@ function FeedbackRowCard({
   );
 }
 
-function FeedbackDetailModal({
-  item,
-  onClose,
-  onDelete,
-  showDelete = true,
-  canEscalate = false,
-  escalateLabel = 'Pass to admin',
-  onEscalate,
-  escalating = false,
-  actionError = '',
-}: {
-  item: FeedbackDisplay;
-  onClose: () => void;
-  onDelete: (item: FeedbackDisplay) => void;
-  showDelete?: boolean;
-  canEscalate?: boolean;
-  escalateLabel?: string;
-  onEscalate?: () => void;
-  escalating?: boolean;
-  actionError?: string;
-}) {
-  const meta = labelMeta(item.label);
-  const Icon = meta.icon;
-  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
-  const [attachmentError, setAttachmentError] = useState('');
-  const [attachmentLoading, setAttachmentLoading] = useState(Boolean(item.attachmentPath));
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!item.attachmentPath) {
-      setAttachmentUrl(null);
-      setAttachmentError('');
-      setAttachmentLoading(false);
-      return;
-    }
-
-    setAttachmentLoading(true);
-    createFeedbackAttachmentUrl(item.attachmentPath).then((result) => {
-      if (cancelled) return;
-      setAttachmentUrl(result.url);
-      setAttachmentError(result.error ?? '');
-      setAttachmentLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [item.attachmentPath]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
-  const copyTicketId = async () => {
-    try {
-      await navigator.clipboard.writeText(item.id);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="feedback-detail-title"
-        className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-[#D4CDB5]/60 bg-white shadow-2xl sm:rounded-3xl"
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 px-5 py-4">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F8F3E8] ${meta.tone}`}>
-              <Icon size={16} />
-            </div>
-            <div className="min-w-0">
-              <h2
-                id="feedback-detail-title"
-                className="leading-none text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
-              >
-                Feedback details
-              </h2>
-              <p className="mt-1 text-[11px] text-[#8A7E6E]">{formatSubmittedAt(item.createdAt)}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#8A7E6E] transition-colors hover:bg-[#EDE8D8] hover:text-[#1E2A35]"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-4 overflow-y-auto px-5 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#D4CDB5]/70 bg-[#F8F3E8] px-2.5 py-1 text-[11px] font-semibold text-[#1E2A35]">
-              <Icon size={12} className={meta.tone} />
-              {meta.label}
-            </span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusTone(item.status)}`}>
-              {statusLabel(item.status)}
-            </span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${levelTone(item.ticketLevel)}`}>
-              {feedbackLevelLabel(item.ticketLevel)}
-            </span>
-          </div>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Label</span>
-            <div className={`${INP} flex items-center gap-2.5`}>
-              <Icon size={16} className={meta.tone} />
-              <span className="font-medium">{meta.label}</span>
-            </div>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Title</span>
-            <div className={INP}>{item.title}</div>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Description</span>
-            <div className={`${INP} min-h-[140px] whitespace-pre-wrap`}>{item.description}</div>
-          </label>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Attachment</span>
-            {item.attachmentPath ? (
-              <div className="rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-4 py-4">
-                {attachmentLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-[#8A7E6E]">
-                    <Loader2 size={16} className="animate-spin text-[#c49a3c]" />
-                    Loading attachment…
-                  </div>
-                ) : attachmentError || !attachmentUrl ? (
-                  <p className="text-sm text-[#8A7E6E]">{attachmentError || 'Attachment is unavailable.'}</p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <div className="overflow-hidden rounded-xl border border-[#D4CDB5]/60 bg-white">
-                      {isFeedbackVideoMime(item.attachmentMime) ? (
-                        <video src={attachmentUrl} controls className="max-h-56 w-full bg-black object-contain" />
-                      ) : (
-                        <img src={attachmentUrl} alt={item.attachmentName ?? 'Attachment'} className="max-h-56 w-full object-contain" />
-                      )}
-                    </div>
-                    <p className="flex items-center gap-1.5 truncate text-sm font-medium text-[#1E2A35]">
-                      {isFeedbackVideoMime(item.attachmentMime) ? <Film size={14} /> : <ImagePlus size={14} />}
-                      {item.attachmentName || 'Attachment'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className={`${INP} text-[#8A7E6E]`}>No file attached</div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Ticket ID</p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <code className="min-w-0 flex-1 break-all text-sm font-semibold text-[#1E2A35]">{item.id}</code>
-              <button
-                type="button"
-                onClick={() => void copyTicketId()}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#D4CDB5]/80 bg-white px-2.5 py-1 text-xs font-semibold text-[#5A5048] transition-colors hover:bg-[#EDE8D8]"
-              >
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-          </div>
-
-          {actionError && (
-            <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {actionError}
-            </p>
-          )}
-
-          <div className="flex flex-col gap-2">
-            {canEscalate && onEscalate && (
-              <button
-                type="button"
-                disabled={escalating}
-                onClick={onEscalate}
-                className="action-button inline-flex items-center justify-center gap-2 rounded-full bg-[#1E2A35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#263545] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {escalating ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
-                {escalateLabel}
-              </button>
-            )}
-
-            {showDelete && (
-              <>
-                <button
-                  type="button"
-                  disabled={!canDeleteOwnFeedback(item)}
-                  title={canDeleteOwnFeedback(item) ? 'Delete ticket' : 'Only unopened tickets can be deleted'}
-                  onClick={() => onDelete(item)}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:border-[#D4CDB5]/70 disabled:bg-[#F8F3E8] disabled:text-[#C4B8A0] disabled:hover:bg-[#F8F3E8]"
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
-                {!canDeleteOwnFeedback(item) && (
-                  <p className="text-center text-xs leading-relaxed text-[#8A7E6E]">
-                    Staff have opened this ticket, so it can&apos;t be deleted anymore. Thank you for your feedback!
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AdminFeedbackPage() {
   const navigate = useNavigate();
@@ -551,6 +326,7 @@ export default function AdminFeedbackPage() {
   const loginPath = loginPathForPortal(portal);
 
   const hasInbox = portalHasInbox(portal);
+  const urlSearchQuery = useAdminUrlSearchQuery();
 
   const [ready, setReady] = useState(false);
   const [listMode, setListMode] = useState<FeedbackListMode>(hasInbox ? 'inbox' : 'mine');
@@ -564,11 +340,19 @@ export default function AdminFeedbackPage() {
   const [pendingDelete, setPendingDelete] = useState<FeedbackDisplay | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-  const [escalating, setEscalating] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [submitterRole, setSubmitterRole] = useState<UserRole | null>(null);
+  const [submitterAccountId, setSubmitterAccountId] = useState<string | null>(null);
+  const [ticketCreatorRole, setTicketCreatorRole] = useState<UserRole | null>(null);
+  const [prioritySaving, setPrioritySaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [pendingForwardConfirm, setPendingForwardConfirm] = useState(false);
+  const [pendingDeescalateConfirm, setPendingDeescalateConfirm] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [label, setLabel] = useState<FeedbackLabel>('positive');
+  const [priority, setPriority] = useState<FeedbackPriority>('medium');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -589,7 +373,7 @@ export default function AdminFeedbackPage() {
     ]);
     setListError(ownResult.error ?? inboxResult.error ?? '');
     setItems(ownResult.data);
-    setInboxItems(inboxResult.data.filter((item) => item.ticketLevel === 1));
+    setInboxItems(inboxResult.data);
     setListLoading(false);
   };
 
@@ -601,6 +385,8 @@ export default function AdminFeedbackPage() {
         navigate(loginPath);
         return;
       }
+      setSubmitterRole(submitter.role);
+      setSubmitterAccountId(submitter.accountId);
       setReady(true);
       void loadItems();
     });
@@ -608,6 +394,20 @@ export default function AdminFeedbackPage() {
       cancelled = true;
     };
   }, [navigate, loginPath]);
+
+  useEffect(() => {
+    if (!viewing) {
+      setTicketCreatorRole(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchFeedbackTicketCreatorRole(viewing.accountId).then((result) => {
+      if (!cancelled) setTicketCreatorRole(result.role);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewing?.id, viewing?.accountId]);
 
   useEffect(() => {
     return () => {
@@ -634,6 +434,7 @@ export default function AdminFeedbackPage() {
 
   const resetFormFields = () => {
     setLabel('positive');
+    setPriority('medium');
     setTitle('');
     setDescription('');
     clearFile();
@@ -691,7 +492,7 @@ export default function AdminFeedbackPage() {
     }
 
     setSaving(true);
-    const result = await submitFeedback({ title, description, label, file });
+    const result = await submitFeedback({ title, description, label, priority, file });
     setSaving(false);
 
     if (result.error || !result.data) {
@@ -738,54 +539,140 @@ export default function AdminFeedbackPage() {
     setPendingDelete(null);
   };
 
-  const handleOpenItem = async (item: FeedbackDisplay) => {
+  const handleOpenItem = (item: FeedbackDisplay) => {
     setActionError('');
-    if (portal === 'staff' && listMode === 'inbox' && item.ticketLevel === 0) {
-      const result = await openFeedbackTicket(item.id);
-      if (result.error) {
-        setActionError(result.error);
-        setViewing(item);
-        return;
-      }
-      if (result.data) {
-        setInboxItems((prev) => prev.map((row) => (row.id === item.id ? result.data! : row)));
-        setViewing(result.data);
-        return;
-      }
-    }
     setViewing(item);
   };
 
-  const handleEscalate = async () => {
-    if (!viewing) return;
-    setEscalating(true);
-    setActionError('');
-    const result = await escalateFeedbackTicket(viewing.id);
-    setEscalating(false);
+  const patchFeedbackItem = (updated: FeedbackDisplay) => {
+    setViewing(updated);
+    setItems((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+    setInboxItems((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+  };
 
+  const handleReceive = async () => {
+    if (!viewing || viewing.ticketLevel !== 2) return;
+    setActionBusy(true);
+    setActionError('');
+    const result = await receiveAdminFeedbackTicket(viewing.id);
+    setActionBusy(false);
     if (result.error) {
       setActionError(result.error);
       toastOperationFailed(result.error);
       return;
     }
+    toastUpdated('Ticket received');
+    if (result.data) patchFeedbackItem(result.data);
+    await loadItems();
+  };
 
-    toastUpdated('Ticket escalated');
+  const handleForwardToDev = async () => {
+    if (!viewing || viewing.ticketLevel !== 3) return;
+    setActionBusy(true);
+    setActionError('');
+    const result = await forwardFeedbackToDev(viewing.id);
+    setActionBusy(false);
+    if (result.error) {
+      setActionError(result.error);
+      toastOperationFailed(result.error);
+      return;
+    }
+    toastUpdated('Forwarded to dev');
+    setPendingForwardConfirm(false);
     setViewing(null);
     await loadItems();
+  };
+
+  const handleDeescalateToFrontdesk = async () => {
+    if (!viewing) return;
+    setActionBusy(true);
+    setActionError('');
+    const result = await deescalateFeedbackToFrontdesk(viewing.id);
+    setActionBusy(false);
+    if (result.error) {
+      setActionError(result.error);
+      toastOperationFailed(result.error);
+      return;
+    }
+    toastUpdated('Returned to front desk');
+    setPendingDeescalateConfirm(false);
+    setViewing(null);
+    await loadItems();
+  };
+
+  const handlePrioritySelect = async (priority: FeedbackPriority) => {
+    if (!viewing || priority === viewing.priority) return;
+    setPrioritySaving(true);
+    setActionError('');
+    const result = await updateFeedbackPriority(viewing.id, priority);
+    setPrioritySaving(false);
+    if (result.error || !result.data) {
+      setActionError(result.error ?? 'Could not update priority.');
+      toastOperationFailed(result.error ?? 'Could not update priority.');
+      return;
+    }
+    patchFeedbackItem(result.data);
+    toastUpdated('Priority updated');
+  };
+
+  const handleStatusSelect = async (status: FeedbackStatus) => {
+    if (!viewing || status === viewing.status) return;
+    setStatusSaving(true);
+    setActionError('');
+    const result = await updateFeedbackStatus(viewing.id, status);
+    setStatusSaving(false);
+    if (result.error || !result.data) {
+      setActionError(result.error ?? 'Could not update status.');
+      toastOperationFailed(result.error ?? 'Could not update status.');
+      return;
+    }
+    patchFeedbackItem(result.data);
+    toastUpdated('Status updated');
   };
 
   const activeItems = listMode === 'inbox' ? inboxItems : items;
   const showDeleteControls = listMode === 'mine';
 
-  const filteredItems = useMemo(
-    () => (typeFilter === 'all' ? activeItems : activeItems.filter((item) => item.label === typeFilter)),
-    [activeItems, typeFilter],
+  const filteredItems = useMemo(() => {
+    const typed =
+      typeFilter === 'all' ? activeItems : activeItems.filter((item) => item.label === typeFilter);
+    const q = urlSearchQuery.trim().toLowerCase();
+    if (!q) return typed;
+    return typed.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q)
+        || item.description.toLowerCase().includes(q)
+        || feedbackPublicTicketId(item).toLowerCase().includes(q),
+    );
+  }, [activeItems, typeFilter, urlSearchQuery]);
+
+  const canReceiveViewing = Boolean(
+    viewing && listMode === 'inbox' && viewing.ticketLevel === 2,
   );
 
-  const canEscalateViewing = Boolean(
+  const showForwardViewing = Boolean(
+    viewing && listMode === 'inbox' && viewing.ticketLevel <= 3,
+  );
+
+  const forwardDisabledViewing = showForwardViewing && viewing?.ticketLevel !== 3;
+
+  const showDeescalateViewing = Boolean(
     viewing
-    && listMode === 'inbox'
-    && ((portal === 'staff' && viewing.ticketLevel === 1) || (portal === 'admin' && viewing.ticketLevel === 1)),
+    && canAdminDeescalateFeedbackToFrontdesk(viewing, ticketCreatorRole, listMode),
+  );
+
+  const canEditPriorityViewing = Boolean(
+    viewing
+    && submitterRole
+    && submitterAccountId
+    && canSetFeedbackPriority(submitterRole, viewing, submitterAccountId, listMode),
+  );
+
+  const canEditStatusViewing = Boolean(
+    viewing
+    && submitterRole
+    && submitterAccountId
+    && canSetFeedbackStatus(submitterRole, viewing, submitterAccountId, listMode),
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
@@ -1043,20 +930,79 @@ export default function AdminFeedbackPage() {
       </div>
     </div>
 
-      {viewing && (
-        <FeedbackDetailModal
-          item={viewing}
-          onClose={() => {
-            setViewing(null);
-            setActionError('');
-          }}
-          onDelete={setPendingDelete}
-          showDelete={showDeleteControls}
-          canEscalate={canEscalateViewing}
-          escalateLabel="Pass to dev"
-          onEscalate={() => { void handleEscalate(); }}
-          escalating={escalating}
-          actionError={actionError}
+      {viewing && (() => {
+        const meta = labelMeta(viewing.label);
+        const ViewIcon = meta.icon;
+        return (
+          <FeedbackDetailViewModal
+            item={viewing}
+            submittedAtLabel={formatSubmittedAt(viewing.createdAt)}
+            labelText={meta.label}
+            LabelIcon={ViewIcon}
+            labelTone={meta.tone}
+            onClose={() => {
+              setViewing(null);
+              setActionError('');
+            }}
+            onDelete={setPendingDelete}
+            showDelete={showDeleteControls}
+            submitterRole={submitterRole}
+            canReceive={canReceiveViewing}
+            receiveLabel="Receive"
+            onReceive={() => { void handleReceive(); }}
+            showForward={showForwardViewing}
+            forwardDisabled={forwardDisabledViewing}
+            forwardLabel="Forward to Dev"
+            forwardDisabledTitle="Receive this ticket first (ticket level must be 3)."
+            onForward={() => {
+              if (!forwardDisabledViewing) setPendingForwardConfirm(true);
+            }}
+            showDeescalate={showDeescalateViewing}
+            deescalateLabel="De-escalate to Frontdesk"
+            onDeescalate={() => setPendingDeescalateConfirm(true)}
+            canEditPriority={canEditPriorityViewing}
+            canEditStatus={canEditStatusViewing}
+            prioritySaving={prioritySaving}
+            statusSaving={statusSaving}
+            onPrioritySelect={(p) => { void handlePrioritySelect(p); }}
+            onStatusSelect={(s) => { void handleStatusSelect(s); }}
+            actionBusy={actionBusy}
+            actionError={actionError}
+          />
+        );
+      })()}
+
+      {pendingForwardConfirm && viewing && (
+        <FeedbackIrreversibleConfirmDialog
+          title="Forward to dev?"
+          message={
+            <>
+              This sends the ticket to the development queue and cannot be undone.
+              {' '}
+              <span className="font-semibold text-[#1E2A35]">{viewing.title}</span>
+            </>
+          }
+          confirmLabel="Forward to Dev"
+          busy={actionBusy}
+          onCancel={() => setPendingForwardConfirm(false)}
+          onConfirm={() => { void handleForwardToDev(); }}
+        />
+      )}
+
+      {pendingDeescalateConfirm && viewing && (
+        <FeedbackIrreversibleConfirmDialog
+          title="De-escalate to front desk?"
+          message={
+            <>
+              This returns the ticket to front desk (level 1) and cannot be undone from admin.
+              {' '}
+              <span className="font-semibold text-[#1E2A35]">{viewing.title}</span>
+            </>
+          }
+          confirmLabel="De-escalate to Frontdesk"
+          busy={actionBusy}
+          onCancel={() => setPendingDeescalateConfirm(false)}
+          onConfirm={() => { void handleDeescalateToFrontdesk(); }}
         />
       )}
 

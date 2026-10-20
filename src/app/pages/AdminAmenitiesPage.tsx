@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import { Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
@@ -16,6 +17,7 @@ import {
 export default function AdminAmenitiesPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
+  const urlSearchQuery = useAdminUrlSearchQuery();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -56,6 +58,19 @@ export default function AdminAmenitiesPage() {
     }
     return false;
   }, [selected, savedSnapshot]);
+
+  const visibleGroups = useMemo(() => {
+    const q = urlSearchQuery.trim().toLowerCase();
+    if (!q) return STUDIO_AMENITY_GROUPS;
+    return STUDIO_AMENITY_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) =>
+          item.label.toLowerCase().includes(q)
+          || group.title.toLowerCase().includes(q),
+      ),
+    })).filter((group) => group.items.length > 0);
+  }, [urlSearchQuery]);
 
   const toggleLabel = (label: string) => {
     setSelected((current) => {
@@ -117,7 +132,12 @@ export default function AdminAmenitiesPage() {
           </div>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pb-24">
-            {STUDIO_AMENITY_GROUPS.map((group) => (
+            {visibleGroups.length === 0 ? (
+              <p className="text-center text-sm text-[#8A7E6E] py-12">
+                No amenities match your search. Clear the search or try another term.
+              </p>
+            ) : null}
+            {visibleGroups.map((group) => (
               <section
                 key={group.title}
                 className="rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden"

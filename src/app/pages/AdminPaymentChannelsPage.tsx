@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import {
   deletePaymentChannelRecord,
   fetchPaymentChannelsForAdmin,
@@ -75,6 +76,7 @@ export default function AdminPaymentChannelsPage() {
   const { adminUser } = useAdminAuth();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const urlSearchQuery = useAdminUrlSearchQuery();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<PaymentChannelRecord[]>([]);
@@ -98,6 +100,19 @@ export default function AdminPaymentChannelsPage() {
   }, [adminUser, load]);
 
   const activeCount = useMemo(() => channels.filter((c) => c.isActive).length, [channels]);
+
+  const visibleChannels = useMemo(() => {
+    const q = urlSearchQuery.trim().toLowerCase();
+    if (!q) return channels;
+    return channels.filter(
+      (c) =>
+        c.label.toLowerCase().includes(q)
+        || c.slug.toLowerCase().includes(q)
+        || c.subtitle.toLowerCase().includes(q)
+        || c.bankName.toLowerCase().includes(q)
+        || c.accountName.toLowerCase().includes(q),
+    );
+  }, [channels, urlSearchQuery]);
 
   const openNew = () => {
     const nextOrder = channels.length > 0 ? Math.max(...channels.map((c) => c.sortOrder)) + 10 : 10;
@@ -255,7 +270,7 @@ export default function AdminPaymentChannelsPage() {
             </div>
           ) : (
             <div className="divide-y divide-[#D4CDB5]/30">
-              {channels.map((channel) => {
+              {visibleChannels.map((channel) => {
                 const qr = paymentChannelPublicQrUrl(channel.qrStoragePath);
                 return (
                   <div

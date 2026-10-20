@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { toastDeleted, toastOperationFailed, toastUpdated } from '../../../lib/operation-toast';
 import {
   CLASS_BLOCK_STATUSES,
-  CLASS_OPEN_STATUSES,
+  CLASS_BOOKING_OPTIONS,
+  CLASS_STATUS_CLASS_OPTIONS,
+  formatClassBooking,
   formatClassDateTime,
+  formatClassStatusClass,
   type ClassBlockStatus,
   type ClassDisplay,
-  type ClassOpenStatus,
   type ClassUpsertInput,
 } from '../../../lib/class-service';
 import type { DisciplineDisplay } from '../../../lib/discipline-service';
@@ -372,9 +375,10 @@ interface AdminClassModalProps {
 
 const BLOCK_STATUS_LABEL: Record<ClassBlockStatus, string> = {
   vacant: 'Vacant',
-  occupied: 'Occupied',
+  assigned: 'Assigned',
   active: 'Active',
-  closed: 'Closed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
 function scheduleSlotFromForm(form: ClassUpsertInput): {
@@ -430,7 +434,7 @@ function prepareAssignScheduleSavePayload(
   return {
     ...form,
     name: resolveAssignScheduleClassName(form, disciplines),
-    statusBlock: isUpdate ? form.statusBlock : 'occupied',
+    statusBlock: isUpdate ? form.statusBlock : 'assigned',
   };
 }
 
@@ -474,7 +478,7 @@ function summarizeAssignScheduleChanges(
     changes.push(`Coach → ${coachDisplayName(coaches, afterCoachId)}`);
   }
   if (before.statusClass !== after.statusClass) {
-    changes.push(`Class status → ${STATUS_LABEL[after.statusClass]}`);
+    changes.push(`Class booking → ${formatClassBooking(after.statusClass)}`);
   }
   if (before.classLimit !== after.classLimit) {
     changes.push(`Class limit → ${after.classLimit ?? '—'}`);
@@ -523,12 +527,6 @@ const compactInputClass =
 const fieldLabelClass = 'text-[#9A8E7E] text-[10px] uppercase tracking-widest mb-1 block';
 const fieldLabelClassDefault = 'text-[#9A8E7E] text-xs uppercase tracking-widest mb-2 block';
 
-const STATUS_LABEL: Record<ClassOpenStatus, string> = {
-  open: 'Open',
-  close: 'Close',
-  pending: 'Pending',
-};
-
 export function AdminClassModal({
   mode,
   initial,
@@ -561,6 +559,7 @@ export function AdminClassModal({
       next = {
         ...initial,
         coachAccountIds: coachId ? [coachId] : [],
+        statusClass: assignScheduleIsUpdate ? initial.statusClass : false,
       };
     }
     setForm(next);
@@ -569,7 +568,7 @@ export function AdminClassModal({
     setError('');
     setCoachQuery('');
     setStudentQuery('');
-  }, [initial, mode, assignSchedule]);
+  }, [initial, mode, assignSchedule, assignScheduleIsUpdate]);
 
   const activeDisciplines = useMemo(
     () => disciplines.filter((item) => isDisciplineActive(item) || item.id === form.disciplineId),
@@ -659,11 +658,11 @@ export function AdminClassModal({
     [coaches, coachAvailabilityStatus],
   );
 
-  const assignClassStatusOptions = useMemo(
+  const assignClassBookingOptions = useMemo(
     () =>
-      CLASS_OPEN_STATUSES.map((status) => ({
-        value: status,
-        label: STATUS_LABEL[status],
+      CLASS_BOOKING_OPTIONS.map((option) => ({
+        value: String(option.value),
+        label: option.label,
       })),
     [],
   );
@@ -1020,17 +1019,17 @@ export function AdminClassModal({
                   />
                   <div className="grid grid-cols-2 gap-2 min-w-0">
                     <AssignScheduleSelect
-                      label="Class status"
+                      label="Class booking"
                       labelClass={labelClass}
-                      value={form.statusClass}
-                      onValueChange={(statusClass) =>
+                      value={String(form.statusClass)}
+                      onValueChange={(value) =>
                         setForm((c) => ({
                           ...c,
-                          statusClass: statusClass as ClassOpenStatus,
+                          statusClass: value === 'true',
                         }))
                       }
-                      placeholder="Select status…"
-                      options={assignClassStatusOptions}
+                      placeholder="Closed or Open…"
+                      options={assignClassBookingOptions}
                     />
                     <div className="min-w-0">
                       <label className={labelClass}>Class limit</label>
@@ -1161,13 +1160,15 @@ export function AdminClassModal({
             <div>
               <label className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2 block">Status</label>
               <select
-                value={form.statusClass}
-                onChange={(e) => setForm((c) => ({ ...c, statusClass: e.target.value as ClassOpenStatus }))}
+                value={String(form.statusClass)}
+                onChange={(e) =>
+                  setForm((c) => ({ ...c, statusClass: e.target.value === 'true' }))
+                }
                 className={inputClass}
               >
-                {CLASS_OPEN_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABEL[status]}
+                {CLASS_STATUS_CLASS_OPTIONS.map((option) => (
+                  <option key={String(option.value)} value={String(option.value)}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -1302,8 +1303,8 @@ export function AdminClassModal({
               </p>
               <p className="text-[#8A7E6E] text-sm mb-4">
                 {assignSchedule
-                  ? `"${assignScheduleDisplayName}" · 1 coach · class ${STATUS_LABEL[form.statusClass].toLowerCase()}.`
-                  : `${form.coachAccountIds.length} coach(es), ${form.studentAccountIds.length} student(s), class ${STATUS_LABEL[form.statusClass].toLowerCase()}.`}
+                  ? `"${assignScheduleDisplayName}" · 1 coach · booking ${formatClassBooking(form.statusClass).toLowerCase()}.`
+                  : `${form.coachAccountIds.length} coach(es), ${form.studentAccountIds.length} student(s), class ${formatClassStatusClass(form.statusClass).toLowerCase()}.`}
               </p>
               <div className="flex gap-2">
                 <button
@@ -1403,7 +1404,7 @@ export function AdminClassModal({
             >
               {assignSchedule
                 ? assignScheduleIsUpdate
-                  ? 'Update'
+                  ? 'Update Schedule'
                   : 'Assign'
                 : mode === 'create'
                   ? 'Create Class'
@@ -1416,7 +1417,11 @@ export function AdminClassModal({
   );
 
   if (assignSchedule) {
-    return <TooltipProvider delayDuration={200}>{modalBody}</TooltipProvider>;
+    const portaled = createPortal(
+      <TooltipProvider delayDuration={200}>{modalBody}</TooltipProvider>,
+      document.body,
+    );
+    return portaled;
   }
 
   return modalBody;

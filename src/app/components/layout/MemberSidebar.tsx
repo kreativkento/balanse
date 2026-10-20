@@ -1,6 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Activity, ChevronDown, CreditCard, LayoutDashboard, MessageSquare, Newspaper, User, Info } from 'lucide-react';
+import {
+  ChevronDown,
+  Coins,
+  CreditCard,
+  LayoutDashboard,
+  MessageSquare,
+  Newspaper,
+  User,
+  Info,
+} from 'lucide-react';
 import logoMain from '@/assets/logo_main.svg';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -23,21 +32,16 @@ const memberLinks: {
   icon: ReactNode;
 }[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={16} /> },
+  { label: 'Profile', path: '/profile', icon: <User size={16} /> },
 ];
 
 const financeLinks: {
   label: string;
   path: string;
   icon: ReactNode;
-}[] = [{ label: 'Payments', path: '/payment-history', icon: <CreditCard size={16} /> }];
-
-const userProfileLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
 }[] = [
-  { label: 'Profile', path: '/profile', icon: <User size={16} /> },
-  { label: 'Performance', path: '/performance', icon: <Activity size={16} /> },
+  { label: 'Credits & Pass', path: '/credits', icon: <Coins size={16} /> },
+  { label: 'Billing & Receipts', path: '/payment-history', icon: <CreditCard size={16} /> },
 ];
 
 const NAV_GROUPS: {
@@ -45,7 +49,6 @@ const NAV_GROUPS: {
   label: string;
   links: { label: string; path: string; icon: ReactNode }[];
 }[] = [
-  { key: 'profile', label: 'User Profile', links: userProfileLinks },
   { key: 'classes', label: 'Class Management', links: memberClassLinks },
   { key: 'finances', label: 'Finances', links: financeLinks },
   { key: 'studio', label: 'Studio', links: memberStudioLinks },
@@ -56,9 +59,6 @@ const communityBulletinLink = {
   path: '/member-bulletin',
   icon: <Newspaper size={16} />,
 };
-
-/** Kept visible, but not navigable until these areas are ready. */
-const TEMPORARILY_DISABLED_PATHS = new Set(['/performance']);
 
 function MemberSidebarNav({
   onNavigate,
@@ -76,8 +76,6 @@ function MemberSidebarNav({
   const profileStatusDot = featuresLocked
     ? profileScoreBarClasses(profileScore).bar
     : undefined;
-  const profileLink = userProfileLinks.find((link) => link.path === '/profile');
-
   const toggleGroup = (key: string) => {
     if (featuresLocked) return;
     setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
@@ -90,8 +88,6 @@ function MemberSidebarNav({
           statusLabel: `Profile ${profileScore}% complete`,
         }
       : {};
-
-  const isTemporarilyDisabled = (path: string) => TEMPORARILY_DISABLED_PATHS.has(path);
 
   return (
     <div className="flex flex-col h-full">
@@ -112,17 +108,6 @@ function MemberSidebarNav({
             </div>
           )}
 
-          {featuresLocked && profileLink && (
-            <SidebarNavLink
-              to={profileLink.path}
-              icon={profileLink.icon}
-              label={profileLink.label}
-              active={isActive(profileLink.path)}
-              onNavigate={onNavigate}
-              {...linkStatus(profileLink.path)}
-            />
-          )}
-
           {memberLinks.map((link) => (
             <SidebarNavLink
               key={link.path}
@@ -131,7 +116,7 @@ function MemberSidebarNav({
               label={link.label}
               active={isActive(link.path)}
               onNavigate={onNavigate}
-              disabled={featuresLocked}
+              disabled={featuresLocked && link.path !== '/profile'}
               {...linkStatus(link.path)}
             />
           ))}
@@ -139,10 +124,6 @@ function MemberSidebarNav({
           {NAV_GROUPS.map((group) => {
             const open = featuresLocked ? false : (openGroups[group.key] ?? true);
             const groupActive = !featuresLocked && group.links.some((link) => isActive(link.path));
-            const groupLinks = featuresLocked
-              ? group.links.filter((link) => link.path !== '/profile')
-              : group.links;
-
             return (
               <div key={group.key} className={`mt-3 first:mt-0${featuresLocked ? ' opacity-60' : ''}`}>
                 <button
@@ -181,7 +162,7 @@ function MemberSidebarNav({
                 </button>
                 {open && (
                   <div className="flex flex-col gap-0.5 pl-2.5">
-                    {groupLinks.map((link) => (
+                    {group.links.map((link) => (
                       <SidebarNavLink
                         key={link.path}
                         to={link.path}
@@ -189,12 +170,7 @@ function MemberSidebarNav({
                         label={link.label}
                         active={isActive(link.path)}
                         onNavigate={onNavigate}
-                        disabled={featuresLocked || isTemporarilyDisabled(link.path)}
-                        disabledTitle={
-                          !featuresLocked && isTemporarilyDisabled(link.path)
-                            ? 'Temporarily unavailable'
-                            : undefined
-                        }
+                        disabled={featuresLocked}
                         {...linkStatus(link.path)}
                       />
                     ))}
@@ -250,6 +226,7 @@ export function MemberSidebar({ children, lockScroll = false, lockScrollDesktop 
   return (
     <>
       <AppSidebarLayout
+        sidebarWidthClass="w-60"
         mainOverflow={mainOverflow}
         memberMainScroll
         renderSidebar={(closeMobile) => (
