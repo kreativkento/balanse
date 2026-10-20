@@ -373,6 +373,11 @@ allow_dynamic_registration = false
 [functions.send-payment-receipt]
 verify_jwt = true
 
+# Public informational assistant; browser-origin and input checks run inside
+# the gateway. Only its server-side secret can invoke the n8n generation path.
+[functions.balanse-chat]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
