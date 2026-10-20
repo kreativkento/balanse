@@ -486,6 +486,21 @@ function escrowBadgeLabel(payment: Payment): string | null {
   return null;
 }
 
+function escrowBadgeClass(payment: Payment): string {
+  if (payment.escrowState === 'refunded') {
+    return payment.cashRefundDisbursedAt
+      ? 'bg-[#EDE8D8] text-[#5A5048] border-[#D4CDB5]'
+      : 'bg-amber-50 text-amber-800 border-amber-200';
+  }
+  if (payment.escrowState === 'finalized' || payment.finalTransactionId) {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+  }
+  if (payment.escrowState === 'in_escrow') {
+    return 'bg-sky-50 text-sky-800 border-sky-200';
+  }
+  return 'bg-[#F8F3E8] text-[#8A7E6E] border-[#D4CDB5]/70';
+}
+
 type EscrowConfirmKind = 'refund' | 'lock';
 
 function EscrowActionConfirmModal({
@@ -1014,7 +1029,7 @@ export default function AdminPaymentsPage() {
           {[
             {
               label: 'Recognized revenue',
-              hint: 'Cleared packs + locked drop-ins this month',
+              hint: 'Cleared credit packages + locked drop-ins this month',
               value: peso(
                 payments
                   .filter((payment) => isCleared(payment) && inManilaThisMonth(payment.finalizedAt))
@@ -1028,7 +1043,7 @@ export default function AdminPaymentsPage() {
               border: 'border-green-200',
             },
             {
-              label: 'Escrow / deferred liability',
+              label: 'Funds on hold',
               hint: 'Cash held until the cancellation window',
               value: peso(payments.filter(isHeld).reduce((sum, payment) => sum + payment.amount, 0)),
               icon: <Timer size={17} className="text-sky-700" />,
@@ -1066,7 +1081,7 @@ export default function AdminPaymentsPage() {
             {(
               [
                 ['all', 'All payments'],
-                ['held', 'Held in escrow'],
+                ['held', 'On Hold'],
                 ['cleared', 'Locked / cleared'],
                 ['voided', 'Voided / refunded'],
               ] as const
@@ -1154,7 +1169,9 @@ export default function AdminPaymentsPage() {
                 if (ledgerTab === 'cleared') return isCleared(payment);
                 if (ledgerTab === 'voided') return isVoided(payment);
                 return true;
-              })).map((payment) => (
+              })).map((payment) => {
+                const lifecycleLabel = escrowBadgeLabel(payment);
+                return (
                 <div
                   key={payment.id}
                   onClick={() => {
@@ -1188,7 +1205,7 @@ export default function AdminPaymentsPage() {
                   {ledgerTab === 'held' ? (
                     <p className="text-[#1E2A35] text-sm whitespace-nowrap">{payment.date}</p>
                   ) : (
-                    <div className="flex flex-col gap-0.5 items-start">
+                    <div className="flex flex-col gap-1 items-start">
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize w-fit ${
                         payment.status === 'pending'
                           ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -1199,8 +1216,10 @@ export default function AdminPaymentsPage() {
                       >
                         {payment.status === 'rejected' ? 'Returned' : payment.status}
                       </span>
-                      {escrowBadgeLabel(payment) ? (
-                        <span className="text-[9px] font-semibold uppercase text-[#9A8E7E]">{escrowBadgeLabel(payment)}</span>
+                      {lifecycleLabel ? (
+                        <span className={`inline-flex text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border w-fit whitespace-nowrap ${escrowBadgeClass(payment)}`}>
+                          {lifecycleLabel}
+                        </span>
                       ) : null}
                     </div>
                   )}
@@ -1264,7 +1283,8 @@ export default function AdminPaymentsPage() {
                     <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#c49a3c]" />
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>
