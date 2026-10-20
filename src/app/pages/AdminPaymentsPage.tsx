@@ -1,21 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  CreditCard, Check, X, Search, Receipt, Mail,
+  Check, X, Search, Receipt,
   AlertCircle, FileCheck,
-  Smartphone, Eye, RefreshCcw,
-  ChevronRight, Plus,
+  RefreshCcw,
+  ChevronRight, Plus, Lock, Timer, Wallet,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import { ProfileAvatar } from '../components/ProfileImages';
 import { toast } from 'sonner';
 import {
+  adminForceLockEscrowPayment,
+  adminMarkCashRefundDisbursed,
+  adminRefundClassPaymentEscrow,
   adminReviewClassPayment,
   fetchClassPaymentsForAdmin,
   getPaymentProofSignedUrl,
   resolvePaymentProofDisplayName,
   type ClassPaymentDisplay,
+  type PaymentEscrowState,
 } from '../../lib/class-payment-service';
+import { fetchSubscriptionPackagePaymentsForAdmin } from '../../lib/subscription-package-payment-service';
 import { fetchClientDirectory, type ClientDirectoryItem } from '../../lib/admin-service';
 import { fetchClassesForAdmin, type ClassDisplay } from '../../lib/class-service';
 import {
@@ -25,6 +31,7 @@ import {
 import { AdminManualPaymentModal } from '../components/payments/AdminManualPaymentModal';
 import { ClassPaymentReceiptPrintModal } from '../components/payments/ClassPaymentReceiptPrintModal';
 import { PaymentStudentContactPanel } from '../components/payments/PaymentStudentContactPanel';
+import { AdminCreditPackPaymentsSection } from '../components/payments/AdminCreditPackPaymentsSection';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -49,6 +56,12 @@ interface Payment {
   proofStoragePath?: string;
   submittedAt: string;
   status: PaymentStatus;
+  escrowState: PaymentEscrowState | null;
+  refundableUntil: string | null;
+  finalTransactionId: string | null;
+  finalizedAt: string | null;
+  cashRefundDisbursedAt: string | null;
+  classStartsAt: string | null;
   emailSent: boolean;
   receiptPrinted: boolean;
   receiptIssuedAt?: string;
@@ -128,6 +141,12 @@ function classPaymentToPayment(row: ClassPaymentDisplay): Payment {
     proofStoragePath: row.proofStoragePath,
     submittedAt: formatSubmittedAt(row.createdAt),
     status: row.status,
+    escrowState: row.escrowState,
+    refundableUntil: row.refundableUntil,
+    finalTransactionId: row.finalTransactionId,
+    finalizedAt: row.finalizedAt,
+    cashRefundDisbursedAt: row.cashRefundDisbursedAt,
+    classStartsAt: row.classStartsAt,
     emailSent: row.emailReceiptSent,
     receiptPrinted: row.receiptPrinted,
     receiptIssuedAt,
@@ -168,21 +187,16 @@ function PaymentStudentAvatar({
   );
 }
 
-function MethodIcon({ method }: { method: string }) {
-  const m = method.toLowerCase();
-  if (m.includes('gcash')) return <Smartphone size={13} style={{ color: '#007DFF' }} />;
-  if (m.includes('maya')) return <Smartphone size={13} style={{ color: '#46BFA8' }} />;
-  return <CreditCard size={13} className="text-[#3A4A5A]" />;
-}
-
 // ── Pending Payment Modal (row-click) ──────────────────────
 
 function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
   payment: Payment; onClose: () => void;
-  onApprove: (id: string) => void; onReject: (id: string) => void;
+  onApprove: (id: string) => void | Promise<void>;
+  onReject: (id: string, reviewNote?: string) => void | Promise<void>;
 }) {
   const [confirmReject, setConfirmReject] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofDisplayName, setProofDisplayName] = useState('Payment proof');
   const [reviewBusy, setReviewBusy] = useState(false);
@@ -296,9 +310,21 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
                 <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-red-700 text-sm font-semibold">Reject this payment?</p>
-                  <p className="text-red-500 text-xs mt-0.5">This will mark the payment as rejected. The student may resubmit with corrected information.</p>
+                  <p className="text-red-500 text-xs mt-0.5">This will mark the payment as rejected and email the student. They may resubmit with corrected information.</p>
                 </div>
               </div>
+              <label className="block">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E] mb-1.5 block">
+                  Message to student (optional)
+                </span>
+                <textarea
+                  value={rejectNote}
+                  onChange={(e) => setRejectNote(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Proof amount does not match — please resubmit."
+                  className="w-full rounded-xl border border-red-200/80 bg-white px-3 py-2 text-sm text-[#1E2A35] placeholder-[#C0B8A8] outline-none focus:ring-2 focus:ring-red-200 resize-none"
+                />
+              </label>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -313,7 +339,7 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
                   onClick={async () => {
                     setReviewBusy(true);
                     try {
-                      await onReject(payment.id);
+                      await onReject(payment.id, rejectNote.trim());
                       onClose();
                     } finally {
                       setReviewBusy(false);
@@ -335,7 +361,7 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
                   <p className="text-green-800 text-sm font-semibold">Approve this payment?</p>
                   <p className="text-green-700 text-xs mt-0.5 leading-relaxed">
                     This action is <span className="font-semibold">irreversible</span>. The student will be enrolled in{' '}
-                    <span className="font-semibold">{payment.class}</span>, an official e-receipt will be generated and emailed
+                    <span className="font-semibold">{payment.class}</span>, a confirmation email and official e-receipt will be sent
                     to <span className="font-semibold">{payment.email}</span>, and you can print a copy next.
                   </p>
                 </div>
@@ -400,10 +426,170 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
 
 // ── History Payment Modal (row-click) ─────────────────────
 
-function HistoryPaymentModal({ payment, onClose, onOpenReceipt }: {
-  payment: Payment; onClose: () => void;
-  onOpenReceipt: () => void;
+function peso(amount: number): string {
+  return `₱${Math.round(amount).toLocaleString()}`;
+}
+
+function manilaMonthBounds(now = new Date()): { start: number; end: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: PH_TZ,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const start = Date.UTC(year, month - 1, 1, -8, 0, 0);
+  const end = Date.UTC(year, month, 1, -8, 0, 0);
+  return { start, end };
+}
+
+function inManilaThisMonth(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  const time = new Date(iso).getTime();
+  if (!Number.isFinite(time)) return false;
+  const { start, end } = manilaMonthBounds();
+  return time >= start && time < end;
+}
+
+function lockTimerLabel(refundableUntil: string | null): string {
+  if (!refundableUntil) return 'Lock time unavailable';
+  const ms = new Date(refundableUntil).getTime() - Date.now();
+  if (!Number.isFinite(ms)) return 'Lock time unavailable';
+  if (ms <= 0) return 'Lock due';
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 1) return `Locks in ${Math.max(1, Math.ceil(ms / 60_000))}m`;
+  if (hours < 48) return `Locks in ${hours}h`;
+  return `Locks in ${Math.floor(hours / 24)}d`;
+}
+
+function isHeld(payment: Payment): boolean {
+  return payment.escrowState === 'in_escrow' && payment.status === 'approved';
+}
+
+function isCleared(payment: Payment): boolean {
+  return payment.escrowState === 'finalized' || Boolean(payment.finalTransactionId);
+}
+
+function isVoided(payment: Payment): boolean {
+  return payment.escrowState === 'refunded'
+    || payment.escrowState === 'rejected'
+    || payment.status === 'rejected';
+}
+
+function escrowBadgeLabel(payment: Payment): string | null {
+  if (payment.status !== 'approved') return null;
+  if (payment.escrowState === 'refunded') {
+    return payment.cashRefundDisbursedAt ? 'Cash sent' : 'Awaiting disbursement';
+  }
+  if (payment.escrowState === 'finalized' || payment.finalTransactionId) return 'Cleared';
+  if (payment.escrowState === 'in_escrow') return 'Held';
+  return null;
+}
+
+type EscrowConfirmKind = 'refund' | 'lock';
+
+function EscrowActionConfirmModal({
+  kind,
+  paymentUid,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  kind: EscrowConfirmKind;
+  paymentUid: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
 }) {
+  const isRefund = kind === 'refund';
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(30,42,53,0.55)', backdropFilter: 'blur(4px)' }}
+      role="presentation"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md overflow-hidden"
+        role="dialog"
+        aria-labelledby="escrow-confirm-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50">
+          <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Irreversible action</p>
+          <h3
+            id="escrow-confirm-title"
+            className="text-[#1E2A35]"
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
+          >
+            {isRefund ? 'Manual refund' : 'Issue OR'}
+          </h3>
+          <p className="text-[#5A5048] text-sm mt-2 leading-relaxed">
+            Payment <span className="font-mono text-xs">{paymentUid}</span>
+          </p>
+        </div>
+        <div className="px-6 py-5 space-y-3">
+          <div className="flex gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertCircle size={18} className="text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-amber-950 text-sm leading-relaxed">
+              This cannot be undone. Confirm only if you intend to proceed.
+            </p>
+          </div>
+          {isRefund ? (
+            <ul className="text-[#5A5048] text-sm leading-relaxed list-disc pl-5 space-y-1">
+              <li>Escrow will be released and the payment marked refunded.</li>
+              <li>The member may be unenrolled from the class if still enrolled.</li>
+              <li>Cash refund will wait for manual disbursement tracking.</li>
+            </ul>
+          ) : (
+            <ul className="text-[#5A5048] text-sm leading-relaxed list-disc pl-5 space-y-1">
+              <li>The held payment will be locked and finalized early.</li>
+              <li>An official receipt (OR) will be issued.</li>
+              <li>The member refund / cancellation window for this payment will close.</li>
+            </ul>
+          )}
+        </div>
+        <div className="px-6 pb-6 flex gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-full border border-[#D4CDB5]/70 text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onConfirm}
+            className={`flex-1 py-2.5 rounded-full text-white text-sm font-bold transition-colors disabled:opacity-50 ${
+              isRefund ? 'bg-amber-700 hover:bg-amber-800' : 'bg-[#1E2A35] hover:bg-[#263545]'
+            }`}
+          >
+            {busy ? 'Processing…' : isRefund ? 'Confirm manual refund' : 'Confirm issue OR'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryPaymentModal({
+  payment,
+  onClose,
+  onOpenReceipt,
+  canRefundEscrow,
+  onRequestRefundEscrow,
+  refundBusy,
+}: {
+  payment: Payment;
+  onClose: () => void;
+  onOpenReceipt: () => void;
+  canRefundEscrow: boolean;
+  onRequestRefundEscrow: () => void;
+  refundBusy: boolean;
+}) {
+  const escrowLabel = escrowBadgeLabel(payment);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
@@ -416,9 +602,14 @@ function HistoryPaymentModal({ payment, onClose, onOpenReceipt }: {
             </h3>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-              payment.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
-            }`}>{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</span>
+            <div className="flex flex-col items-end gap-1">
+              <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                payment.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
+              }`}>{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</span>
+              {escrowLabel ? (
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8A7E6E]">{escrowLabel}</span>
+              ) : null}
+            </div>
             <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all"><X size={16} /></button>
           </div>
         </div>
@@ -461,14 +652,32 @@ function HistoryPaymentModal({ payment, onClose, onOpenReceipt }: {
         </div>
 
         {payment.status === 'approved' && (
-          <div className="px-7 pb-7 flex gap-2">
-            <button
-              type="button"
-              onClick={onOpenReceipt}
-              className="action-button flex-1 py-2.5 rounded-full bg-[#1E2A35] text-white text-sm font-semibold hover:bg-[#263545] active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-            >
-              <Receipt size={13} /> View / Print Receipt
-            </button>
+          <div className="px-7 pb-7 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onOpenReceipt}
+                disabled={!payment.finalTransactionId && payment.escrowState !== 'finalized'}
+                title={
+                  payment.finalTransactionId || payment.escrowState === 'finalized'
+                    ? undefined
+                    : 'Receipt is available after escrow finalizes (refund window).'
+                }
+                className="action-button flex-1 py-2.5 rounded-full bg-[#1E2A35] text-white text-sm font-semibold hover:bg-[#263545] active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                <Receipt size={13} /> View / Print Receipt
+              </button>
+            </div>
+            {canRefundEscrow && payment.escrowState === 'in_escrow' ? (
+              <button
+                type="button"
+                disabled={refundBusy}
+                onClick={onRequestRefundEscrow}
+                className="w-full py-2.5 rounded-full border border-amber-300 bg-amber-50 text-amber-900 text-sm font-semibold hover:bg-amber-100 transition-all disabled:opacity-60"
+              >
+                {refundBusy ? 'Processing refund…' : 'Manual Refund'}
+              </button>
+            ) : null}
           </div>
         )}
         {payment.status !== 'approved' && (
@@ -486,14 +695,18 @@ function HistoryPaymentModal({ payment, onClose, onOpenReceipt }: {
 
 // ── Main Component ─────────────────────────────────────────────
 
+type LedgerTab = 'all' | 'held' | 'cleared' | 'voided';
+
 export default function AdminPaymentsPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
   const [payments, setPayments]           = useState<Payment[]>([]);
+  const [packPayments, setPackPayments]   = useState<{ amountPaid: number; status: string; createdAt: string }[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
-  const [activeTab, setActiveTab]         = useState<'pending' | 'history'>('pending');
-  const [search, setSearch]               = useState('');
+  const [paymentDomain, setPaymentDomain] = useState<'class' | 'credits'>('class');
+  const [ledgerTab, setLedgerTab]         = useState<LedgerTab>('all');
+  const [search, setSearch] = useAdminUrlSearchFilter();
   const [selectedPending, setSelectedPending] = useState<Payment | null>(null);
   const [selectedHistory, setSelectedHistory] = useState<Payment | null>(null);
   const [printPayment, setPrintPayment]   = useState<Payment | null>(null);
@@ -502,8 +715,15 @@ export default function AdminPaymentsPage() {
   const [manualFormClasses, setManualFormClasses] = useState<ClassDisplay[]>([]);
   const [manualFormChannels, setManualFormChannels] = useState<PaymentChannelRecord[]>([]);
   const [manualFormLoading, setManualFormLoading] = useState(false);
+  const [refundBusyId, setRefundBusyId] = useState<string | null>(null);
+  const [lockBusyId, setLockBusyId] = useState<string | null>(null);
+  const [escrowConfirm, setEscrowConfirm] = useState<{
+    kind: EscrowConfirmKind;
+    paymentId: string;
+    paymentUid: string;
+  } | null>(null);
 
-  const isStudioAdmin = adminUser?.role === 'admin';
+  const isStudioAdmin = adminUser?.role === 'admin' || adminUser?.role === 'dev';
 
   useEffect(() => { if (!adminUser) navigate('/admin-login'); }, [adminUser, navigate]);
 
@@ -524,12 +744,22 @@ export default function AdminPaymentsPage() {
   }, []);
 
   const reloadPayments = useCallback(async () => {
-    const { data, error } = await fetchClassPaymentsForAdmin();
-    if (error) {
-      toast.error(error);
+    const [classResult, packResult] = await Promise.all([
+      fetchClassPaymentsForAdmin(),
+      fetchSubscriptionPackagePaymentsForAdmin(),
+    ]);
+    if (classResult.error) {
+      toast.error(classResult.error);
       return;
     }
-    setPayments(data.map(classPaymentToPayment));
+    setPayments(classResult.data.map(classPaymentToPayment));
+    if (!packResult.error) {
+      setPackPayments(packResult.data.map((row) => ({
+        amountPaid: row.amountPaid,
+        status: row.status,
+        createdAt: row.createdAt,
+      })));
+    }
   }, []);
 
   useEffect(() => {
@@ -537,10 +767,20 @@ export default function AdminPaymentsPage() {
     let cancelled = false;
     void (async () => {
       setPaymentsLoading(true);
-      const { data, error } = await fetchClassPaymentsForAdmin();
+      const [classResult, packResult] = await Promise.all([
+        fetchClassPaymentsForAdmin(),
+        fetchSubscriptionPackagePaymentsForAdmin(),
+      ]);
       if (cancelled) return;
-      if (error) toast.error(error);
-      else setPayments(data.map(classPaymentToPayment));
+      if (classResult.error) toast.error(classResult.error);
+      else setPayments(classResult.data.map(classPaymentToPayment));
+      if (!packResult.error) {
+        setPackPayments(packResult.data.map((row) => ({
+          amountPaid: row.amountPaid,
+          status: row.status,
+          createdAt: row.createdAt,
+        })));
+      }
       setPaymentsLoading(false);
     })();
     return () => {
@@ -549,9 +789,6 @@ export default function AdminPaymentsPage() {
   }, [adminUser]);
 
   if (!adminUser) return null;
-
-  const pending = payments.filter(p => p.status === 'pending');
-  const history = payments.filter(p => p.status !== 'pending');
 
   const filtered = (list: Payment[]) =>
     list.filter(p =>
@@ -566,13 +803,26 @@ export default function AdminPaymentsPage() {
       toast.error(result.error ?? 'Could not approve payment.');
       return;
     }
-    if (result.receiptEmailSent) {
+    if (result.feedbackEmailSent && result.receiptEmailSent) {
+      toast.success('Payment approved. Confirmation and e-receipt emailed to the student.');
+    } else if (result.feedbackEmailSent) {
+      toast.success('Payment approved. Student notified by email.');
+      if (result.receiptEmailError) {
+        toast.error(`E-receipt not sent: ${result.receiptEmailError}`);
+      }
+    } else if (result.receiptEmailSent) {
       toast.success('Payment approved. E-receipt sent to the student.');
-    } else if (result.receiptEmailError) {
-      toast.success('Payment approved. Student enrolled.');
-      toast.error(`E-receipt not sent: ${result.receiptEmailError}`);
+      if (result.feedbackEmailError) {
+        toast.error(`Confirmation email not sent: ${result.feedbackEmailError}`);
+      }
     } else {
       toast.success('Payment approved. Student enrolled in class.');
+      if (result.feedbackEmailError) {
+        toast.error(`Confirmation email not sent: ${result.feedbackEmailError}`);
+      }
+      if (result.receiptEmailError) {
+        toast.error(`E-receipt not sent: ${result.receiptEmailError}`);
+      }
     }
     const { data, error } = await fetchClassPaymentsForAdmin();
     if (error) toast.error(error);
@@ -587,13 +837,20 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  const rejectPayment = async (id: string) => {
-    const result = await adminReviewClassPayment(id, false);
+  const rejectPayment = async (id: string, reviewNote = '') => {
+    const result = await adminReviewClassPayment(id, false, reviewNote);
     if (!result.success) {
       toast.error(result.error ?? 'Could not reject payment.');
       return;
     }
-    toast.success('Payment rejected.');
+    if (result.feedbackEmailSent) {
+      toast.success('Payment rejected. The student was notified by email.');
+    } else {
+      toast.success('Payment rejected.');
+      if (result.feedbackEmailError) {
+        toast.error(`Email not sent: ${result.feedbackEmailError}`);
+      }
+    }
     await reloadPayments();
   };
 
@@ -602,10 +859,69 @@ export default function AdminPaymentsPage() {
     setPrintPayment(null);
   };
 
+  const refundEscrowPayment = async (id: string) => {
+    setRefundBusyId(id);
+    const result = await adminRefundClassPaymentEscrow(id, 'Refunded by admin from Payments.');
+    setRefundBusyId(null);
+    if (!result.success) {
+      toast.error(result.error ?? 'Could not refund escrow.');
+      return;
+    }
+    toast.success('Escrow released. Cash refund is waiting for manual disbursement.');
+    setSelectedHistory(null);
+    await reloadPayments();
+  };
+
+  const forceLockPayment = async (id: string) => {
+    setLockBusyId(id);
+    const result = await adminForceLockEscrowPayment(id);
+    setLockBusyId(null);
+    if (!result.success) {
+      toast.error(result.error ?? 'Could not lock this payment.');
+      return;
+    }
+    if (result.error) toast.error(result.error);
+    else toast.success('Payment locked. Official receipt issued.');
+    setSelectedHistory(null);
+    await reloadPayments();
+  };
+
+  const markCashSent = async (id: string) => {
+    setRefundBusyId(id);
+    const result = await adminMarkCashRefundDisbursed(id);
+    setRefundBusyId(null);
+    if (!result.success) {
+      toast.error(result.error ?? 'Could not mark the cash refund as sent.');
+      return;
+    }
+    toast.success('Marked as disbursed.');
+    await reloadPayments();
+  };
+
   const INP = 'w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
+
+  const escrowConfirmBusy =
+    escrowConfirm != null
+      && (refundBusyId === escrowConfirm.paymentId || lockBusyId === escrowConfirm.paymentId);
 
   return (
     <>
+      {escrowConfirm ? (
+        <EscrowActionConfirmModal
+          kind={escrowConfirm.kind}
+          paymentUid={escrowConfirm.paymentUid}
+          busy={escrowConfirmBusy}
+          onCancel={() => {
+            if (!escrowConfirmBusy) setEscrowConfirm(null);
+          }}
+          onConfirm={() => {
+            const { kind, paymentId } = escrowConfirm;
+            if (kind === 'refund') void refundEscrowPayment(paymentId);
+            else void forceLockPayment(paymentId);
+            setEscrowConfirm(null);
+          }}
+        />
+      ) : null}
       {selectedPending && (
         <PendingPaymentModal
           payment={selectedPending}
@@ -614,8 +930,8 @@ export default function AdminPaymentsPage() {
             await approvePayment(id);
             setSelectedPending(null);
           }}
-          onReject={async (id) => {
-            await rejectPayment(id);
+          onReject={async (id, reviewNote) => {
+            await rejectPayment(id, reviewNote);
             setSelectedPending(null);
           }}
         />
@@ -630,6 +946,15 @@ export default function AdminPaymentsPage() {
               setSelectedHistory(null);
             }
           }}
+          canRefundEscrow={isStudioAdmin}
+          refundBusy={refundBusyId === selectedHistory.id}
+          onRequestRefundEscrow={() =>
+            setEscrowConfirm({
+              kind: 'refund',
+              paymentId: selectedHistory.id,
+              paymentUid: selectedHistory.paymentUid,
+            })
+          }
         />
       )}
       {printPayment && (
@@ -652,42 +977,127 @@ export default function AdminPaymentsPage() {
           onCreated={reloadPayments}
         />
       )}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="flex h-full min-h-0 flex-col">
+      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col px-6 py-8">
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3">
+          <div className="flex w-fit max-w-full gap-1 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
+          {(
+            [
+              ['class', 'Class enrollments'],
+              ['credits', 'Credit packs'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setPaymentDomain(id)}
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                paymentDomain === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          </div>
+        </div>
+
+        {paymentDomain === 'credits' ? (
+          <div className="min-w-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6">
+            <AdminCreditPackPaymentsSection search={search} />
+          </div>
+        ) : null}
+
+        {paymentDomain === 'class' ? (
+        <>
+        <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-3">
           {[
-            { label: 'Pending Review',  value: String(pending.length),                                    icon: <AlertCircle size={17} className="text-amber-500" />,    bg: 'bg-amber-50',         border: 'border-amber-200'       },
-            { label: 'Approved',        value: String(history.filter(p => p.status === 'approved').length), icon: <Check size={17} className="text-green-600" />,          bg: 'bg-green-50',         border: 'border-green-200'       },
-            { label: 'Rejected',        value: String(history.filter(p => p.status === 'rejected').length), icon: <X size={17} className="text-red-500" />,               bg: 'bg-red-50',           border: 'border-red-200'         },
-            { label: 'E-Receipts Sent', value: String(history.filter(p => p.emailSent).length),            icon: <Mail size={17} className="text-[#c49a3c]" />,           bg: 'bg-[#c49a3c]/10',    border: 'border-[#c49a3c]/30'   },
-          ].map(s => (
-            <div key={s.label} className={`bg-white rounded-2xl border shadow-sm px-4 py-4 flex items-center gap-3 ${s.border}`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>{s.icon}</div>
-              <div>
-                <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
-                <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>{s.value}</p>
+            {
+              label: 'Recognized revenue',
+              hint: 'Cleared packs + locked drop-ins this month',
+              value: peso(
+                payments
+                  .filter((payment) => isCleared(payment) && inManilaThisMonth(payment.finalizedAt))
+                  .reduce((sum, payment) => sum + payment.amount, 0)
+                + packPayments
+                  .filter((payment) => payment.status === 'approved' && inManilaThisMonth(payment.createdAt))
+                  .reduce((sum, payment) => sum + payment.amountPaid, 0),
+              ),
+              icon: <Wallet size={17} className="text-green-700" />,
+              bg: 'bg-green-50',
+              border: 'border-green-200',
+            },
+            {
+              label: 'Escrow / deferred liability',
+              hint: 'Cash held until the cancellation window',
+              value: peso(payments.filter(isHeld).reduce((sum, payment) => sum + payment.amount, 0)),
+              icon: <Timer size={17} className="text-sky-700" />,
+              bg: 'bg-sky-50',
+              border: 'border-sky-200',
+            },
+            {
+              label: 'Pending refunds',
+              hint: 'Approved voids waiting for manual cash',
+              value: peso(
+                payments
+                  .filter((payment) => payment.escrowState === 'refunded' && !payment.cashRefundDisbursedAt)
+                  .reduce((sum, payment) => sum + payment.amount, 0),
+              ),
+              icon: <AlertCircle size={17} className="text-amber-700" />,
+              bg: 'bg-amber-50',
+              border: 'border-amber-200',
+            },
+          ].map((card) => (
+            <div key={card.label} className={`bg-white rounded-2xl border shadow-sm px-4 py-4 ${card.border}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${card.bg}`}>{card.icon}</div>
+                <div className="min-w-0">
+                  <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{card.label}</p>
+                  <p className="text-[#1E2A35] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>{card.value}</p>
+                </div>
               </div>
+              <p className="text-[#9A8E7E] text-[11px] mt-2">{card.hint}</p>
             </div>
           ))}
         </div>
 
-        {/* Tabs + Search */}
-        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-          <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm">
-            {([['pending', 'Pending Payments'], ['history', 'Payment History']] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setActiveTab(id)}
-                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${activeTab === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}>
-                {label}
-                {id === 'pending' && pending.length > 0 && (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
-                    {pending.length}
+        <div className="mb-5 flex min-w-0 flex-nowrap items-center gap-3">
+          <div className="flex min-w-0 gap-1 overflow-x-auto rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
+            {(
+              [
+                ['all', 'All payments'],
+                ['held', 'Held in escrow'],
+                ['cleared', 'Locked / cleared'],
+                ['voided', 'Voided / refunded'],
+              ] as const
+            ).map(([id, label]) => {
+              const count = payments.filter((payment) => {
+                if (id === 'all') return true;
+                if (id === 'held') return isHeld(payment);
+                if (id === 'cleared') return isCleared(payment);
+                return isVoided(payment);
+              }).length;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setLedgerTab(id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+                    ledgerTab === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                  }`}
+                >
+                  {label}
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    ledgerTab === id ? 'bg-white/20 text-white' : 'bg-[#EDE8D8] text-[#5A5048]'
+                  }`}
+                  >
+                    {count}
                   </span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {isStudioAdmin ? (
               <button
                 type="button"
@@ -698,116 +1108,173 @@ export default function AdminPaymentsPage() {
                 Add record
               </button>
             ) : null}
-            <div className="relative max-w-xs w-full min-w-[200px]">
+            <div className="relative w-52 min-w-0 sm:w-64">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search student, class, reference…" className={INP} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search student, class, reference…"
+                className={INP}
+              />
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-          {activeTab === 'pending' ? (
-            <>
-              <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.5fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-                {['Student', 'Class / Date', 'Method', 'Amount', 'Reference'].map(h => (
-                  <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-                ))}
-              </div>
-              {paymentsLoading ? (
-                <div className="px-6 py-14 text-center text-[#B0A898] text-sm">Loading payments…</div>
-              ) : filtered(pending).length === 0 ? (
-                <div className="px-6 py-14 text-center">
-                  <RefreshCcw size={24} className="mx-auto text-[#D4CDB5] mb-3" />
-                  <p className="text-[#B0A898] text-sm">No pending payments</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-[#D4CDB5]/30">
-                  {filtered(pending).map(p => (
-                    <div
-                      key={p.id}
-                      onClick={() => setSelectedPending(p)}
-                      className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.5fr)] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/70 transition-colors min-h-[64px] cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <PaymentStudentAvatar payment={p} size="sm" />
-                        <div className="min-w-0">
-                          <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#c49a3c] transition-colors">{p.student}</p>
-                          <p className="text-[#B0A898] text-xs truncate">{p.email}</p>
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[#1E2A35] text-sm font-medium truncate">{p.class}</p>
-                        <p className="text-[#9A8E7E] text-xs truncate">{p.date} · {p.time}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MethodIcon method={p.method} />
-                        <span className="text-[#5A5048] text-xs truncate">{p.method}</span>
-                      </div>
-                      <p className="text-[#1E2A35] font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}>₱{p.amount.toLocaleString()}</p>
-                      <div className="flex items-center justify-between min-w-0">
-                        <p className="text-[#8A7E6E] text-xs font-mono truncate">{p.ref}</p>
-                        <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#c49a3c] transition-colors" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+        <div className="min-w-0 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+          <div className={`hidden md:grid gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 ${
+            ledgerTab === 'held'
+              ? 'grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_6rem_8rem_7rem_minmax(0,1.4fr)]'
+              : 'grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_6rem_minmax(0,1fr)_minmax(0,1.5fr)]'
+          }`}
+          >
+            {(ledgerTab === 'held'
+              ? ['Student', 'Class', 'Amount', 'Class date', 'Auto-lock', 'Actions']
+              : ['Student', 'Class / date', 'Amount', 'Status', 'Actions']
+            ).map((header) => (
+              <p key={header} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{header}</p>
+            ))}
+          </div>
+          {paymentsLoading ? (
+            <div className="px-6 py-14 text-center text-[#B0A898] text-sm">Loading payments…</div>
+          ) : filtered(payments.filter((payment) => {
+            if (ledgerTab === 'held') return isHeld(payment);
+            if (ledgerTab === 'cleared') return isCleared(payment);
+            if (ledgerTab === 'voided') return isVoided(payment);
+            return true;
+          })).length === 0 ? (
+            <div className="px-6 py-14 text-center">
+              <RefreshCcw size={24} className="mx-auto text-[#D4CDB5] mb-3" />
+              <p className="text-[#B0A898] text-sm">No payments in this ledger.</p>
+            </div>
           ) : (
-            <>
-              <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.5fr)_80px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-                {['Student', 'Class / Date', 'Method', 'Amount', 'Reference', 'Status'].map(h => (
-                  <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-                ))}
-              </div>
-              {paymentsLoading ? (
-                <div className="px-6 py-14 text-center text-[#B0A898] text-sm">Loading payments…</div>
-              ) : filtered(history).length === 0 ? (
-                <div className="px-6 py-14 text-center text-[#B0A898] text-sm">No payment history found.</div>
-              ) : (
-                <div className="divide-y divide-[#D4CDB5]/30">
-                  {filtered(history).map(p => (
-                    <div
-                      key={p.id}
-                      onClick={() => setSelectedHistory(p)}
-                      className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.5fr)_80px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/70 transition-colors min-h-[64px] cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <PaymentStudentAvatar payment={p} size="sm" />
-                        <div className="min-w-0">
-                          <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#c49a3c] transition-colors">{p.student}</p>
-                          <p className="text-[#B0A898] text-xs truncate">{p.email}</p>
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[#1E2A35] text-sm font-medium truncate">{p.class}</p>
-                        <p className="text-[#9A8E7E] text-xs truncate">{p.date} · {p.time}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MethodIcon method={p.method} />
-                        <span className="text-[#5A5048] text-xs truncate">{p.method}</span>
-                      </div>
-                      <p className="text-[#1E2A35] font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}>₱{p.amount.toLocaleString()}</p>
-                      <div className="flex items-center justify-between min-w-0">
-                        <p className="text-[#8A7E6E] text-xs font-mono truncate">{p.ref}</p>
-                        <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#c49a3c] transition-colors" />
-                      </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize w-fit ${
-                        p.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
-                      }`}>{p.status}</span>
+            <div className="divide-y divide-[#D4CDB5]/30">
+              {filtered(payments.filter((payment) => {
+                if (ledgerTab === 'held') return isHeld(payment);
+                if (ledgerTab === 'cleared') return isCleared(payment);
+                if (ledgerTab === 'voided') return isVoided(payment);
+                return true;
+              })).map((payment) => (
+                <div
+                  key={payment.id}
+                  onClick={() => {
+                    if (payment.status === 'pending') setSelectedPending(payment);
+                    else setSelectedHistory(payment);
+                  }}
+                  className={`grid gap-x-4 gap-y-2 px-6 py-4 items-center hover:bg-[#F8F3E8]/70 transition-colors cursor-pointer group ${
+                    ledgerTab === 'held'
+                      ? 'md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_6rem_8rem_7rem_minmax(0,1.4fr)]'
+                      : 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_6rem_minmax(0,1fr)_minmax(0,1.5fr)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <PaymentStudentAvatar payment={payment} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-[#1E2A35] text-sm font-semibold truncate group-hover:text-[#c49a3c] transition-colors">{payment.student}</p>
+                      <p className="text-[#B0A898] text-xs truncate">{payment.email}</p>
                     </div>
-                  ))}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[#1E2A35] text-sm font-medium truncate">{payment.class}</p>
+                    {ledgerTab !== 'held' ? (
+                      <p className="text-[#9A8E7E] text-xs truncate">{payment.date} · {payment.time}</p>
+                    ) : (
+                      <p className="text-[#9A8E7E] text-xs truncate">{payment.method}</p>
+                    )}
+                  </div>
+                  <p className="text-[#1E2A35] font-bold tabular-nums" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}>
+                    {peso(payment.amount)}
+                  </p>
+                  {ledgerTab === 'held' ? (
+                    <p className="text-[#1E2A35] text-sm whitespace-nowrap">{payment.date}</p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5 items-start">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize w-fit ${
+                        payment.status === 'pending'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : payment.status === 'rejected'
+                            ? 'bg-red-50 text-red-600 border-red-200'
+                            : 'bg-green-50 text-green-700 border-green-200'
+                      }`}
+                      >
+                        {payment.status === 'rejected' ? 'Returned' : payment.status}
+                      </span>
+                      {escrowBadgeLabel(payment) ? (
+                        <span className="text-[9px] font-semibold uppercase text-[#9A8E7E]">{escrowBadgeLabel(payment)}</span>
+                      ) : null}
+                    </div>
+                  )}
+                  {ledgerTab === 'held' ? (
+                    <p className="text-sky-800 text-xs font-semibold whitespace-nowrap">{lockTimerLabel(payment.refundableUntil)}</p>
+                  ) : null}
+                  <div className="flex flex-wrap items-center gap-1.5 justify-start md:justify-end" onClick={(event) => event.stopPropagation()}>
+                    {isStudioAdmin && isHeld(payment) ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={lockBusyId === payment.id}
+                          onClick={() =>
+                            setEscrowConfirm({
+                              kind: 'lock',
+                              paymentId: payment.id,
+                              paymentUid: payment.paymentUid,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-full border border-[#1E2A35] bg-[#1E2A35] px-2.5 py-1 text-[10px] font-bold text-white hover:bg-[#263545] disabled:opacity-60"
+                        >
+                          <Lock size={11} />
+                          {lockBusyId === payment.id ? 'Issuing…' : 'Issue OR'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={refundBusyId === payment.id}
+                          onClick={() =>
+                            setEscrowConfirm({
+                              kind: 'refund',
+                              paymentId: payment.id,
+                              paymentUid: payment.paymentUid,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                        >
+                          {refundBusyId === payment.id ? 'Refunding…' : 'Manual Refund'}
+                        </button>
+                      </>
+                    ) : null}
+                    {isStudioAdmin && payment.escrowState === 'refunded' && !payment.cashRefundDisbursedAt ? (
+                      <button
+                        type="button"
+                        disabled={refundBusyId === payment.id}
+                        onClick={() => void markCashSent(payment.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-800 hover:bg-green-100 disabled:opacity-60"
+                      >
+                        {refundBusyId === payment.id ? 'Saving…' : 'Mark cash sent'}
+                      </button>
+                    ) : null}
+                    {isCleared(payment) ? (
+                      <button
+                        type="button"
+                        onClick={() => setPrintPayment(payment)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5] px-2.5 py-1 text-[10px] font-bold text-[#5A5048] hover:bg-[#F8F3E8]"
+                      >
+                        <Receipt size={11} />
+                        Receipt
+                      </button>
+                    ) : null}
+                    <ChevronRight size={14} className="text-[#C0B8A8] shrink-0 group-hover:text-[#c49a3c]" />
+                  </div>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </div>
 
         <p className="text-[#B0A898] text-xs mt-4 text-right">
-          {filtered(activeTab === 'pending' ? pending : history).length} record{filtered(activeTab === 'pending' ? pending : history).length !== 1 ? 's' : ''} shown · Click any row to view details
+          Click a row for proof and review. Held rows can use Issue OR or Manual Refund (each requires confirmation).
         </p>
+        </>
+        ) : null}
+      </div>
       </div>
     </>
   );

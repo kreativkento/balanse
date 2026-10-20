@@ -26,7 +26,7 @@ export const classesLinks = [
 
 /** Member sidebar Class Management — schedules stay on a member page. */
 export const memberClassLinks = [
-  { label: 'My Classes', path: '/my-classes', icon: <Bookmark size={18} /> },
+  { label: 'My Bookings', path: '/my-classes', icon: <Bookmark size={18} /> },
   { label: 'Class Schedules', path: '/class-schedule', icon: <CalendarDays size={18} /> },
   { label: 'Studio Guidelines', path: '/studio-guidelines', icon: <ClipboardList size={18} /> },
 ];

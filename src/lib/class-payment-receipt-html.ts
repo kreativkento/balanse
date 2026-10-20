@@ -1,5 +1,10 @@
 /** Official class payment e-receipt HTML (email, print, and stored snapshot). */
 
+export const DEFAULT_STUDIO_ADDRESS =
+  'Capitol Centrum Building, N Escario St, Brgy. Camputhaw, Cebu City, Cebu 6000';
+
+export const DEFAULT_STUDIO_TIN = '000-000-0000';
+
 export type ClassPaymentReceiptRow = {
   uid: string;
   buyer_name: string;
@@ -89,8 +94,11 @@ export function buildClassPaymentReceiptHtml(
   const description = payment.service_description?.trim() || classLabel;
   const buyerAddress = payment.buyer_address?.trim() || '—';
   const sellerName = payment.seller_business_name?.trim() || 'BALANSÉ Wellness Hub';
-  const sellerAddress = payment.seller_address?.trim() || '—';
-  const sellerTin = payment.seller_tin?.trim() || '—';
+  const rawSellerAddress = payment.seller_address?.trim() ?? '';
+  const sellerAddress =
+    rawSellerAddress && rawSellerAddress !== '—' ? rawSellerAddress : DEFAULT_STUDIO_ADDRESS;
+  const rawSellerTin = payment.seller_tin?.trim() ?? '';
+  const sellerTin = rawSellerTin && rawSellerTin !== '—' ? rawSellerTin : DEFAULT_STUDIO_TIN;
   const method = payment.payment_method_label?.trim() || '—';
   const reference = payment.payment_reference?.trim() || payment.uid;
   const qty = payment.quantity ?? 1;
@@ -128,87 +136,90 @@ export function buildClassPaymentReceiptHtml(
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 16px;
+      padding: 24px;
       background: #eceae4;
       font-family: "Courier New", Courier, monospace;
-      color: #1a1a1a;
+      font-weight: 900;
+      color: #000;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     .receipt {
-      max-width: 380px;
+      max-width: 560px;
       margin: 0 auto;
       background: #fff;
       border: 1px solid #ccc;
       box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-      padding: 20px 18px 24px;
+      padding: 32px 28px 36px;
     }
     .logo-wrap { text-align: center; margin-bottom: 10px; }
-    .logo-wrap img { width: 120px; height: auto; }
+    .logo-wrap img { width: 96px; height: auto; }
     .center { text-align: center; }
     .biz-name {
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 17px;
-      font-weight: 700;
+      font-size: 10px;
+      font-weight: 900;
       letter-spacing: 0.04em;
-      text-transform: uppercase;
-      margin: 0 0 4px;
-    }
-    .muted { font-size: 11px; line-height: 1.45; color: #444; margin: 0; }
-    .rule {
-      border: none;
-      border-top: 1px dashed #888;
-      margin: 12px 0;
-    }
-    .rule-solid {
-      border: none;
-      border-top: 2px solid #1a1a1a;
-      margin: 10px 0;
-    }
-    .or-title {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
       text-transform: uppercase;
       margin: 0 0 6px;
     }
-    .meta { width: 100%; font-size: 11px; border-collapse: collapse; }
-    .meta td { padding: 2px 0; vertical-align: top; }
-    .meta td:last-child { text-align: right; font-weight: 700; }
+    .muted { font-size: 14px; font-weight: 900; line-height: 1.5; color: #000; margin: 0 0 4px; }
+    .buyer strong { font-weight: 900; }
+    .rule {
+      border: none;
+      border-top: 1px dashed #000;
+      margin: 16px 0;
+    }
+    .rule-solid {
+      border: none;
+      border-top: 2px solid #000;
+      margin: 14px 0;
+    }
+    .or-title {
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+    .meta { width: 100%; font-size: 15px; font-weight: 900; border-collapse: collapse; }
+    .meta td { padding: 4px 0; vertical-align: top; }
+    .meta td:last-child { text-align: right; font-weight: 900; }
     .section-label {
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 900;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: #666;
-      margin: 0 0 4px;
+      color: #000;
+      margin: 0 0 6px;
     }
-    .buyer { font-size: 11px; line-height: 1.45; margin: 0 0 10px; }
-    .items { width: 100%; font-size: 11px; border-collapse: collapse; margin: 8px 0; }
+    .buyer { font-size: 15px; font-weight: 900; line-height: 1.5; margin: 0 0 14px; }
+    .items { width: 100%; font-size: 15px; font-weight: 900; border-collapse: collapse; margin: 12px 0; }
     .items th {
       text-align: left;
-      font-size: 10px;
+      font-size: 12px;
+      font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      border-bottom: 1px solid #333;
-      padding: 4px 0;
+      border-bottom: 1px solid #000;
+      padding: 6px 0;
     }
     .items th:nth-child(2), .items th:nth-child(3), .items th:nth-child(4) { text-align: right; }
-    .items td { padding: 6px 0; border-bottom: 1px dashed #ccc; vertical-align: top; }
+    .items td { padding: 10px 0; border-bottom: 1px dashed #000; vertical-align: top; }
     .items td:nth-child(2), .items td:nth-child(3), .items td:nth-child(4) { text-align: right; white-space: nowrap; }
-    .totals { width: 100%; font-size: 11px; border-collapse: collapse; }
-    .totals td { padding: 3px 0; }
-    .totals td:last-child { text-align: right; font-weight: 600; }
+    .totals { width: 100%; font-size: 15px; font-weight: 900; border-collapse: collapse; }
+    .totals td { padding: 5px 0; }
+    .totals td:last-child { text-align: right; font-weight: 900; }
     .grand {
-      margin-top: 8px;
-      padding: 10px 0 4px;
-      border-top: 2px double #1a1a1a;
-      border-bottom: 2px double #1a1a1a;
+      margin-top: 12px;
+      padding: 14px 0 6px;
+      border-top: 2px double #000;
+      border-bottom: 2px double #000;
       text-align: center;
     }
-    .grand-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
-    .grand-amount { font-size: 22px; font-weight: 700; margin-top: 4px; }
-    .footer { font-size: 10px; text-align: center; color: #555; line-height: 1.5; margin-top: 14px; }
+    .grand-label { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+    .grand-amount { font-size: 32px; font-weight: 900; margin-top: 6px; }
+    .footer { font-size: 13px; font-weight: 900; text-align: center; color: #000; line-height: 1.55; margin-top: 18px; }
     @media print {
       body { background: #fff; padding: 0; }
       .receipt { box-shadow: none; border: none; max-width: 100%; }
@@ -289,4 +300,31 @@ export function buildClassPaymentReceiptHtml(
   </div>
 </body>
 </html>`;
+}
+
+/** Overlay preview: transparent chrome, white paper block only (stored/email HTML unchanged). */
+export function wrapReceiptHtmlForOverlayPreview(html: string): string {
+  const override = `<style id="balanse-receipt-overlay-preview">
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: transparent !important;
+      overflow: hidden !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    .receipt {
+      max-width: 100% !important;
+      width: 100% !important;
+      margin: 0 !important;
+      background: #ffffff !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 32px 28px 36px !important;
+    }
+  </style>`;
+  if (html.includes('</head>')) {
+    return html.replace('</head>', `${override}</head>`);
+  }
+  return `${override}${html}`;
 }

@@ -12,6 +12,7 @@ export function MemberSiteLayout() {
         || pathname === '/studio-disciplines'
         || pathname === '/class-schedule'
         || pathname === '/payment-history'
+        || pathname === '/credits'
       }
     >
       <Outlet />

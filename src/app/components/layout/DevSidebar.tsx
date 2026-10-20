@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import {
-  Code2, LogOut, Ticket, Bot, Menu, ChevronDown, ScrollText,
+  Code2, LogOut, Bot, Menu, ChevronDown, ScrollText,
   UserCog, UserRound, Headphones, MessageSquare, Dumbbell, CalendarDays, Megaphone,
 } from 'lucide-react';
 import { useDevAuth } from '../../context/DevAuthContext';
@@ -10,9 +10,11 @@ import logoMain from 'figma:asset/logo_main.svg';
 import { ProfileAvatar } from '../ProfileImages';
 
 const NAV_LINKS = [
-  { label: 'Ticket Management', path: '/development/tickets', icon: Ticket },
-  { label: 'AI Setup', path: '/development/ai-setup', icon: Bot },
+  { label: 'Feedback Inbox', path: '/development/feedback', icon: MessageSquare },
+  { label: 'AI Setup', path: '/development/ai-setup', icon: Bot, disabled: true },
 ];
+
+const SYSTEM_LOGS_DISABLED = true;
 
 const SYSTEM_LOG_LINKS = [
   { label: 'Account Logs', path: '/development/logs/accounts', icon: UserCog, desc: 'Account create/role/email changes' },
@@ -57,8 +59,22 @@ export function DevSidebar({ children }: DevSidebarProps) {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">Navigation</p>
         <div className="flex flex-col gap-0.5">
-          {NAV_LINKS.map(({ label, path, icon: Icon }) => {
+          {NAV_LINKS.map(({ label, path, icon: Icon, disabled }) => {
             const active = location.pathname === path;
+            if (disabled) {
+              return (
+                <span
+                  key={path}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#B0A898] cursor-not-allowed"
+                  aria-disabled="true"
+                  title="Temporarily unavailable"
+                >
+                  <Icon size={16} className="text-[#C4B8A0]" />
+                  <span className="flex-1">{label}</span>
+                  <span className="text-[0.55rem] font-bold uppercase tracking-widest">Soon</span>
+                </span>
+              );
+            }
             return (
               <Link
                 key={path}
@@ -76,35 +92,49 @@ export function DevSidebar({ children }: DevSidebarProps) {
 
           <div className="mt-3">
             <p className="text-[#B0A898] text-[0.6rem] uppercase tracking-widest px-3 mb-2">System Logs</p>
-            <button
-              onClick={() => setLogsOpen((v) => !v)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                logsActive ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
-              }`}
-            >
-              <ScrollText size={16} className={logsActive ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
-              <span className="flex-1 text-left">System Logs</span>
-              <ChevronDown size={14} className={`transition-transform ${logsOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {logsOpen && (
-              <div className="mt-1 ml-3 flex flex-col gap-0.5 pl-6 border-l-2 border-[#D4CDB5]/50">
-                {SYSTEM_LOG_LINKS.map((l) => {
-                  const active = location.pathname === l.path;
-                  return (
-                    <Link
-                      key={l.path}
-                      to={l.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                        active ? 'bg-[#c49a3c]/15 text-[#a67f2e]' : 'text-[#5A5048] hover:bg-[#EDE8D8]'
-                      }`}
-                    >
-                      <l.icon size={13} className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
-                      {l.label}
-                    </Link>
-                  );
-                })}
-              </div>
+            {SYSTEM_LOGS_DISABLED ? (
+              <span
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#B0A898] cursor-not-allowed"
+                aria-disabled="true"
+                title="Temporarily unavailable"
+              >
+                <ScrollText size={16} className="text-[#C4B8A0]" />
+                <span className="flex-1">System Logs</span>
+                <span className="text-[0.55rem] font-bold uppercase tracking-widest">Soon</span>
+              </span>
+            ) : (
+              <>
+                <button
+                  onClick={() => setLogsOpen((v) => !v)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    logsActive ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#5A5048] hover:bg-[#EDE8D8] hover:text-[#1E2A35]'
+                  }`}
+                >
+                  <ScrollText size={16} className={logsActive ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
+                  <span className="flex-1 text-left">System Logs</span>
+                  <ChevronDown size={14} className={`transition-transform ${logsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {logsOpen && (
+                  <div className="mt-1 ml-3 flex flex-col gap-0.5 pl-6 border-l-2 border-[#D4CDB5]/50">
+                    {SYSTEM_LOG_LINKS.map((l) => {
+                      const active = location.pathname === l.path;
+                      return (
+                        <Link
+                          key={l.path}
+                          to={l.path}
+                          onClick={() => setMobileOpen(false)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                            active ? 'bg-[#c49a3c]/15 text-[#a67f2e]' : 'text-[#5A5048] hover:bg-[#EDE8D8]'
+                          }`}
+                        >
+                          <l.icon size={13} className={active ? 'text-[#c49a3c]' : 'text-[#8A7E6E]'} />
+                          {l.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

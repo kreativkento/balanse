@@ -5,7 +5,6 @@ import type {
   AccountRow,
   ClassBlockStatus,
   ClassCoachRow,
-  ClassOpenStatus,
   ClassRow,
   ClassStudentRow,
   DisciplineRow,
@@ -17,7 +16,44 @@ type ProfileNameRow = Pick<ProfileClientRow, 'account_id' | 'name'> & {
   display_name?: string;
 };
 
-export type { ClassOpenStatus, ClassBlockStatus };
+export type { ClassBlockStatus };
+
+export function formatClassStatusClass(open: boolean): string {
+  return open ? 'Open' : 'Pending';
+}
+
+/** UI options for class enrollment open flag (Pending = false, Open = true). */
+export const CLASS_STATUS_CLASS_OPTIONS: { value: boolean; label: string }[] = [
+  { value: false, label: 'Pending' },
+  { value: true, label: 'Open' },
+];
+
+/** Assign / booking form: maps to `classes.status_class` (false = closed, true = open). */
+export const CLASS_BOOKING_OPTIONS: { value: boolean; label: string }[] = [
+  { value: false, label: 'Closed' },
+  { value: true, label: 'Open' },
+];
+
+export function formatClassBooking(open: boolean): string {
+  return open ? 'Open' : 'Closed';
+}
+
+/** True when `starts_at` is at or before now (session has begun). */
+export function classSessionHasStarted(
+  startsAt: string | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  if (!startsAt) return false;
+  const startMs = new Date(startsAt).getTime();
+  return Number.isFinite(startMs) && startMs <= nowMs;
+}
+
+async function closeStartedClassBlocksInDb(): Promise<void> {
+  const { error } = await supabase.rpc('close_started_class_blocks');
+  if (error) {
+    console.error('Failed to close started class blocks:', error.message);
+  }
+}
 
 export interface ClassPerson {
   accountId: string;
@@ -38,7 +74,7 @@ export interface ClassDisplay {
   startsAt: string;
   endsAt: string | null;
   classLimit: number | null;
-  statusClass: ClassOpenStatus;
+  statusClass: boolean;
   statusBlock: ClassBlockStatus;
   createdBy: string;
   createdByName: string;
@@ -56,14 +92,30 @@ export interface ClassUpsertInput {
   startsAt: string;
   endsAt: string | null;
   classLimit: number | null;
-  statusClass: ClassOpenStatus;
+  statusClass: boolean;
   statusBlock: ClassBlockStatus;
   coachAccountIds: string[];
   studentAccountIds: string[];
 }
 
-export const CLASS_OPEN_STATUSES: ClassOpenStatus[] = ['open', 'close', 'pending'];
-export const CLASS_BLOCK_STATUSES: ClassBlockStatus[] = ['vacant', 'occupied', 'active', 'closed'];
+export const CLASS_BLOCK_STATUSES: ClassBlockStatus[] = [
+  'vacant',
+  'assigned',
+  'active',
+  'completed',
+  'cancelled',
+];
+
+export function isTerminalClassBlockStatus(statusBlock: ClassBlockStatus): boolean {
+  return statusBlock === 'completed' || statusBlock === 'cancelled';
+}
+
+/** Member class schedule: never load or offer vacant / assigned in filters or fetch. */
+export const MEMBER_SCHEDULE_VISIBLE_BLOCK_STATUSES: ClassBlockStatus[] = [
+  'active',
+  'completed',
+  'cancelled',
+];
 
 export function createEmptyClassDraft(): ClassUpsertInput {
   const start = new Date();
@@ -77,7 +129,7 @@ export function createEmptyClassDraft(): ClassUpsertInput {
     startsAt: start.toISOString(),
     endsAt: null,
     classLimit: 12,
-    statusClass: 'close',
+    statusClass: false,
     statusBlock: 'active',
     coachAccountIds: [],
     studentAccountIds: [],
@@ -257,7 +309,7 @@ export async function fetchCoachAssignedClassDisplays(
   const { data, error } = await fetchClassesForStaffSchedule();
   if (error) return { data: [], error };
   if (!trimmed) return { data: [], error: null };
-  const visibleBlocks: ClassBlockStatus[] = ['active', 'occupied'];
+  const visibleBlocks: ClassBlockStatus[] = ['active', 'assigned'];
   const assigned = data.filter((row) => {
     if (!row.coaches.some((coach) => coach.accountId === trimmed)) return false;
     if (options?.includeAllBlocks) return true;
@@ -363,25 +415,38 @@ export async function fetchCoachClassWaitlist(classId: string): Promise<{
   return { data: await mapCoachClassRosterRows((data ?? []) as CoachClassRosterRow[]), error: null };
 }
 
-/** Member class calendar: only Active timeblocks from `classes.status_block`. */
-export async function fetchClassesForMemberSchedule(): Promise<{
+/** Public class calendar: Active timeblocks only. */
+export async function fetchClassesForPublicSchedule(): Promise<{
   data: ClassDisplay[];
   error: string | null;
 }> {
   return fetchClassesForAdmin({ statusBlock: 'active' });
 }
 
+/** Member class calendar: active and past terminal blocks (completed/cancelled shown grayed out). */
+export async function fetchClassesForMemberSchedule(): Promise<{
+  data: ClassDisplay[];
+  error: string | null;
+}> {
+  return fetchClassesForAdmin({ statusBlocks: ['active', 'completed', 'cancelled'] });
+}
+
 export async function fetchClassesForAdmin(options?: {
   statusBlock?: ClassBlockStatus;
+  statusBlocks?: ClassBlockStatus[];
 }): Promise<{
   data: ClassDisplay[];
   error: string | null;
 }> {
+  await closeStartedClassBlocksInDb();
+
   let query = supabase
     .from('classes')
     .select('*')
     .order('starts_at', { ascending: true });
-  if (options?.statusBlock) {
+  if (options?.statusBlocks?.length) {
+    query = query.in('status_block', options.statusBlocks);
+  } else if (options?.statusBlock) {
     query = query.eq('status_block', options.statusBlock);
   }
   const { data: classRows, error: classesError } = await query;
@@ -622,6 +687,8 @@ export type MemberClassListStatus =
   | 'completed'
   | 'cancelled';
 
+export type MemberBookingRefundKind = 'credit' | 'cash' | 'none';
+
 export interface MemberEnrolledClassItem {
   id: string;
   className: string;
@@ -633,6 +700,10 @@ export interface MemberEnrolledClassItem {
   location: string;
   status: MemberClassListStatus;
   sortAt: string;
+  /** Last instant for free cancel (from payment or class start − cancel window). */
+  freeCancellationUntil: string | null;
+  bookingRefundKind: MemberBookingRefundKind;
+  creditsOnBooking: number | null;
 }
 
 type ClassRowForMemberList = Pick<
@@ -658,7 +729,7 @@ function resolveMemberClassStatus(
   }
 
   if (sessionEnded) {
-    if (row.status_class === 'close' || row.status_block === 'closed') {
+    if (row.status_block === 'cancelled') {
       return 'cancelled';
     }
     return 'completed';
@@ -759,14 +830,24 @@ export async function fetchMemberEnrolledClasses(): Promise<{
     ...new Set(waitlistRows.map((row) => row.payment_id as string).filter(Boolean)),
   ];
   const paymentStatusById = new Map<string, 'pending' | 'approved' | 'rejected'>();
+  const paymentMetaById = new Map<
+    string,
+    { classId: string; refundableUntil: string | null; status: string }
+  >();
 
   if (paymentIds.length > 0) {
     const { data: payments } = await supabase
-      .from('class_payments')
-      .select('id, status')
+      .from('class_payments_escrow')
+      .select('id, class_id, status, refundable_until')
       .in('id', paymentIds);
     for (const payment of payments ?? []) {
-      paymentStatusById.set(payment.id as string, payment.status as 'pending' | 'approved' | 'rejected');
+      const id = payment.id as string;
+      paymentStatusById.set(id, payment.status as 'pending' | 'approved' | 'rejected');
+      paymentMetaById.set(id, {
+        classId: payment.class_id as string,
+        refundableUntil: (payment.refundable_until as string | null) ?? null,
+        status: payment.status as string,
+      });
     }
   }
 
@@ -779,6 +860,72 @@ export async function fetchMemberEnrolledClasses(): Promise<{
 
   if (classIds.length === 0) {
     return { data: [], error: null };
+  }
+
+  const creditEnrollByClass = new Map<string, number>();
+  const { data: creditSpendRows } = await supabase
+    .from('account_credit_transactions')
+    .select('idempotency_key, amount')
+    .eq('account_id', accountId)
+    .like('idempotency_key', 'enroll-credit:%');
+
+  for (const row of creditSpendRows ?? []) {
+    const key = row.idempotency_key as string | null;
+    if (!key) continue;
+    const segments = key.split(':');
+    if (segments.length < 3) continue;
+    const classId = segments[1];
+    if (!classIds.includes(classId)) continue;
+    const spent = Math.abs(Number(row.amount));
+    creditEnrollByClass.set(classId, spent > 0 ? spent : 1);
+  }
+
+  const paymentByClassId = new Map<string, { refundableUntil: string | null }>();
+  const { data: memberPayments } = await supabase
+    .from('class_payments_escrow')
+    .select('class_id, refundable_until, status')
+    .eq('account_id', accountId)
+    .in('class_id', classIds)
+    .neq('status', 'rejected');
+
+  for (const payment of memberPayments ?? []) {
+    const classId = payment.class_id as string;
+    if (!classId) continue;
+    paymentByClassId.set(classId, {
+      refundableUntil: (payment.refundable_until as string | null) ?? null,
+    });
+  }
+
+  for (const meta of paymentMetaById.values()) {
+    if (!meta.classId || meta.status === 'rejected') continue;
+    paymentByClassId.set(meta.classId, { refundableUntil: meta.refundableUntil });
+  }
+
+  function bookingMetaForClass(classId: string): Pick<
+    MemberEnrolledClassItem,
+    'freeCancellationUntil' | 'bookingRefundKind' | 'creditsOnBooking'
+  > {
+    const credits = creditEnrollByClass.get(classId);
+    if (credits != null) {
+      return {
+        freeCancellationUntil: paymentByClassId.get(classId)?.refundableUntil ?? null,
+        bookingRefundKind: 'credit',
+        creditsOnBooking: credits,
+      };
+    }
+    const pay = paymentByClassId.get(classId);
+    if (pay) {
+      return {
+        freeCancellationUntil: pay.refundableUntil,
+        bookingRefundKind: 'cash',
+        creditsOnBooking: null,
+      };
+    }
+    return {
+      freeCancellationUntil: null,
+      bookingRefundKind: 'none',
+      creditsOnBooking: null,
+    };
   }
 
   const { data: classRows, error: classError } = await supabase
@@ -821,6 +968,7 @@ export async function fetchMemberEnrolledClasses(): Promise<{
       location: 'Main studio',
       status: resolveMemberClassStatus(row, 'enrolled', null, nowMs),
       sortAt: row.starts_at,
+      ...bookingMetaForClass(classId),
     });
   }
 
@@ -834,6 +982,16 @@ export async function fetchMemberEnrolledClasses(): Promise<{
       ? disciplineJoin[0]?.name ?? '—'
       : disciplineJoin?.name ?? '—';
 
+    const waitPaymentId = waitRow.payment_id as string;
+    const waitPayMeta = waitPaymentId ? paymentMetaById.get(waitPaymentId) : undefined;
+    const waitBooking = bookingMetaForClass(classId);
+    if (waitPayMeta?.refundableUntil) {
+      waitBooking.freeCancellationUntil = waitPayMeta.refundableUntil;
+      if (waitBooking.bookingRefundKind === 'none') {
+        waitBooking.bookingRefundKind = 'cash';
+      }
+    }
+
     items.push({
       id: `${classId}-waitlist`,
       className: row.name?.trim() || 'Class',
@@ -845,6 +1003,7 @@ export async function fetchMemberEnrolledClasses(): Promise<{
       location: 'Main studio',
       status: resolveMemberClassStatus(row, 'waitlist', paymentStatus, nowMs),
       sortAt: row.starts_at,
+      ...waitBooking,
     });
   }
 
@@ -904,7 +1063,7 @@ export interface MemberMyClassDetail {
   disciplineLogoUrl: string;
   startsAt: string;
   endsAt: string | null;
-  statusClass: ClassOpenStatus;
+  statusClass: boolean;
   statusBlock: ClassBlockStatus;
   classLimit: number | null;
   enrolledCount: number;
@@ -1043,7 +1202,7 @@ export async function fetchMemberMyClassDetail(classId: string): Promise<{
       disciplineLogoUrl,
       startsAt: classRow.starts_at as string,
       endsAt: (classRow.ends_at as string | null) ?? null,
-      statusClass: classRow.status_class as ClassOpenStatus,
+      statusClass: Boolean(classRow.status_class),
       statusBlock: classRow.status_block as ClassBlockStatus,
       classLimit: classRow.class_limit as number | null,
       enrolledCount: enrolledCount ?? 0,
@@ -1111,6 +1270,9 @@ export async function fetchStaffAssignedClasses(accountId: string): Promise<{
         location: 'Main studio',
         status: resolveMemberClassStatus(classRow, 'enrolled', null, nowMs),
         sortAt: classRow.starts_at,
+        freeCancellationUntil: null,
+        bookingRefundKind: 'none',
+        creditsOnBooking: null,
       };
     })
     .sort((a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime());

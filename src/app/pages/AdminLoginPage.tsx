@@ -194,6 +194,15 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            <div className="text-right -mt-1">
+              <Link
+                to="/internal-forgot-password?from=admin"
+                className="text-[#c49a3c] text-xs hover:text-[#a67f2e] transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
             {/* Error */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">

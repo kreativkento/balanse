@@ -373,6 +373,27 @@ allow_dynamic_registration = false
 [functions.send-payment-receipt]
 verify_jwt = true
 
+[functions.send-payment-review-email]
+verify_jwt = true
+
+[functions.send-payment-submitted-email]
+verify_jwt = true
+
+[functions.send-subscription-payment-receipt]
+verify_jwt = true
+
+[functions.send-subscription-payment-review-email]
+verify_jwt = true
+
+[functions.send-schedule-coach-email]
+verify_jwt = true
+
+[functions.lock-due-escrow]
+verify_jwt = false
+
+[functions.send-enrollment-cancellation-email]
+verify_jwt = true
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

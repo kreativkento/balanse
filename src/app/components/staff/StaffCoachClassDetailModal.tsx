@@ -30,28 +30,21 @@ function blockStatusLabel(status: ClassDisplay['statusBlock']): string {
   switch (status) {
     case 'active':
       return 'Active';
-    case 'occupied':
-      return 'Occupied';
+    case 'assigned':
+      return 'Assigned';
     case 'vacant':
       return 'Vacant';
-    case 'closed':
-      return 'Closed';
+    case 'completed':
+      return 'Completed';
+    case 'cancelled':
+      return 'Cancelled';
     default:
       return status;
   }
 }
 
-function openStatusLabel(status: ClassDisplay['statusClass']): string {
-  switch (status) {
-    case 'open':
-      return 'Open for enrollment';
-    case 'close':
-      return 'Closed to enrollment';
-    case 'pending':
-      return 'Enrollment pending';
-    default:
-      return status;
-  }
+function openStatusLabel(open: ClassDisplay['statusClass']): string {
+  return open ? 'Open for enrollment' : 'Enrollment pending';
 }
 
 export function StaffCoachClassDetailModal({

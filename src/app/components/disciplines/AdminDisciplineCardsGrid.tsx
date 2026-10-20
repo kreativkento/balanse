@@ -182,9 +182,9 @@ function AdminDisciplineList({
         fillContainer ? 'flex-1 min-h-0 flex flex-col' : ''
       }`}
     >
-      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-x-4 px-5 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
+      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
         {['Discipline', 'Description', 'Status', 'Updated'].map((heading) => (
-          <p key={heading} className="text-[#9A8E7E] text-[0.65rem] uppercase tracking-widest font-semibold">
+          <p key={heading} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">
             {heading}
           </p>
         ))}
@@ -210,7 +210,7 @@ function AdminDisciplineList({
                 onSelect(discipline);
               }
             }}
-            className={`grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-x-4 px-5 items-center hover:bg-[#F8F3E8]/70 cursor-pointer transition-colors box-border shrink-0 ${
+            className={`grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-x-4 px-6 items-center hover:bg-[#F8F3E8]/50 cursor-pointer transition-colors box-border shrink-0 ${
               fillContainer ? 'h-[72px]' : 'min-h-[64px] py-4'
             }`}
           >

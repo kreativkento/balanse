@@ -190,9 +190,12 @@ export default function StaffLoginPage() {
 
             {/* Forgot password */}
             <div className="text-right -mt-1">
-              <button type="button" className="text-[#c49a3c] text-xs hover:text-[#a67f2e] transition-colors">
+              <Link
+                to="/internal-forgot-password?from=staff"
+                className="text-[#c49a3c] text-xs hover:text-[#a67f2e] transition-colors"
+              >
                 Forgot Password?
-              </button>
+              </Link>
             </div>
 
             {/* Error */}

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import {
   Plus, Search, X, ChevronDown, Mail, Phone, Award, Globe, Check, Pencil, Trash2,
   Clock, AlertOctagon, Users, LayoutGrid, List, Eye, EyeOff,
@@ -19,6 +20,7 @@ import {
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
 import { AdminCoachAvailabilityPanel } from './AdminCoachAvailabilityPage';
 import { AdminAbsenceTrackerPanel } from './AdminAbsenceTrackerPage';
+import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 
 /** Set true when Absence Tracker is ready to ship. */
 const ABSENCE_TRACKER_TAB_ENABLED = false;
@@ -455,6 +457,8 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
   const [disciplines, setDisciplines] = useState<DisciplineDisplay[]>([]);
   const [selectedCoach, setSelectedCoach] = useState<CoachMember | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [page, setPage] = useState(1);
+  const { containerRef, pageSize } = useFitPageSize({ layout: 'table', fallback: 8 });
 
   const loadCoaches = useCallback(async () => {
     setLoading(true);
@@ -510,14 +514,27 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
     if (adminUser) void loadCoaches();
   }, [adminUser, loadCoaches]);
 
-  if (!adminUser) return null;
-
   const filtered = coaches.filter(
     (coach) =>
       coach.name.toLowerCase().includes(search.toLowerCase()) ||
       coach.email.toLowerCase().includes(search.toLowerCase()) ||
       coach.specialty.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageCoaches = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, filtered.length);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, viewMode]);
+
+  if (!adminUser) return null;
 
   const openAdd = () => {
     setForm(EMPTY_FORM);
@@ -657,9 +674,10 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="h-full min-h-0 overflow-hidden flex flex-col">
+      <div className="max-w-7xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col">
         {!viewOnly && (
-        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit">
+        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-5 w-fit shrink-0">
           {([
             ['coaches', 'Coaches', Users, true],
             ['availability', 'Coach Availability', Clock, true],
@@ -691,12 +709,20 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
         </div>
         )}
 
-        {!viewOnly && pageTab === 'availability' && <AdminCoachAvailabilityPanel />}
-        {!viewOnly && ABSENCE_TRACKER_TAB_ENABLED && pageTab === 'absence' && <AdminAbsenceTrackerPanel />}
+        {!viewOnly && pageTab === 'availability' && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <AdminCoachAvailabilityPanel />
+          </div>
+        )}
+        {!viewOnly && ABSENCE_TRACKER_TAB_ENABLED && pageTab === 'absence' && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <AdminAbsenceTrackerPanel />
+          </div>
+        )}
 
         {(viewOnly || pageTab === 'coaches') && (
           <>
-        <div className="flex items-center gap-4 mb-5 flex-wrap">
+        <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
           <div className="relative flex-1 max-w-sm min-w-[200px]">
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
             <input
@@ -737,7 +763,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
               <button
                 type="button"
                 onClick={openAdd}
-                className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
+                className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full text-sm hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
               >
                 <Plus size={16} /> Add Coach
               </button>
@@ -746,15 +772,15 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex-1 min-h-0 px-6 py-12 text-center text-[#B0A898] text-sm">
             Loading coaches…
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex-1 min-h-0 px-6 py-12 text-center text-[#B0A898] text-sm">
             No coaches match your search.
           </div>
         ) : viewMode === 'card' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 content-start">
             {filtered.map((coach) => {
               const disciplineLabels = coach.disciplineNames.length > 0
                 ? coach.disciplineNames
@@ -868,9 +894,10 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
             })}
           </div>
         ) : (
-        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
           <div
-            className={`grid gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 ${
+            className={`grid gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0 ${
               viewOnly
                 ? 'grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)]'
                 : 'grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,1fr)_100px]'
@@ -884,8 +911,8 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
             ))}
           </div>
 
-            <div className="divide-y divide-[#D4CDB5]/30">
-              {filtered.map((coach) => (
+            <div ref={containerRef} className="flex-1 min-h-0 divide-y divide-[#D4CDB5]/30">
+              {pageCoaches.map((coach) => (
                 <div
                   key={coach.id}
                   role="button"
@@ -952,9 +979,20 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
               ))}
             </div>
         </div>
+        <AdminTablePagination
+          page={currentPage}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={filtered.length}
+          noun="coaches"
+          onPageChange={setPage}
+        />
+        </div>
         )}
           </>
         )}
+      </div>
       </div>
 
       {selectedCoach && (

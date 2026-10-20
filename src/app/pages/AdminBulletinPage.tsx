@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Calendar as CalendarIcon, Check, ChevronDown, Clock, Eye, Newspaper, Paperclip, Pause, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import {
   toastCreated,
   toastDeleted,
@@ -1338,6 +1339,7 @@ function PostFormModal({
 export default function AdminBulletinPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
+  const urlSearchQuery = useAdminUrlSearchQuery();
   const { posts, loading, refresh } = useBulletinPosts();
   const [selectedCategories, setSelectedCategories] = useState<BulletinPostType[]>([]);
   const [selectedVisibilities, setSelectedVisibilities] = useState<BulletinVisibility[]>([]);
@@ -1366,28 +1368,36 @@ export default function AdminBulletinPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedCategories, selectedVisibilities, selectedStatuses, listTab]);
+  }, [selectedCategories, selectedVisibilities, selectedStatuses, listTab, urlSearchQuery]);
 
   const hasActiveFilters =
     selectedCategories.length > 0 || selectedVisibilities.length > 0 || selectedStatuses.length > 0;
 
   const filtered = useMemo(() => {
+    const q = urlSearchQuery.trim().toLowerCase();
     const inTab = posts.filter((post) => postListTab(post) === listTab);
+    const withQuery = !q
+      ? inTab
+      : inTab.filter(
+          (post) =>
+            post.title.toLowerCase().includes(q)
+            || post.body.toLowerCase().includes(q),
+        );
     if (
       selectedCategories.length === 0
       && selectedVisibilities.length === 0
       && selectedStatuses.length === 0
     ) {
-      return inTab;
+      return withQuery;
     }
-    return inTab.filter((post) => {
+    return withQuery.filter((post) => {
       if (selectedCategories.includes(post.category)) return true;
       if (selectedVisibilities.includes(post.visibility)) return true;
       if (selectedStatuses.includes('featured') && Boolean(post.pinned)) return true;
       if (selectedStatuses.includes('pending') && !post.adminApproved) return true;
       return false;
     });
-  }, [posts, listTab, selectedCategories, selectedVisibilities, selectedStatuses]);
+  }, [posts, listTab, selectedCategories, selectedVisibilities, selectedStatuses, urlSearchQuery]);
 
   const tabCounts = useMemo(() => {
     const counts: Record<ListTab, number> = { active: 0, inactive: 0, scheduled: 0 };
@@ -1664,7 +1674,7 @@ export default function AdminBulletinPage() {
                 Add Post
               </button>
                   )}
-            </div>
+        </div>
           ) : (
                 <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
                   {pagePosts.map((post) => {
@@ -1700,7 +1710,7 @@ export default function AdminBulletinPage() {
                       ) : (
                         <div className="flex h-full items-center justify-center">
                                 <Newspaper size={18} className="text-white/70" />
-                        </div>
+          </div>
                       )}
                     </div>
                           <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2">
@@ -1753,8 +1763,8 @@ export default function AdminBulletinPage() {
                               {post.excerpt}
                               {post.attachmentName ? ` · ${post.attachmentName}` : ''}
           </p>
-                    </div>
-                  </div>
+        </div>
+      </div>
                 </article>
                     );
                   })}

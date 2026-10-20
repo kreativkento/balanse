@@ -29,8 +29,27 @@ import {
   fetchMyPortalRequests,
   PORTAL_REQUESTS_CHANGED,
   submitCancellationRequest,
+  submitMemberEnrollmentCancellation,
   type PortalRequestRow,
 } from '../../../lib/portal-request-service';
+import {
+  fetchStudioPolicySettings,
+  STUDIO_POLICY_DEFAULTS,
+} from '../../../lib/studio-policy-service';
+import {
+  buildCancelBookingConfirmMessage,
+  getMemberCancellationBadge,
+} from '../../../lib/member-class-cancellation-ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 const PH_TZ = 'Asia/Manila';
 
@@ -66,7 +85,8 @@ function staffCoachClassBadge(
   }
   const row = classById.get(classId);
   const isCancelled =
-    item.status === 'cancelled' || row?.statusBlock === 'closed' || row?.statusClass === 'close';
+    item.status === 'cancelled'
+    || row?.statusBlock === 'cancelled'
   if (isCancelled) {
     return { label: 'Cancelled', className: STAFF_COACH_BADGE_CANCELLED };
   }
@@ -164,6 +184,7 @@ function ClassRow({
   accentColor,
   onSelect,
   statusBadge,
+  memberCancellation,
 }: {
   item: MemberEnrolledClassItem;
   now: Date;
@@ -171,6 +192,12 @@ function ClassRow({
   onSelect: () => void;
   /** Coach portal: overrides member enrollment badge. */
   statusBadge?: { label: string; className: string };
+  memberCancellation?: {
+    cancelWindowHours: number;
+    timeBucket: ClassView;
+    pendingCancel: boolean;
+    onCancelBooking: () => void;
+  };
 }) {
   const badge = statusBadge ?? {
     label: STATUS_LABEL[item.status],
@@ -182,13 +209,35 @@ function ClassRow({
   const duration = formatDurationMinutes(item.startsAt, item.endsAt);
   const isToday = dateLabel === 'Today';
 
+  const cancellationBadge =
+    memberCancellation &&
+    memberCancellation.timeBucket !== 'past' &&
+    item.status === 'confirmed'
+      ? getMemberCancellationBadge({
+          startsAt: item.startsAt,
+          freeCancellationUntil: item.freeCancellationUntil,
+          cancelWindowHours: memberCancellation.cancelWindowHours,
+          refundKind: item.bookingRefundKind,
+          creditsOnBooking: item.creditsOnBooking,
+          nowMs: now.getTime(),
+        })
+      : null;
+
+  const showCancelBooking =
+    Boolean(cancellationBadge) &&
+    !memberCancellation?.pendingCancel &&
+    item.status === 'confirmed';
+
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`group relative w-full overflow-hidden rounded-2xl border border-[#D4CDB5]/55 bg-white text-left shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c49a3c]/40 ${CARD_HOVER_GROW}`}
+    <div
+      className={`group relative w-full overflow-hidden rounded-2xl border border-[#D4CDB5]/55 bg-white text-left shadow-sm transition-shadow hover:shadow-md ${CARD_HOVER_GROW}`}
       style={{ ['--class-accent' as string]: accentColor }}
     >
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex w-full flex-col gap-3 p-4 pl-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#c49a3c]/40 sm:flex-row sm:items-stretch sm:gap-4"
+      >
       <div
         className="absolute inset-y-0 left-0 w-1 transition-opacity group-hover:opacity-100"
         style={{
@@ -259,9 +308,40 @@ function ClassRow({
               <span className="truncate font-medium">{item.location}</span>
             </span>
           </div>
+
+          {cancellationBadge ? (
+            <p
+              className={`rounded-xl border px-2.5 py-2 text-[10px] font-semibold leading-snug sm:text-[11px] ${
+                cancellationBadge.locked
+                  ? 'border-[#D4CDB5]/80 bg-[#F3F1EB] text-[#5A5048]'
+                  : 'border-emerald-200/90 bg-emerald-50 text-emerald-950'
+              }`}
+            >
+              {cancellationBadge.badgeText}
+            </p>
+          ) : null}
+          {memberCancellation?.pendingCancel ? (
+            <p className="text-[10px] font-semibold text-amber-800">Cancellation pending approval</p>
+          ) : null}
         </div>
       </div>
-    </button>
+      </button>
+
+      {showCancelBooking ? (
+        <div className="flex justify-end border-t border-[#D4CDB5]/45 px-4 py-2.5 sm:px-5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              memberCancellation?.onCancelBooking();
+            }}
+            className="rounded-full border border-red-200/90 bg-red-50/90 px-3.5 py-1.5 text-[11px] font-bold text-red-700 transition-colors hover:bg-red-100"
+          >
+            Cancel booking
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -371,6 +451,8 @@ export function MyClassesPageContent({
   const [coachWaitlistError, setCoachWaitlistError] = useState<string | null>(null);
   const [portalRequests, setPortalRequests] = useState<PortalRequestRow[]>([]);
   const [cancellationSubmitting, setCancellationSubmitting] = useState(false);
+  const [cancelWindowHours, setCancelWindowHours] = useState(STUDIO_POLICY_DEFAULTS.cancelWindowHours);
+  const [cancelConfirmItem, setCancelConfirmItem] = useState<MemberEnrolledClassItem | null>(null);
 
   const selectedCoachClass = useMemo(() => {
     if (!staffCoachDetail || !selectedItem) return null;
@@ -404,34 +486,72 @@ export function MyClassesPageContent({
   }, [staffCoachDetail, selectedCoachClass, coachRosterStudents.length]);
 
   const loadPortalRequests = useCallback(async () => {
-    if (!staffCoachDetail) {
-      setPortalRequests([]);
-      return;
-    }
     const { requests, error } = await fetchMyPortalRequests();
     if (error) return;
     setPortalRequests(requests);
-  }, [staffCoachDetail]);
+  }, []);
 
   useEffect(() => {
-    if (!staffCoachDetail) return;
     void loadPortalRequests();
     const onChanged = () => void loadPortalRequests();
     window.addEventListener(PORTAL_REQUESTS_CHANGED, onChanged);
     return () => window.removeEventListener(PORTAL_REQUESTS_CHANGED, onChanged);
-  }, [loadPortalRequests, staffCoachDetail]);
+  }, [loadPortalRequests]);
+
+  useEffect(() => {
+    if (staffCoachDetail) return;
+    void fetchStudioPolicySettings().then(({ data }) => {
+      setCancelWindowHours(data.cancelWindowHours);
+    });
+  }, [staffCoachDetail]);
+
+  const selectedMemberClassId = selectedItem ? memberEnrolledClassId(selectedItem) : null;
 
   const pendingCancellationForClass = useMemo(() => {
-    if (!selectedCoachClass) return null;
+    const classId = selectedCoachClass?.id ?? selectedMemberClassId;
+    if (!classId) return null;
+    const requestType = staffCoachDetail ? 'cancellation_request' : 'member_enrollment_cancellation';
     return (
       portalRequests.find(
         (r) =>
-          r.request_type === 'cancellation_request' &&
-          r.target_class_id === selectedCoachClass.id &&
+          r.request_type === requestType &&
+          r.target_class_id === classId &&
           r.status === 'pending',
       ) ?? null
     );
-  }, [portalRequests, selectedCoachClass]);
+  }, [portalRequests, selectedCoachClass, selectedMemberClassId, staffCoachDetail]);
+
+  const pendingMemberCancellationClassIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const r of portalRequests) {
+      if (
+        r.request_type === 'member_enrollment_cancellation' &&
+        r.status === 'pending' &&
+        r.target_class_id
+      ) {
+        ids.add(r.target_class_id);
+      }
+    }
+    return ids;
+  }, [portalRequests]);
+
+  const cancelConfirmCopy = useMemo(() => {
+    if (!cancelConfirmItem) return null;
+    const badge = getMemberCancellationBadge({
+      startsAt: cancelConfirmItem.startsAt,
+      freeCancellationUntil: cancelConfirmItem.freeCancellationUntil,
+      cancelWindowHours,
+      refundKind: cancelConfirmItem.bookingRefundKind,
+      creditsOnBooking: cancelConfirmItem.creditsOnBooking,
+    });
+    return buildCancelBookingConfirmMessage({
+      className: cancelConfirmItem.className,
+      locked: badge.locked,
+      refundKind: cancelConfirmItem.bookingRefundKind,
+      creditsOnBooking: cancelConfirmItem.creditsOnBooking,
+      freeCancellationUntil: badge.freeUntil,
+    });
+  }, [cancelConfirmItem, cancelWindowHours]);
 
   const pendingCancellationClassIds = useMemo(() => {
     const ids = new Set<string>();
@@ -473,6 +593,47 @@ export function MyClassesPageContent({
     loadPortalRequests,
     pendingCancellationForClass,
     selectedCoachClass,
+  ]);
+
+  const openMemberCancelConfirm = useCallback((item: MemberEnrolledClassItem) => {
+    setCancelConfirmItem(item);
+  }, []);
+
+  const submitConfirmedMemberCancel = useCallback(async () => {
+    const item = cancelConfirmItem;
+    if (!item || cancellationSubmitting) return;
+    const classId = memberEnrolledClassId(item);
+    if (pendingMemberCancellationClassIds.has(classId)) return;
+
+    const locked = getMemberCancellationBadge({
+      startsAt: item.startsAt,
+      freeCancellationUntil: item.freeCancellationUntil,
+      cancelWindowHours,
+      refundKind: item.bookingRefundKind,
+      creditsOnBooking: item.creditsOnBooking,
+    }).locked;
+
+    setCancellationSubmitting(true);
+    const { error } = await submitMemberEnrollmentCancellation({ classId });
+    setCancellationSubmitting(false);
+    if (error) {
+      toastOperationFailed(error);
+      return;
+    }
+    setCancelConfirmItem(null);
+    setSelectedItem(null);
+    toastCreated(
+      locked
+        ? 'Cancellation submitted. After approval the fee or credit is forfeited.'
+        : 'Cancellation submitted for review. Refund or credit restore applies if approved.',
+    );
+    await loadPortalRequests();
+  }, [
+    cancelConfirmItem,
+    cancellationSubmitting,
+    cancelWindowHours,
+    loadPortalRequests,
+    pendingMemberCancellationClassIds,
   ]);
 
   useEffect(() => {
@@ -803,6 +964,18 @@ export function MyClassesPageContent({
                 accentColor={disciplineAccentForItem(item)}
                 onSelect={() => setSelectedItem(item)}
                 statusBadge={coachBadgeForItem(item)}
+                memberCancellation={
+                  staffCoachDetail
+                    ? undefined
+                    : {
+                        cancelWindowHours,
+                        timeBucket: view,
+                        pendingCancel: pendingMemberCancellationClassIds.has(
+                          memberEnrolledClassId(item),
+                        ),
+                        onCancelBooking: () => openMemberCancelConfirm(item),
+                      }
+                }
               />
             ))}
           </div>
@@ -861,6 +1034,18 @@ export function MyClassesPageContent({
           now={now}
           accentColor={selectedAccent}
           onClose={() => setSelectedItem(null)}
+          onRequestCancellation={
+            selectedItem.status === 'confirmed'
+              ? () => openMemberCancelConfirm(selectedItem)
+              : undefined
+          }
+          requestCancellationSubmitting={cancellationSubmitting}
+          requestCancellationDisabled={Boolean(pendingCancellationForClass)}
+          requestCancellationDisabledReason={
+            pendingCancellationForClass
+              ? 'A cancellation request is already pending.'
+              : undefined
+          }
         />
       ) : null}
 
@@ -889,6 +1074,42 @@ export function MyClassesPageContent({
           </div>
         </div>
       ) : null}
+
+      <AlertDialog
+        open={Boolean(cancelConfirmItem)}
+        onOpenChange={(open) => {
+          if (!open && !cancellationSubmitting) setCancelConfirmItem(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl border-[#D4CDB5]/60 bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1E2A35]">
+              {cancelConfirmCopy?.title ?? 'Cancel booking?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#5A5048] leading-relaxed">
+              {cancelConfirmCopy?.body}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={cancellationSubmitting}
+              className="rounded-full border-[#D4CDB5]/70"
+            >
+              Keep booking
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancellationSubmitting}
+              onClick={(e) => {
+                e.preventDefault();
+                void submitConfirmedMemberCancel();
+              }}
+              className="rounded-full bg-red-600 hover:bg-red-700"
+            >
+              {cancellationSubmitting ? 'Submitting…' : 'Cancel booking'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

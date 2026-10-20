@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { toastOperationFailed, toastUpdated } from '../../lib/operation-toast';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import {
   deleteManagedAccount,
   fetchClientClassBookings,

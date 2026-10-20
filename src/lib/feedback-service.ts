@@ -36,16 +36,84 @@ export const FEEDBACK_PRIORITIES: { value: FeedbackPriority; label: string }[] =
   { value: 'urgent', label: 'Urgent' },
 ];
 
-export type FeedbackTicketLevel = 0 | 1 | 2 | 3;
+export const FEEDBACK_PRIORITY_STYLES: Record<FeedbackPriority, string> = {
+  low: 'bg-slate-100 text-slate-700 border-slate-200',
+  medium: 'bg-sky-50 text-sky-800 border-sky-200',
+  high: 'bg-amber-50 text-amber-900 border-amber-300',
+  urgent: 'bg-red-50 text-red-800 border-red-300',
+};
 
-export const FEEDBACK_TICKET_LEVELS: FeedbackTicketLevel[] = [0, 1, 2, 3];
+export const FEEDBACK_PRIORITY_DROPDOWN_OPTIONS = FEEDBACK_PRIORITIES.map((p) => ({
+  value: p.value,
+  label: p.label,
+  toneClass: FEEDBACK_PRIORITY_STYLES[p.value],
+}));
+
+export const FEEDBACK_STATUS_STYLES: Record<FeedbackStatus, string> = {
+  unresolved: 'bg-amber-50 text-amber-800 border-amber-200',
+  in_progress: 'bg-sky-50 text-sky-700 border-sky-200',
+  resolved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+
+export function feedbackPriorityStyle(priority: FeedbackPriority | null | undefined): string {
+  if (!priority) return 'bg-[#F8F3E8] text-[#8A7E6E] border-[#D4CDB5]/70';
+  return FEEDBACK_PRIORITY_STYLES[priority];
+}
+
+export function feedbackPriorityLabel(priority: FeedbackPriority | null | undefined): string {
+  if (!priority) return 'Not set';
+  return FEEDBACK_PRIORITIES.find((p) => p.value === priority)?.label ?? priority;
+}
+
+export function feedbackStatusStyle(status: FeedbackStatus | null | undefined): string {
+  if (!status) return 'bg-[#F8F3E8] text-[#8A7E6E] border-[#D4CDB5]/70';
+  return FEEDBACK_STATUS_STYLES[status];
+}
+
+export function feedbackStatusLabel(status: FeedbackStatus | null | undefined): string {
+  if (!status) return '—';
+  return FEEDBACK_STATUSES.find((s) => s.value === status)?.label ?? status;
+}
+
+/** Inbox only after submit: front desk, admin, dev (not on own submissions). */
+export function canSetFeedbackPriority(
+  role: UserRole | null | undefined,
+  item: FeedbackDisplay,
+  _accountId: string | null | undefined,
+  listMode: 'inbox' | 'mine',
+): boolean {
+  if (!role || listMode !== 'inbox') return false;
+  if (role === 'frontdesk') return item.ticketLevel === 0 || item.ticketLevel === 1;
+  if (role === 'admin') return item.ticketLevel === 2 || item.ticketLevel === 3;
+  if (role === 'dev') return item.ticketLevel === 4;
+  return false;
+}
+
+/** Inbox only: front desk, admin, dev (not coach/marketing or “My submissions”). */
+export function canSetFeedbackStatus(
+  role: UserRole | null | undefined,
+  item: FeedbackDisplay,
+  _accountId: string | null | undefined,
+  listMode: 'inbox' | 'mine',
+): boolean {
+  if (!role || listMode !== 'inbox') return false;
+  if (role === 'frontdesk') return item.ticketLevel === 0 || item.ticketLevel === 1;
+  if (role === 'admin') return item.ticketLevel === 2 || item.ticketLevel === 3;
+  if (role === 'dev') return item.ticketLevel === 4;
+  return false;
+}
+
+export type FeedbackTicketLevel = 0 | 1 | 2 | 3 | 4;
+
+export const FEEDBACK_TICKET_LEVELS: FeedbackTicketLevel[] = [0, 1, 2, 3, 4];
 
 /** Member-facing queue labels. */
 export const FEEDBACK_LEVEL_LABELS: Record<FeedbackTicketLevel, string> = {
   0: 'Sent to staff',
   1: 'Staff reviewing',
   2: 'With admin',
-  3: 'With dev',
+  3: 'Admin reviewing',
+  4: 'With dev',
 };
 
 export function feedbackLevelLabel(level: number): string {
@@ -57,13 +125,27 @@ export function feedbackLevelLabel(level: number): string {
 
 export function initialTicketLevelForRole(role: UserRole): FeedbackTicketLevel {
   if (role === 'user') return 0;
-  if (role === 'coach' || role === 'marketing') return 1;
-  if (role === 'frontdesk') return 2;
+  if (role === 'coach' || role === 'marketing' || role === 'frontdesk') return 2;
   return 3;
 }
 
-export function canDeleteOwnFeedback(item: FeedbackDisplay): boolean {
+const STAFF_FEEDBACK_SUBMIT_ROLES: UserRole[] = ['coach', 'marketing', 'frontdesk'];
+
+export function canDeleteOwnFeedback(
+  item: FeedbackDisplay,
+  submitterRole?: UserRole | null,
+): boolean {
+  if (submitterRole && STAFF_FEEDBACK_SUBMIT_ROLES.includes(submitterRole)) {
+    return item.ticketLevel === 2;
+  }
   return item.ticketLevel === 0;
+}
+
+export function feedbackDeleteBlockedMessage(submitterRole?: UserRole | null): string {
+  if (submitterRole && STAFF_FEEDBACK_SUBMIT_ROLES.includes(submitterRole)) {
+    return "This ticket has left your queue, and can't be deleted anymore. Thank you for your feedback!";
+  }
+  return "Staff have opened this ticket, so it can't be deleted anymore. Thank you for your feedback!";
 }
 
 const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -80,6 +162,7 @@ const EXT_BY_MIME: Record<string, string> = {
 
 export interface FeedbackDisplay {
   id: string;
+  uid: string;
   accountId: string;
   title: string;
   description: string;
@@ -105,12 +188,21 @@ export interface SubmitFeedbackInput {
   title: string;
   description: string;
   label: FeedbackLabel;
+  priority: FeedbackPriority;
   file?: File | null;
+}
+
+/** Public ticket reference shown in the UI (not the internal uuid). */
+export function feedbackPublicTicketId(item: { id: string; uid?: string | null }): string {
+  const uid = item.uid?.trim();
+  if (uid) return uid;
+  return item.id.slice(0, 8).toUpperCase();
 }
 
 function mapFeedback(row: FeedbackRow): FeedbackDisplay {
   return {
     id: row.id,
+    uid: row.uid ?? feedbackPublicTicketId({ id: row.id, uid: row.uid }),
     accountId: row.account_id,
     title: row.title,
     description: row.description,
@@ -285,6 +377,9 @@ export async function submitFeedback(
   if (description.length > FEEDBACK_DESCRIPTION_MAX) {
     return { data: null, error: `Description must be ${FEEDBACK_DESCRIPTION_MAX} characters or fewer.` };
   }
+  if (!FEEDBACK_PRIORITIES.some((p) => p.value === input.priority)) {
+    return { data: null, error: 'Choose a valid priority.' };
+  }
 
   const submitter = await fetchFeedbackSubmitter();
   if (!submitter) {
@@ -316,7 +411,7 @@ export async function submitFeedback(
       description,
       label: input.label,
       status: 'unresolved',
-      priority: null,
+      priority: input.priority,
       ticket_level: ticketLevel,
       attachment_path: attachmentPath,
       attachment_name: attachmentName,
@@ -379,14 +474,117 @@ export async function fetchFeedbackInbox(
   return { data: (data ?? []).map(mapFeedback), error: null };
 }
 
-/** Admin inbox: tickets at ticket_level = 1 in feedback_system. */
+/** Admin inbox: tickets at ticket_level 2–3. */
 export async function fetchAdminFeedbackInbox(): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
-  return fetchFeedbackInbox([1]);
+  return fetchFeedbackInbox([2, 3]);
+}
+
+/** Dev inbox: tickets at ticket_level 4. */
+export async function fetchDevFeedbackInbox(): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
+  return fetchFeedbackInbox([4]);
 }
 
 /** Front desk inbox: new submissions at ticket_level = 0. */
 export async function fetchFrontdeskFeedbackInbox(): Promise<{ data: FeedbackDisplay[]; error: string | null }> {
   return fetchFeedbackInbox([0]);
+}
+
+export async function receiveAdminFeedbackTicket(
+  ticketId: string,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_admin_receive_ticket', { p_id: ticketId });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
+}
+
+export async function forwardFeedbackToDev(
+  ticketId: string,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_forward_to_dev', { p_id: ticketId });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
+}
+
+export async function deescalateFeedbackToFrontdesk(
+  ticketId: string,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_deescalate_to_frontdesk', { p_id: ticketId });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
+}
+
+export async function fetchFeedbackTicketCreatorRole(
+  accountId: string,
+): Promise<{ role: UserRole | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('role')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  if (error) {
+    return { role: null, error: error.message };
+  }
+
+  return { role: (data?.role as UserRole | undefined) ?? null, error: null };
+}
+
+export function canAdminDeescalateFeedbackToFrontdesk(
+  item: FeedbackDisplay,
+  creatorRole: UserRole | null | undefined,
+  listMode: 'inbox' | 'mine',
+): boolean {
+  if (listMode !== 'inbox' || creatorRole !== 'user') return false;
+  return item.ticketLevel === 2 || item.ticketLevel === 3;
+}
+
+export async function updateFeedbackPriority(
+  ticketId: string,
+  priority: FeedbackPriority,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_set_priority', {
+    p_id: ticketId,
+    p_priority: priority,
+  });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
+}
+
+export async function updateFeedbackStatus(
+  ticketId: string,
+  status: FeedbackStatus,
+): Promise<{ data: FeedbackDisplay | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('feedback_set_status', {
+    p_id: ticketId,
+    p_status: status,
+  });
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ? mapFeedback(row as FeedbackRow) : null, error: null };
 }
 
 export async function openFeedbackTicket(
@@ -432,8 +630,9 @@ export async function deleteOwnFeedback(
 
   if (fetchError) return { error: fetchError.message };
   if (!row) return { error: 'Ticket not found.' };
-  if (row.ticket_level !== 0) {
-    return { error: 'Only tickets that staff have not opened yet can be deleted.' };
+  const deletableLevel: FeedbackTicketLevel = STAFF_FEEDBACK_SUBMIT_ROLES.includes(submitter.role) ? 2 : 0;
+  if (row.ticket_level !== deletableLevel) {
+    return { error: feedbackDeleteBlockedMessage(submitter.role) };
   }
 
   const { error } = await supabase.from('feedback_system').delete().eq('id', ticketId);

@@ -11,6 +11,8 @@ export type PendingPortalRequestWithdrawActionsProps = {
   /** Panel footer on class schedule block side sheet. */
   variant?: 'modal' | 'panel';
   closeLabel?: string;
+  /** When true, omit the dismiss/close button (e.g. panel already has Go Back). */
+  hideClose?: boolean;
 };
 
 const btnModalSecondary =
@@ -37,6 +39,7 @@ export function PendingPortalRequestWithdrawActions({
   onKeepRequest,
   variant = 'modal',
   closeLabel = 'Close',
+  hideClose = false,
 }: PendingPortalRequestWithdrawActionsProps) {
   const isPanel = variant === 'panel';
   const secondaryBtn = isPanel ? btnPanelSecondary : btnModalSecondary;
@@ -45,7 +48,11 @@ export function PendingPortalRequestWithdrawActions({
   const wrapperClass = isPanel
     ? 'flex flex-col gap-2'
     : 'flex flex-col gap-3';
-  const rowClass = isPanel ? 'grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3' : 'flex gap-2';
+  const rowClass = isPanel
+    ? hideClose
+      ? 'grid grid-cols-1 gap-2'
+      : 'grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3'
+    : 'flex gap-2';
 
   if (confirmingWithdraw) {
     return (
@@ -91,9 +98,11 @@ export function PendingPortalRequestWithdrawActions({
         </p>
       )}
       <div className={rowClass}>
-        <button type="button" onClick={onClose} className={secondaryBtn}>
-          {closeLabel}
-        </button>
+        {!hideClose && (
+          <button type="button" onClick={onClose} className={secondaryBtn}>
+            {closeLabel}
+          </button>
+        )}
         <button type="button" onClick={onStartWithdraw} className={cancelOutlineBtn}>
           Cancel request
         </button>

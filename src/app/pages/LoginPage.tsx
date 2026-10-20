@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, Eye, EyeOff, AlertCircle, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -143,9 +143,12 @@ export default function LoginPage() {
               </div>
 
               <div className="flex justify-end -mt-1">
-                <button type="button" className="text-[#c49a3c] text-sm font-medium hover:underline active:opacity-70">
+                <Link
+                  to="/member-forgot-password"
+                  className="text-[#c49a3c] text-sm font-medium hover:underline active:opacity-70"
+                >
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
               <button

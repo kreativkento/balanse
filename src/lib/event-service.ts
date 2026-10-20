@@ -1,6 +1,5 @@
 /** @deprecated Import from `./class-service` instead. */
 export {
-  CLASS_OPEN_STATUSES as EVENT_STATUSES,
   classToUpsertInput as eventToUpsertInput,
   createClass as createEvent,
   createEmptyClassDraft as createEmptyEventDraft,
@@ -10,6 +9,5 @@ export {
   updateClass as updateEvent,
   type ClassDisplay as EventDisplay,
   type ClassPerson as EventPerson,
-  type ClassOpenStatus as EventStatus,
   type ClassUpsertInput as EventUpsertInput,
 } from './class-service';

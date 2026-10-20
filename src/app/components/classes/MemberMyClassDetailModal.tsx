@@ -12,13 +12,13 @@ import {
   X,
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import type {
-  ClassBlockStatus,
-  ClassOpenStatus,
-  ClassPerson,
-  MemberClassListStatus,
-  MemberEnrolledClassItem,
-  MemberMyClassDetail,
+import {
+  formatClassBooking,
+  type ClassBlockStatus,
+  type ClassPerson,
+  type MemberClassListStatus,
+  type MemberEnrolledClassItem,
+  type MemberMyClassDetail,
 } from '../../../lib/class-service';
 
 const PH_TZ = 'Asia/Manila';
@@ -47,15 +47,10 @@ const ENROLLMENT_STATUS_LABEL: Record<MemberClassListStatus, string> = {
 
 const BLOCK_STATUS_LABELS: Record<ClassBlockStatus, string> = {
   active: 'Active',
-  occupied: 'Occupied',
+  assigned: 'Assigned',
   vacant: 'Vacant',
-  closed: 'Closed',
-};
-
-const CLASS_OPEN_STATUS_LABELS: Record<ClassOpenStatus, string> = {
-  open: 'Open for enrollment',
-  close: 'Closed to enrollment',
-  pending: 'Enrollment pending',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
 function formatDisplayDate(iso: string, now: Date): string {
@@ -353,6 +348,7 @@ export function MemberMyClassDetailModal({
   onRequestCancellation,
   requestCancellationSubmitting,
   requestCancellationDisabled,
+  requestCancellationDisabledReason,
   coachStatusBadge,
 }: {
   listItem: MemberEnrolledClassItem;
@@ -366,6 +362,7 @@ export function MemberMyClassDetailModal({
   onRequestCancellation?: () => void;
   requestCancellationSubmitting?: boolean;
   requestCancellationDisabled?: boolean;
+  requestCancellationDisabledReason?: string;
   /** Coach portal: card-style status badge (Assigned, cancellation, etc.). */
   coachStatusBadge?: { label: string; className: string };
   /** Coach portal: show enrolled members and open profile on tap. */
@@ -553,7 +550,7 @@ export function MemberMyClassDetailModal({
                     <div className={`${MODAL_CARD} flex flex-col gap-1`}>
                       <p className={`${MODAL_LABEL} truncate`}>Enrollment</p>
                       <span className={`${MODAL_VALUE} leading-snug line-clamp-2 text-[13px]`}>
-                        {CLASS_OPEN_STATUS_LABELS[detail.statusClass]}
+                        {formatClassBooking(detail.statusClass)}
                       </span>
                     </div>
                   </div>
@@ -656,7 +653,7 @@ export function MemberMyClassDetailModal({
 
           <div
             className={`shrink-0 border-t border-[#D4CDB5]/50 bg-white px-5 py-3 overflow-hidden rounded-b-2xl ${
-              isCoachView && onRequestCancellation ? 'grid grid-cols-2 gap-2.5' : ''
+              onRequestCancellation ? 'grid grid-cols-2 gap-2.5' : ''
             }`}
           >
             <button
@@ -666,16 +663,21 @@ export function MemberMyClassDetailModal({
             >
               Close
             </button>
-            {isCoachView && onRequestCancellation ? (
+            {onRequestCancellation ? (
               <button
                 type="button"
                 onClick={onRequestCancellation}
-                disabled={rosterExpanded || requestCancellationDisabled || requestCancellationSubmitting}
+                disabled={
+                  (isCoachView && rosterExpanded)
+                  || requestCancellationDisabled
+                  || requestCancellationSubmitting
+                }
                 title={
-                  rosterExpanded
+                  isCoachView && rosterExpanded
                     ? 'Collapse the roster panel to request cancellation'
                     : requestCancellationDisabled
-                      ? 'A cancellation request is already pending for this class'
+                      ? requestCancellationDisabledReason
+                        ?? 'A cancellation request is already pending for this class'
                       : undefined
                 }
                 className="w-full py-2.5 rounded-xl border border-red-200/80 bg-red-50/80 text-red-700 text-sm font-semibold hover:bg-red-100 transition-colors disabled:opacity-45 disabled:pointer-events-none disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
@@ -685,8 +687,10 @@ export function MemberMyClassDetailModal({
                     <Loader2 size={16} className="animate-spin shrink-0" aria-hidden />
                     Submitting…
                   </>
-                ) : (
+                ) : isCoachView ? (
                   'Request Cancellation'
+                ) : (
+                  'Cancel booking'
                 )}
               </button>
             ) : null}

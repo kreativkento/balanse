@@ -2,13 +2,15 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import {
   Award,
-  BarChart3,
+  Bookmark,
   Briefcase,
+  Coins,
   CalendarDays,
   CalendarRange,
   ChevronDown,
   ClipboardList,
   CreditCard,
+  Receipt,
   Crown,
   Images,
   Layers,
@@ -26,9 +28,11 @@ import { AdminGreetingHeader } from './DashboardGreetingBar';
 import { AppSidebarLayout } from './AppSidebarLayout';
 import { isPublicNavActive } from './NavBar';
 import { useAdminCoachRequestsPendingCount } from '../../hooks/useAdminCoachRequestsPendingCount';
+import { useAdminCreditCheckoutPendingCount } from '../../hooks/useAdminCreditCheckoutPendingCount';
 import { SidebarNavLink } from './SidebarNavLink';
 
 const COACH_REQUESTS_PATH = '/admin-coach-requests';
+const ADMIN_CREDITS_PATH = '/admin-credits';
 
 const dashboardLinks: {
   label: string;
@@ -75,10 +79,20 @@ const financeLinks: {
   icon: ReactNode;
   disabled?: boolean;
 }[] = [
-  { label: 'Metrics', path: '/admin-financial-metrics', icon: <BarChart3 size={16} /> },
-  { label: 'Channels', path: '/admin-payment-channels', icon: <Layers size={16} /> },
+  { label: 'Credits', path: '/admin-credits', icon: <Coins size={16} /> },
   { label: 'Payments', path: '/admin-payments', icon: <CreditCard size={16} /> },
+  { label: 'OR Register', path: '/admin-official-receipts', icon: <Receipt size={16} /> },
+  { label: 'Payment Channels', path: '/admin-payment-channels', icon: <Layers size={16} /> },
+];
+
+const adminLinks: {
+  label: string;
+  path: string;
+  icon: ReactNode;
+  disabled?: boolean;
+}[] = [
   { label: 'Staffing', path: '/admin-staff', icon: <Briefcase size={16} /> },
+  { label: 'Subscriptions', path: '/admin-subscriptions', icon: <Bookmark size={16} /> },
   { label: 'Policies', path: '/admin-policies', icon: <ShieldCheck size={16} /> },
 ];
 
@@ -90,7 +104,8 @@ const NAV_GROUPS: {
   { key: 'community', label: 'Community', links: communityLinks },
   { key: 'schedule', label: 'Schedule', links: scheduleLinks },
   { key: 'marketing', label: 'Marketing', links: marketingLinks },
-  { key: 'finance', label: 'Finance & Admin', links: financeLinks },
+  { key: 'finance', label: 'Finance', links: financeLinks },
+  { key: 'admin', label: 'Admin', links: adminLinks },
 ];
 
 function AdminBadge({ compact = false }: { compact?: boolean }) {
@@ -111,6 +126,7 @@ function AdminSidebarNav({
 }) {
   const location = useLocation();
   const coachRequestsPendingCount = useAdminCoachRequestsPendingCount();
+  const creditCheckoutPendingCount = useAdminCreditCheckoutPendingCount();
   const isActive = (path: string) => isPublicNavActive(location.pathname, path);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(NAV_GROUPS.map((group) => [group.key, true])),
@@ -183,7 +199,11 @@ function AdminSidebarNav({
                         disabled={link.disabled}
                         disabledTitle="Temporarily unavailable"
                         pendingCount={
-                          link.path === COACH_REQUESTS_PATH ? coachRequestsPendingCount : undefined
+                          link.path === COACH_REQUESTS_PATH
+                            ? coachRequestsPendingCount
+                            : link.path === ADMIN_CREDITS_PATH
+                              ? creditCheckoutPendingCount
+                              : undefined
                         }
                       />
                     ))}
@@ -236,7 +256,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
       <AdminHeaderActionsProvider>
         <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
           <div className="mx-auto w-full max-w-7xl shrink-0 px-6">
-            <AdminGreetingHeader searchPlaceholder="Search clients, classes…" />
+            <AdminGreetingHeader searchPlaceholder="Search clients, coaches, payments, pages…" />
           </div>
           <div data-admin-main-scroll className="min-h-0 flex-1 overflow-y-auto flex flex-col">
             {children}

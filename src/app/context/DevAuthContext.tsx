@@ -19,6 +19,8 @@ export interface DevUser {
 
 interface DevAuthContextType {
   devUser: DevUser | null;
+  /** False until the initial Supabase session has been read (avoids logout on refresh). */
+  devAuthReady: boolean;
   devLogin: (email: string, password: string) => Promise<AuthResult>;
   devLogout: () => Promise<void>;
   updateDevImages: (images: { photo?: string; coverImage?: string }) => void;
@@ -41,6 +43,7 @@ const DevAuthContext = createContext<DevAuthContextType | null>(null);
 
 export function DevAuthProvider({ children }: { children: ReactNode }) {
   const [devUser, setDevUser] = useState<DevUser | null>(null);
+  const [devAuthReady, setDevAuthReady] = useState(false);
 
   const hydrateDevSession = useCallback(async (authUserId: string) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
@@ -56,13 +59,17 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted && session?.user) {
-        await hydrateDevSession(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted && session?.user) {
+          await hydrateDevSession(session.user.id);
+        }
+      } finally {
+        if (mounted) setDevAuthReady(true);
       }
     };
 
-    init();
+    void init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
@@ -120,7 +127,7 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DevAuthContext.Provider value={{ devUser, devLogin, devLogout, updateDevImages }}>
+    <DevAuthContext.Provider value={{ devUser, devAuthReady, devLogin, devLogout, updateDevImages }}>
       {children}
     </DevAuthContext.Provider>
   );

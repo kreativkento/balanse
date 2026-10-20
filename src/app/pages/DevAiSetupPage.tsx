@@ -10,6 +10,7 @@ export default function DevAiSetupPage() {
 
   useEffect(() => {
     if (!devUser) navigate('/development');
+    else navigate('/development/dashboard', { replace: true });
   }, [devUser, navigate]);
 
   if (!devUser) return null;

@@ -18,6 +18,7 @@ import { exportTransparentSignaturePng, SignaturePad } from '../components/Signa
 import { usePhAddressOptions } from '../components/usePhAddressOptions';
 import { toCountryName } from '../data/nationalities';
 import { buildFullName } from '../../lib/auth-helpers';
+import { changeLoggedInUserPassword } from '../../lib/password-recovery';
 import { toastOperationFailed, toastSaved } from '../../lib/operation-toast';
 import {
   HEALTH_FORM_VERSION,
@@ -827,6 +828,7 @@ export default function MemberProfilePage() {
   const [showNew, setShowNew] = useState(false);
   const [pwError, setPwError] = useState('');
   const [pwOk, setPwOk] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
 
   const hydratePersonalFromProfile = () => {
     if (!profile) return;
@@ -1133,14 +1135,55 @@ export default function MemberProfilePage() {
     markSaved('health');
   };
 
-  const changePassword = () => {
+  const changePassword = async () => {
     setPwError('');
-    if (!curPw) return setPwError('Please enter your current password.');
-    if (newPw.length < 6) return setPwError('New password must be at least 6 characters.');
-    if (newPw !== confPw) return setPwError('New passwords do not match.');
+    setPwOk(false);
+
+    if (!curPw) {
+      setPwError('Please enter your current password.');
+      return;
+    }
+    if (!newPw) {
+      setPwError('Please enter a new password.');
+      return;
+    }
+    if (!confPw) {
+      setPwError('Please confirm your new password.');
+      return;
+    }
+    if (newPw.length < 6) {
+      setPwError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPw !== confPw) {
+      setPwError('New password and confirmation do not match.');
+      return;
+    }
+    if (newPw === curPw) {
+      setPwError('New password must be different from your current password.');
+      return;
+    }
+    if (!user?.email) {
+      setPwError('Your session is missing an email. Sign out and sign in again, then retry.');
+      return;
+    }
+
+    setPwLoading(true);
+    const result = await changeLoggedInUserPassword(user.email, curPw, newPw);
+    setPwLoading(false);
+
+    if (!result.ok) {
+      setPwError(result.error);
+      return;
+    }
+
     setPwOk(true);
-    setCurPw(''); setNewPw(''); setConfPw('');
-    setTimeout(() => setPwOk(false), 3000);
+    setCurPw('');
+    setNewPw('');
+    setConfPw('');
+    setShowCur(false);
+    setShowNew(false);
+    setTimeout(() => setPwOk(false), 4000);
   };
 
   const initials = user?.name
@@ -1957,27 +2000,6 @@ export default function MemberProfilePage() {
                     </div>
                   </Field>
 
-                  <Field label="Current Password">
-                    <div className="relative">
-                      <ClearableInput
-                        type={showCur ? 'text' : 'password'}
-                        className={`${INPUT} ${curPw ? 'pr-24' : 'pr-12'}`}
-                        value={curPw}
-                        onChange={e => { setCurPw(e.target.value); setPwError(''); }}
-                        onClear={() => { setCurPw(''); setPwError(''); }}
-                        placeholder="••••••••"
-                        clearClassName="right-10 top-1/2 -translate-y-1/2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCur(v => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-[#B0A898] hover:text-[#8A7E6E] transition-colors"
-                      >
-                        {showCur ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </Field>
-
                   <Field label="New Password">
                     <div className="relative">
                       <ClearableInput
@@ -2012,11 +2034,21 @@ export default function MemberProfilePage() {
                 </div>
 
                 <button
-                  onClick={changePassword}
-                  className="action-button mt-5 w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-3.5 hover:bg-[#263545] active:scale-[0.97] transition-all"
-                 
+                  type="button"
+                  onClick={() => void changePassword()}
+                  disabled={pwLoading}
+                  className="action-button mt-5 w-full flex items-center justify-center gap-2 bg-[#1E2A35] text-white rounded-full py-3.5 hover:bg-[#263545] active:scale-[0.97] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Lock size={15} /> Update Password
+                  {pwLoading ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" aria-hidden />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={15} aria-hidden /> Update Password
+                    </>
+                  )}
                 </button>
               </div>
 
