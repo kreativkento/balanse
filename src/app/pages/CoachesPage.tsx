@@ -5,36 +5,23 @@ import { fetchPublicCoaches, type PublicCoachProfile } from '../../lib/admin-ser
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 import { CoachProfileModal } from '../components/coaches/CoachProfileModal';
+import { CoachCardMedia } from '../components/coaches/CoachCardMedia';
 
 type Coach = PublicCoachProfile;
 
 const PAGE_SIZE = 6;
 
 function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
-  const [imgErr, setImgErr] = useState(false);
   return (
     <button
       onClick={onClick}
       className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#c49a3c]/30 active:scale-[0.97] group h-full ${CARD_HOVER_GROW}`}
     >
-      <div className="relative h-20 md:h-24 overflow-hidden" style={{ backgroundColor: `${coach.color}15` }}>
-        {!imgErr && coach.photo ? (
-          <img
-            src={coach.photo}
-            alt={`Coach ${coach.name}`}
-            className="w-full h-full object-cover object-top"
-            onError={() => setImgErr(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.1em', color: coach.color, opacity: 0.4 }}>{coach.initials}</span>
-          </div>
-        )}
-        <div className="absolute bottom-0 left-0 right-0 h-8" style={{ background: 'linear-gradient(to top, white, transparent)' }} />
+      <CoachCardMedia photo={coach.photo} name={coach.name} initials={coach.initials} color={coach.color}>
         <div className="absolute top-2 right-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: coach.color }} />
         </div>
-      </div>
+      </CoachCardMedia>
       <div className="px-3.5 py-2.5 md:px-4 md:py-3">
         <h3 className="text-[#1E2A35] leading-none mb-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}>{coach.name}</h3>
         <p className="text-[#8A7E6E] text-[11px] font-semibold mb-2 line-clamp-1">{coach.role}</p>
@@ -88,10 +75,10 @@ export default function CoachesPage() {
   const rangeEnd = Math.min(currentPage * PAGE_SIZE, coaches.length);
 
   return (
-    <div className="h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
+    <div className="bg-[#F8F3E8] flex flex-col">
       {selectedCoach && <CoachProfileModal coach={selectedCoach} onClose={() => setSelectedCoach(null)} />}
 
-      <div className="max-w-6xl mx-auto w-full px-4 md:px-8 py-4 md:py-5 flex flex-col flex-1 min-h-0">
+      <div className="max-w-6xl mx-auto w-full px-4 md:px-8 py-4 md:py-5 flex flex-col">
         <div className="shrink-0 mb-3 md:mb-4">
           <PublicBreadcrumb parent="Our Community" current="Coaches" parentTo="/bulletin" />
           <h1
@@ -106,7 +93,7 @@ export default function CoachesPage() {
           </p>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex flex-col">
           {loading && (
             <div className="flex-1 flex items-center justify-center gap-2 text-[#8A7E6E]">
               <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
@@ -140,7 +127,7 @@ export default function CoachesPage() {
                 </div>
               )}
 
-              <div className="flex-1 min-h-0 grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 content-start">
+              <div className="grid auto-rows-fr grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {pageCoaches.map((coach) => (
                   <CoachCard key={coach.id} coach={coach} onClick={() => setSelectedCoach(coach)} />
                 ))}

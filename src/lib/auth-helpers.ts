@@ -66,7 +66,7 @@ export function mapAuthError(
   if (message.includes('user already registered') || message.includes('already been registered')) {
     return 'ACCOUNT_EXISTS';
   }
-  if (message.includes('rate limit') || message.includes('too many requests')) {
+  if (error.status === 429 || message.includes('rate limit') || message.includes('too many requests')) {
     return 'Too many attempts. Please wait a moment and try again.';
   }
   if (message.includes('database error') || message.includes('error saving new user')) {

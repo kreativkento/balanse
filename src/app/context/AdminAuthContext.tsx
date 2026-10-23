@@ -44,39 +44,59 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [adminAuthReady, setAdminAuthReady] = useState(false);
 
-  const hydrateAdminSession = useCallback(async (authUserId: string) => {
+  const hydrateAdminSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && isRoleMatch(data.account, 'admin')) {
-      const bucket = await loadOwnProfileImageUrls();
-      setAdminUser(mergeProfileImageUrls(mapToAdminUser(data), bucket));
+      const mapped = mapToAdminUser(data);
+      const user = mapped.photo && mapped.coverImage
+        ? mapped
+        : mergeProfileImageUrls(mapped, await loadOwnProfileImageUrls());
+      if (isCurrent()) setAdminUser(user);
       return;
     }
-    setAdminUser(null);
+    if (isCurrent()) setAdminUser(null);
   }, []);
 
   useEffect(() => {
     let mounted = true;
+    let generation = 0;
 
     const init = async () => {
+      const current = generation;
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (mounted && session?.user) {
-          await hydrateAdminSession(session.user.id);
+        if (mounted && current === generation && session?.user) {
+          await hydrateAdminSession(session.user.id, () => mounted && current === generation);
         }
+      } catch {
+        if (mounted && current === generation) setAdminUser(null);
       } finally {
-        if (mounted) setAdminAuthReady(true);
+        if (mounted && current === generation) setAdminAuthReady(true);
       }
     };
 
     void init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (session?.user) {
-        await hydrateAdminSession(session.user.id);
-      } else {
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
+      const current = ++generation;
+      if (!session?.user) {
         setAdminUser(null);
+        setAdminAuthReady(true);
+        return;
       }
+      setAdminAuthReady(false);
+      setTimeout(() => {
+        if (!mounted || current !== generation) return;
+        void hydrateAdminSession(session.user.id, () => mounted && current === generation)
+          .catch(() => {
+            if (mounted && current === generation) setAdminUser(null);
+          })
+          .finally(() => {
+            if (mounted && current === generation) setAdminAuthReady(true);
+          });
+      }, 0);
     });
 
     return () => {
@@ -106,7 +126,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('admin') };
     }
 
-    setAdminUser(mergeProfileImageUrls(mapToAdminUser(accountData), await loadOwnProfileImageUrls()));
+    const mapped = mapToAdminUser(accountData);
+    setAdminUser(mapped.photo && mapped.coverImage
+      ? mapped
+      : mergeProfileImageUrls(mapped, await loadOwnProfileImageUrls()));
     return { success: true };
   };
 

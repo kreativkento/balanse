@@ -11,7 +11,21 @@ import {
   type UserRole,
 } from './database.types';
 
-export async function fetchAccountWithProfileByAuthUserId(
+const pendingAccountProfiles = new Map<string, Promise<AccountWithProfile | null>>();
+
+export function fetchAccountWithProfileByAuthUserId(
+  authUserId: string,
+): Promise<AccountWithProfile | null> {
+  const pending = pendingAccountProfiles.get(authUserId);
+  if (pending) return pending;
+  const request = fetchAccountWithProfileUncached(authUserId).finally(() => {
+    pendingAccountProfiles.delete(authUserId);
+  });
+  pendingAccountProfiles.set(authUserId, request);
+  return request;
+}
+
+async function fetchAccountWithProfileUncached(
   authUserId: string,
 ): Promise<AccountWithProfile | null> {
   const { data: account, error: accountError } = await supabase

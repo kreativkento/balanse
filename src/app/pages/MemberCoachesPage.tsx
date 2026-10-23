@@ -3,6 +3,7 @@ import { Users, ChevronRight, ChevronLeft, Loader2, AlertCircle } from 'lucide-r
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { fetchPublicCoaches, type PublicCoachProfile } from '../../lib/admin-service';
 import { CoachProfileModal } from '../components/coaches/CoachProfileModal';
+import { CoachCardMedia } from '../components/coaches/CoachCardMedia';
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 
@@ -11,31 +12,17 @@ type Coach = PublicCoachProfile;
 const PAGE_SIZE = 6;
 
 function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
-  const [imgErr, setImgErr] = useState(false);
   return (
     <button
       type="button"
       onClick={onClick}
       className={`bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#c49a3c]/30 active:scale-[0.97] group h-full ${CARD_HOVER_GROW}`}
     >
-      <div className="relative h-20 md:h-24 overflow-hidden" style={{ backgroundColor: `${coach.color}15` }}>
-        {!imgErr && coach.photo ? (
-          <img
-            src={coach.photo}
-            alt={`Coach ${coach.name}`}
-            className="w-full h-full object-cover object-top"
-            onError={() => setImgErr(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.1em', color: coach.color, opacity: 0.4 }}>{coach.initials}</span>
-          </div>
-        )}
-        <div className="absolute bottom-0 left-0 right-0 h-8" style={{ background: 'linear-gradient(to top, white, transparent)' }} />
+      <CoachCardMedia photo={coach.photo} name={coach.name} initials={coach.initials} color={coach.color}>
         <div className="absolute top-2 right-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: coach.color }} />
         </div>
-      </div>
+      </CoachCardMedia>
       <div className="px-3.5 py-2.5 md:px-4 md:py-3">
         <h3 className="text-[#1E2A35] leading-none mb-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}>{coach.name}</h3>
         <p className="text-[#8A7E6E] text-[11px] font-semibold mb-2 line-clamp-1">{coach.role}</p>
@@ -166,7 +153,7 @@ export default function MemberCoachesPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid auto-rows-fr grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {pageCoaches.map((coach) => (
                 <CoachCard key={coach.id} coach={coach} onClick={() => setSelectedCoach(coach)} />
               ))}

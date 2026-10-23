@@ -45,39 +45,59 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
   const [devUser, setDevUser] = useState<DevUser | null>(null);
   const [devAuthReady, setDevAuthReady] = useState(false);
 
-  const hydrateDevSession = useCallback(async (authUserId: string) => {
+  const hydrateDevSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && isDevRole(data.account.role)) {
-      const bucket = await loadOwnProfileImageUrls();
-      setDevUser(mergeProfileImageUrls(mapToDevUser(data), bucket));
+      const mapped = mapToDevUser(data);
+      const user = mapped.photo && mapped.coverImage
+        ? mapped
+        : mergeProfileImageUrls(mapped, await loadOwnProfileImageUrls());
+      if (isCurrent()) setDevUser(user);
       return;
     }
-    setDevUser(null);
+    if (isCurrent()) setDevUser(null);
   }, []);
 
   useEffect(() => {
     let mounted = true;
+    let generation = 0;
 
     const init = async () => {
+      const current = generation;
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (mounted && session?.user) {
-          await hydrateDevSession(session.user.id);
+        if (mounted && current === generation && session?.user) {
+          await hydrateDevSession(session.user.id, () => mounted && current === generation);
         }
+      } catch {
+        if (mounted && current === generation) setDevUser(null);
       } finally {
-        if (mounted) setDevAuthReady(true);
+        if (mounted && current === generation) setDevAuthReady(true);
       }
     };
 
     void init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (session?.user) {
-        await hydrateDevSession(session.user.id);
-      } else {
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
+      const current = ++generation;
+      if (!session?.user) {
         setDevUser(null);
+        setDevAuthReady(true);
+        return;
       }
+      setDevAuthReady(false);
+      setTimeout(() => {
+        if (!mounted || current !== generation) return;
+        void hydrateDevSession(session.user.id, () => mounted && current === generation)
+          .catch(() => {
+            if (mounted && current === generation) setDevUser(null);
+          })
+          .finally(() => {
+            if (mounted && current === generation) setDevAuthReady(true);
+          });
+      }, 0);
     });
 
     return () => {
@@ -107,7 +127,10 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongRoleMessage('dev') };
     }
 
-    setDevUser(mergeProfileImageUrls(mapToDevUser(accountData), await loadOwnProfileImageUrls()));
+    const mapped = mapToDevUser(accountData);
+    setDevUser(mapped.photo && mapped.coverImage
+      ? mapped
+      : mergeProfileImageUrls(mapped, await loadOwnProfileImageUrls()));
     return { success: true };
   };
 

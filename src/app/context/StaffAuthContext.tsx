@@ -88,49 +88,75 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   const [staffProfile, setStaffProfile] = useState<CoachProfileData | null>(null);
   const [staffAuthReady, setStaffAuthReady] = useState(false);
 
-  const hydrateStaffSession = useCallback(async (authUserId: string) => {
+  const hydrateStaffSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (canUseStaffPortalSession(data)) {
-      const bucket = await loadOwnProfileImageUrls();
+      if (!isCurrent()) return;
       setStaffUser(mapToStaffUser(data));
       if (data.account.role === 'coach') {
-        setStaffProfile(mergeProfileImageUrls(
-          profileRowToCoachProfile(data.profile, data.account.email),
-          bucket,
-        ));
+        const mapped = profileRowToCoachProfile(data.profile, data.account.email);
+        const profile = mapped.photo && mapped.coverImage
+          ? mapped
+          : mergeProfileImageUrls(mapped, await loadOwnProfileImageUrls());
+        if (isCurrent()) setStaffProfile(profile);
       } else {
         setStaffProfile(null);
       }
       return;
     }
-    setStaffUser(null);
-    setStaffProfile(null);
+    if (isCurrent()) {
+      setStaffUser(null);
+      setStaffProfile(null);
+    }
   }, []);
 
   useEffect(() => {
     let mounted = true;
+    let generation = 0;
 
     const init = async () => {
+      const current = generation;
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (mounted && session?.user) {
-          await hydrateStaffSession(session.user.id);
+        if (mounted && current === generation && session?.user) {
+          await hydrateStaffSession(session.user.id, () => mounted && current === generation);
+        }
+      } catch {
+        if (mounted && current === generation) {
+          setStaffUser(null);
+          setStaffProfile(null);
         }
       } finally {
-        if (mounted) setStaffAuthReady(true);
+        if (mounted && current === generation) setStaffAuthReady(true);
       }
     };
 
     void init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (session?.user) {
-        await hydrateStaffSession(session.user.id);
-      } else {
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
+      const current = ++generation;
+      if (!session?.user) {
         setStaffUser(null);
         setStaffProfile(null);
+        setStaffAuthReady(true);
+        return;
       }
+      setStaffAuthReady(false);
+      setTimeout(() => {
+        if (!mounted || current !== generation) return;
+        void hydrateStaffSession(session.user.id, () => mounted && current === generation)
+          .catch(() => {
+            if (mounted && current === generation) {
+              setStaffUser(null);
+              setStaffProfile(null);
+            }
+          })
+          .finally(() => {
+            if (mounted && current === generation) setStaffAuthReady(true);
+          });
+      }, 0);
     });
 
     return () => {
@@ -160,13 +186,12 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: wrongStaffPortalMessage() };
     }
 
-    const bucket = await loadOwnProfileImageUrls();
     setStaffUser(mapToStaffUser(accountData));
     if (accountData.account.role === 'coach') {
-      setStaffProfile(mergeProfileImageUrls(
-        profileRowToCoachProfile(accountData.profile, accountData.account.email),
-        bucket,
-      ));
+      const mapped = profileRowToCoachProfile(accountData.profile, accountData.account.email);
+      setStaffProfile(mapped.photo && mapped.coverImage
+        ? mapped
+        : mergeProfileImageUrls(mapped, await loadOwnProfileImageUrls()));
     } else {
       setStaffProfile(null);
     }
