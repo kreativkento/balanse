@@ -480,8 +480,8 @@ export default function StaffRequestsPage() {
                     {scheduleReqs.length === 0 ? (
                       <>
                         Request a vacant slot from{' '}
-                        <Link to="/staff-class-schedule" className="text-[#a67f2e] underline">
-                          Class Schedule
+                        <Link to="/staff-time-slots" className="text-[#a67f2e] underline">
+                          Time Slots
                         </Link>
                         .
                       </>

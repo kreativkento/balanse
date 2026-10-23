@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Eye, EyeOff, Lock, Mail, Code2 } from 'lucide-react';
 import { useDevAuth } from '../context/DevAuthContext';
+import { passwordInputGuardProps } from '../components/auth/password-input-guards';
 import logoMain from 'figma:asset/logo_main.svg';
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
@@ -15,6 +16,7 @@ export default function DevelopmentLoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   useEffect(() => {
     if (devUser) navigate('/development/dashboard', { replace: true });
@@ -22,6 +24,7 @@ export default function DevelopmentLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setError('');
     if (!email.trim()) {
       setError('Please enter your email address.');
@@ -39,13 +42,20 @@ export default function DevelopmentLoginPage() {
       setError('Password must be at least 6 characters.');
       return;
     }
+    submitting.current = true;
     setLoading(true);
-    const result = await devLogin(email.trim(), password);
-    setLoading(false);
-    if (result.success) {
-      navigate('/development/dashboard');
-    } else {
-      setError(result.error || 'Login failed.');
+    try {
+      const result = await devLogin(email.trim(), password);
+      if (result.success) {
+        navigate('/development/dashboard');
+      } else {
+        setError(result.error || 'Login failed.');
+      }
+    } catch {
+      setError('Login failed. Please try again.');
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -90,6 +100,7 @@ export default function DevelopmentLoginPage() {
             <div className="relative">
               <Lock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
               <input
+                {...passwordInputGuardProps}
                 type={showPw ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Eye, EyeOff, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { staffPortalHomePath } from '../../lib/staff-portal-routes';
+import { passwordInputGuardProps } from '../components/auth/password-input-guards';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
 
@@ -23,9 +24,11 @@ export default function StaffLoginPage() {
   const [showPw, setShowPw]     = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const submitting = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setError('');
     if (!email.trim()) {
       setError('Please enter your email address.');
@@ -43,13 +46,20 @@ export default function StaffLoginPage() {
       setError('Password must be at least 6 characters.');
       return;
     }
+    submitting.current = true;
     setLoading(true);
-    const result = await staffLogin(email.trim(), password);
-    setLoading(false);
-    if (result.success) {
-      navigate(result.redirectTo ?? '/staff-dashboard');
-    } else {
-      setError(result.error || 'Login failed.');
+    try {
+      const result = await staffLogin(email.trim(), password);
+      if (result.success) {
+        navigate(result.redirectTo ?? '/staff-dashboard');
+      } else {
+        setError(result.error || 'Login failed.');
+      }
+    } catch {
+      setError('Login failed. Please try again.');
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -172,6 +182,7 @@ export default function StaffLoginPage() {
               <div className="relative">
                 <Lock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
                 <input
+                  {...passwordInputGuardProps}
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}

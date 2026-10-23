@@ -541,6 +541,8 @@ export default function StudioPage() {
                     <img
                       src={img.url}
                       alt={img.alt}
+                      loading="lazy"
+                      decoding="async"
                       className={`w-full object-cover ${img.tall ? 'h-56' : 'h-40'}`}
                     />
                     <div className="absolute inset-0 bg-[#1E2A35]/0 group-active:bg-[#1E2A35]/10 transition-colors rounded-2xl" />
@@ -558,6 +560,8 @@ export default function StudioPage() {
                     <img
                       src={img.url}
                       alt={img.alt}
+                      loading="lazy"
+                      decoding="async"
                       className={`w-full object-cover ${img.tall ? 'h-56' : 'h-40'}`}
                     />
                     <div className="absolute inset-0 bg-[#1E2A35]/0 group-active:bg-[#1E2A35]/10 transition-colors rounded-2xl" />
@@ -584,6 +588,8 @@ export default function StudioPage() {
                       <img
                         src={img.url}
                         alt={img.alt}
+                        loading="lazy"
+                        decoding="async"
                         className={`w-full object-cover ${IMAGE_HOVER_ZOOM} ${
                           img.tall ? 'h-72' : 'h-48'
                         }`}

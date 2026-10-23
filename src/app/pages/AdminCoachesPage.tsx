@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import {
-  Plus, Search, X, ChevronDown, Mail, Phone, Award, Globe, Check, Pencil, Trash2,
+  Plus, Search, X, ChevronDown, ChevronRight, Mail, Phone, Award, Globe, Check, Pencil, Trash2,
   Clock, AlertOctagon, Users, LayoutGrid, List, Eye, EyeOff,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
@@ -21,6 +21,7 @@ import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/disc
 import { AdminCoachAvailabilityPanel } from './AdminCoachAvailabilityPage';
 import { AdminAbsenceTrackerPanel } from './AdminAbsenceTrackerPage';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import { CoachCardMedia } from '../components/coaches/CoachCardMedia';
 
 /** Set true when Absence Tracker is ready to ship. */
 const ABSENCE_TRACKER_TAB_ENABLED = false;
@@ -780,7 +781,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
             No coaches match your search.
           </div>
         ) : viewMode === 'card' ? (
-          <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 content-start">
+          <div className="flex-1 min-h-0 overflow-y-auto grid auto-rows-fr grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 content-start">
             {filtered.map((coach) => {
               const disciplineLabels = coach.disciplineNames.length > 0
                 ? coach.disciplineNames
@@ -800,12 +801,10 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                       setSelectedCoach(coach);
                     }
                   }}
-                  className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden text-left hover:shadow-md hover:border-[#c49a3c]/30 transition-all cursor-pointer group"
+                  className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-white text-left shadow-sm transition-all hover:border-[#c49a3c]/30 hover:shadow-md cursor-pointer"
                 >
-                  <div className="relative h-28 overflow-hidden" style={{ backgroundColor: `${ACCENT}15` }}>
-                    <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${ACCENT}30 0%, ${ACCENT}08 100%)` }} />
-                    <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ backgroundColor: ACCENT }} />
-                    <div className="absolute top-3 right-3">
+                  <CoachCardMedia photo={coach.photo} name={coach.name} initials={coachInitials(coach.name)} color={ACCENT}>
+                    <div className="absolute top-2 right-2">
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           coach.status === 'active'
@@ -816,22 +815,12 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                         {coach.status}
                       </span>
                     </div>
-                  </div>
+                  </CoachCardMedia>
 
-                  <div className="px-5 pb-5 -mt-8 relative">
-                    <div className="w-16 h-16 rounded-2xl border-4 border-white shadow-md overflow-hidden bg-[#F8F3E8] flex items-center justify-center mb-3">
-                      {coach.photo ? (
-                        <img src={coach.photo} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-[#a67f2e] text-sm font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.06em' }}>
-                          {coachInitials(coach.name)}
-                        </span>
-                      )}
-                    </div>
-
+                  <div className="flex flex-1 flex-col px-3.5 py-2.5 md:px-4 md:py-3">
                     <h3
                       className="text-[#1E2A35] leading-none mb-0.5"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.04em' }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}
                     >
                       {coach.name}
                     </h3>
@@ -844,7 +833,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                     )}
 
                     {disciplineLabels.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 mb-4">
+                      <div className="flex flex-wrap gap-1.5 mb-2">
                         {disciplineLabels.slice(0, 3).map((discipline) => (
                           <span
                             key={discipline}
@@ -861,12 +850,16 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                         )}
                       </div>
                     ) : (
-                      <p className="text-[#B0A898] text-xs mb-4">No disciplines tagged</p>
+                      <p className="text-[#B0A898] text-xs mb-2">No disciplines tagged</p>
                     )}
+
+                    <div className="mt-auto flex items-center gap-1 text-[#c49a3c] text-[11px] font-semibold transition-all group-hover:gap-2">
+                      View Profile <ChevronRight size={11} className="transition-transform group-hover:translate-x-0.5" />
+                    </div>
 
                     {!viewOnly && (
                       <div
-                        className="flex items-center gap-1.5 pt-3 border-t border-[#D4CDB5]/40"
+                        className="mt-3 flex items-center gap-1.5 border-t border-[#D4CDB5]/40 pt-3"
                         onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
                       >

@@ -68,6 +68,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  authReady: boolean;
   isAuthenticated: boolean;
   profileComplete: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
@@ -130,6 +131,7 @@ function mapToUser(data: AccountWithClientProfile): User {
 
 async function mapToUserWithBucket(data: AccountWithClientProfile): Promise<User> {
   const mapped = mapToUser(data);
+  if (mapped.profile.photo && mapped.profile.coverImage) return mapped;
   const bucket = await loadOwnProfileImageUrls();
   return {
     ...mapped,
@@ -141,35 +143,59 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
-  const hydrateUserSession = useCallback(async (authUserId: string) => {
+  const hydrateUserSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
     if (data && data.account.role === 'user' && isRoleMatch(data.account, 'user')) {
-      setUser(await mapToUserWithBucket(data as AccountWithClientProfile));
+      const mapped = await mapToUserWithBucket(data as AccountWithClientProfile);
+      if (isCurrent()) setUser(mapped);
       return;
     }
-    setUser(null);
+    if (isCurrent()) setUser(null);
   }, []);
 
   useEffect(() => {
     let mounted = true;
+    let generation = 0;
 
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted && session?.user) {
-        await hydrateUserSession(session.user.id);
+      const current = generation;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted && current === generation && session?.user) {
+          await hydrateUserSession(session.user.id, () => mounted && current === generation);
+        }
+      } catch {
+        if (mounted && current === generation) setUser(null);
+      } finally {
+        if (mounted && current === generation) setAuthReady(true);
       }
     };
 
-    init();
+    void init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (session?.user) {
-        await hydrateUserSession(session.user.id);
-      } else {
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
+      const current = ++generation;
+      if (!session?.user) {
         setUser(null);
+        setAuthReady(true);
+        return;
       }
+      setAuthReady(false);
+      // Supabase emits auth events while holding its session lock.
+      setTimeout(() => {
+        if (!mounted || current !== generation) return;
+        void hydrateUserSession(session.user.id, () => mounted && current === generation)
+          .catch(() => {
+            if (mounted && current === generation) setUser(null);
+          })
+          .finally(() => {
+            if (mounted && current === generation) setAuthReady(true);
+          });
+      }, 0);
     });
 
     return () => {
@@ -352,6 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        authReady,
         login,
         signup,
         completeProfile,

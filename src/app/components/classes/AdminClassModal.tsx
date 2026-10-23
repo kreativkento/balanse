@@ -106,7 +106,7 @@ function AssignScheduleLeadSelect({
   allowEmpty = false,
   renderTrailing,
 }: {
-  label: string;
+  label: ReactNode;
   labelClass: string;
   value: string;
   onValueChange: (value: string) => void;
@@ -248,7 +248,7 @@ function AssignScheduleCoachSelect({
   placeholder,
   options,
 }: {
-  label: string;
+  label: ReactNode;
   labelClass: string;
   value: string;
   onValueChange: (value: string) => void;
@@ -963,7 +963,7 @@ export function AdminClassModal({
                   <p className="text-[#8A7E6E] text-[10px] uppercase tracking-widest font-medium">Class</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
                     <AssignScheduleLeadSelect
-                      label="Discipline"
+                      label={<>Discipline <span className="text-red-600" aria-hidden="true">*</span></>}
                       labelClass={labelClass}
                       value={form.disciplineId ?? ''}
                       onValueChange={(disciplineId) =>
@@ -1008,7 +1008,7 @@ export function AdminClassModal({
                 <section className="flex flex-col gap-2 rounded-xl border border-[#D4CDB5]/55 bg-[#F8F3E8]/40 px-3 py-2.5 min-w-0 overflow-hidden">
                   <p className="text-[#8A7E6E] text-[10px] uppercase tracking-widest font-medium">Assignment</p>
                   <AssignScheduleCoachSelect
-                    label="Assigned Coach"
+                    label={<>Assigned Coach <span className="text-red-600" aria-hidden="true">*</span></>}
                     labelClass={labelClass}
                     value={form.coachAccountIds[0] ?? ''}
                     onValueChange={(id) =>
@@ -1032,7 +1032,9 @@ export function AdminClassModal({
                       options={assignClassBookingOptions}
                     />
                     <div className="min-w-0">
-                      <label className={labelClass}>Class limit</label>
+                      <label className={labelClass}>
+                        Class limit <span className="text-red-600" aria-hidden="true">*</span>
+                      </label>
                       <input
                         type="number"
                         min={1}

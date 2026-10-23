@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, Eye, EyeOff, AlertCircle, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { passwordInputGuardProps } from '../components/auth/password-input-guards';
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
@@ -14,9 +15,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setError('');
 
     if (!email.trim()) {
@@ -36,15 +39,20 @@ export default function LoginPage() {
       return;
     }
 
+    submitting.current = true;
     setLoading(true);
-
-    const result = await login(email.trim(), password);
-    setLoading(false);
-
-    if (result.success) {
-      navigate(result.profileComplete ? '/dashboard' : '/profile');
-    } else {
-      setError(result.error || 'Login failed. Please try again.');
+    try {
+      const result = await login(email.trim(), password);
+      if (result.success) {
+        navigate(result.profileComplete ? '/dashboard' : '/profile');
+      } else {
+        setError(result.error || 'Login failed. Please try again.');
+      }
+    } catch {
+      setError('Login failed. Please try again.');
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -125,6 +133,7 @@ export default function LoginPage() {
                 <div className="relative">
                   <Lock size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
                   <input
+                    {...passwordInputGuardProps}
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
