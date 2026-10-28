@@ -15,7 +15,7 @@ const PAGES_WITH_CTA = [
   '/events',
 ];
 
-const LOCK_SCROLL_PATHS = ['/login', '/signup', '/coaches'];
+const LOCK_SCROLL_PATHS = ['/login', '/signup'];
 
 /** Full-height calendar (same flex chain as member class schedule). */
 const FILL_VIEWPORT_PATHS = ['/classes'];

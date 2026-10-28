@@ -3,6 +3,8 @@ import { AuthProvider } from './context/AuthContext';
 import { StaffAuthProvider } from './context/StaffAuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { DevAuthProvider } from './context/DevAuthContext';
+import { Suspense } from 'react';
+import { PageLoadingScreen } from './components/layout/PageLoadingScreen';
 
 // Standalone portals — hide the public NavBar / student sidebar
 const PORTAL_PREFIXES = [
@@ -33,7 +35,9 @@ export function Root() {
       <AdminAuthProvider>
         <StaffAuthProvider>
           <AuthProvider>
-            <Shell />
+            <Suspense fallback={<PageLoadingScreen />}>
+              <Shell />
+            </Suspense>
           </AuthProvider>
         </StaffAuthProvider>
       </AdminAuthProvider>
