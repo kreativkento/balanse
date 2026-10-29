@@ -95,6 +95,7 @@ import {
   updateClass,
   type ClassBlockStatus,
   type ClassDisplay,
+  type ClassPerson,
   type ClassUpsertInput,
 } from '../../lib/class-service';
 import {
@@ -131,7 +132,9 @@ import {
   allClassesToBlocks,
   buildDisciplineClassColors,
   buildStartEndFromMinutes,
+  classDisplayToScheduleBlock,
   coachDisplayShort,
+  dateKeyFromIso,
   localMinutesFromIso,
   mergeScheduleBlock,
   provisionalScheduleBlock,
@@ -565,6 +568,45 @@ function isStaffClassScheduleVisibleBlock(
 
 function isAssignedScheduleBlock(statusBlock: ClassBlockStatus): boolean {
   return statusBlock !== 'vacant';
+}
+
+function classDisplayFromAssignInput(
+  existing: ClassDisplay,
+  input: ClassUpsertInput,
+  disciplineRows: DisciplineDisplay[],
+  coachOptions: ClassPersonOption[],
+): ClassDisplay {
+  const discipline = input.disciplineId
+    ? disciplineRows.find((row) => row.id === input.disciplineId)
+    : undefined;
+  const coaches = input.coachAccountIds
+    .map((accountId) => {
+      const prior = existing.coaches.find((coach) => coach.accountId === accountId);
+      if (prior) return prior;
+      const opt = coachOptions.find((coach) => coach.accountId === accountId);
+      if (!opt) return null;
+      return {
+        accountId: opt.accountId,
+        name: opt.name,
+        email: opt.email,
+        photo: opt.photo,
+      } satisfies ClassPerson;
+    })
+    .filter((coach): coach is ClassPerson => coach != null);
+
+  return {
+    ...existing,
+    name: input.name.trim(),
+    description: input.description.trim(),
+    disciplineId: input.disciplineId,
+    disciplineName: discipline?.name ?? (input.disciplineId ? existing.disciplineName : '—'),
+    startsAt: input.startsAt,
+    endsAt: input.endsAt,
+    classLimit: input.classLimit,
+    statusClass: input.statusClass,
+    statusBlock: input.statusBlock,
+    coaches: coaches.length > 0 ? coaches : existing.coaches,
+  };
 }
 
 function scheduleBlockIncludesCoachAccount(
@@ -3040,7 +3082,7 @@ export default function AdminTimeBlockingPage({
     setSaving(false);
     setShowModal(false);
     setEditingBlock(null);
-    await loadSchedule({ silent: true });
+    void loadSchedule({ silent: true });
     return classId;
   };
 
@@ -3420,11 +3462,40 @@ export default function AdminTimeBlockingPage({
     const alreadyAssigned =
       existing != null && isAssignedScheduleBlock(existing.statusBlock);
     const statusBlock = alreadyAssigned ? input.statusBlock : 'assigned';
-    const result = await updateClass(classAssignId, {
+    const payload: ClassUpsertInput = {
       ...input,
       statusBlock,
-    });
+    };
+    const result = await updateClass(classAssignId, payload);
     if (result.success) {
+      if (existing) {
+        const updated = classDisplayFromAssignInput(
+          existing,
+          payload,
+          disciplines,
+          coachOptions,
+        );
+        setClassesById((prev) => {
+          const next = new Map(prev);
+          next.set(classAssignId, updated);
+          return next;
+        });
+        const colors = buildDisciplineClassColors(disciplines, CLASS_COLORS);
+        const blockPatch = classDisplayToScheduleBlock(
+          updated,
+          colors,
+          weekDateKeys,
+          scheduleBlockColorMode,
+        );
+        if (blockPatch) {
+          setBlocks((prev) => mergeScheduleBlock(prev, blockPatch));
+        }
+        const startMinutes = localMinutesFromIso(updated.startsAt);
+        const endMinutes = updated.endsAt
+          ? localMinutesFromIso(updated.endsAt)
+          : startMinutes + 60;
+        focusCalendarOnDateKey(dateKeyFromIso(updated.startsAt), startMinutes, endMinutes);
+      }
       if (input.coachAccountIds.length > 0) {
         void sendScheduleCoachAssignedEmail(classAssignId).then(({ ok, error: emailError }) => {
           if (!ok && emailError) {
@@ -3432,7 +3503,7 @@ export default function AdminTimeBlockingPage({
           }
         });
       }
-      await loadSchedule({ silent: true });
+      void loadSchedule({ silent: true });
     }
     return { success: result.success, error: result.error };
   };
