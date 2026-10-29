@@ -4,6 +4,22 @@ type RecordData = Record<string, unknown>;
 type Turn = { role: 'user' | 'assistant'; content: string };
 type Env = (key: string) => string | undefined;
 const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://balanse.kentveloso.com'];
+
+/** Vite may move off 5173 when that port is taken. Local hosts are not a public website origin. */
+export function isLocalDevOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    const host = url.hostname.replace(/^\[|\]$/g, '');
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return false;
+  }
+}
+
+export function originAllowed(origin: string, configured: string[]): boolean {
+  return configured.includes(origin) || isLocalDevOrigin(origin);
+}
 const WEBHOOK = 'https://kychver.app.n8n.cloud/webhook/balanse-assistant-v1';
 const buckets = new Map<string, { count: number; until: number }>();
 let activeRequests = 0;
@@ -185,9 +201,9 @@ export function createHandler(env: Env, fetcher: typeof fetch = fetch) {
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
     };
-    if (origins.includes(origin)) headers['Access-Control-Allow-Origin'] = origin;
+    if (originAllowed(origin, origins)) headers['Access-Control-Allow-Origin'] = origin;
     const respond = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers });
-    if (!origins.includes(origin)) return respond({ ok: false, error: 'Origin not allowed.' }, 403);
+    if (!originAllowed(origin, origins)) return respond({ ok: false, error: 'Origin not allowed.' }, 403);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     if (req.method !== 'POST') return respond({ ok: false, error: 'Method not allowed.' }, 405);
     if (!(req.headers.get('content-type') ?? '').includes('application/json')) return respond({ ok: false, error: 'JSON required.' }, 415);

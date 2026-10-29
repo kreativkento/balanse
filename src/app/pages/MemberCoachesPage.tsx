@@ -116,6 +116,9 @@ export default function MemberCoachesPage() {
           <p className="text-[#8A7E6E] text-sm max-w-xl">
             Meet the coaches who help you move better, feel stronger, and live well. Tap a card to view a full profile.
           </p>
+        </div>
+
+        {loading && (
           <div role="status" aria-live="polite" aria-label="Loading coaches">
             <ContentSkeleton variant="cards" />
           </div>

@@ -6,6 +6,17 @@ import { friendlyRateLimitResponse } from '../src/lib/supabase-rate-limit.ts';
 const handler = createHandler((key) =>
   key === 'BALANSE_CHAT_WEBHOOK_SECRET' ? 'x'.repeat(32) : undefined,
 );
+const alternatePort = await handler(new Request('https://example.test/balanse-chat', {
+  method: 'POST',
+  headers: {
+    origin: 'http://localhost:5174',
+    'content-type': 'application/json',
+    'x-real-ip': 'local-alt-port',
+  },
+  body: JSON.stringify({ message: 'Hello', history: [] }),
+}));
+assert.equal(alternatePort.status, 503, 'a non-default Vite port is still an allowed local origin');
+assert.equal(alternatePort.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5174');
 const request = () => new Request('https://example.test/balanse-chat', {
   method: 'POST',
   headers: {

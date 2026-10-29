@@ -11,30 +11,34 @@
 -- ---------------------------------------------------------------------------
 -- 1. Storage objects tied to the rows being removed
 -- ---------------------------------------------------------------------------
-
-delete from storage.objects
-where bucket_id in (
-  'bulletin_resources',
-  'gallery_media',
-  'payment_proofs',
-  'payment_channel_qr',
-  'official_receipts',
-  'feedback_attachments',
-  'disciplines_images'
-);
-
--- Profile photos/covers and signed member PDFs are stored under {auth_user_id}/...
-delete from storage.objects o
-where o.bucket_id in ('profile_images', 'member_documents')
-  and not exists (
-    select 1
-    from public.accounts a
-    where lower(a.email) = 'admin@balanse.com'
-      and split_part(o.name, '/', 1) = a.auth_user_id::text
-  );
+-- storage.protect_delete() rejects DELETE unless this transaction allows it.
+-- One block so the flag and the deletes stay in the same transaction.
 
 do $$
 begin
+  perform set_config('storage.allow_delete_query', 'true', true);
+
+  delete from storage.objects
+  where bucket_id in (
+    'bulletin_resources',
+    'gallery_media',
+    'payment_proofs',
+    'payment_channel_qr',
+    'official_receipts',
+    'feedback_attachments',
+    'disciplines_images'
+  );
+
+  -- Profile photos/covers and signed member PDFs are stored under {auth_user_id}/...
+  delete from storage.objects o
+  where o.bucket_id in ('profile_images', 'member_documents')
+    and not exists (
+      select 1
+      from public.accounts a
+      where lower(a.email) = 'admin@balanse.com'
+        and split_part(o.name, '/', 1) = a.auth_user_id::text
+    );
+
   if to_regclass('storage.prefixes') is null then
     return;
   end if;
@@ -66,6 +70,31 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- 2. Rows, children before parents (RESTRICT foreign keys)
 -- ---------------------------------------------------------------------------
+-- tg_write_log_system() inserts log_system.account_id after the account row
+-- is already gone. The wipe clears log_system at the end, so skip those
+-- triggers until the deletes are finished.
+
+do $$
+declare
+  r record;
+begin
+  for r in
+    select n.nspname as schema_name, c.relname as table_name, t.tgname as trigger_name
+    from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    join pg_proc p on p.oid = t.tgfoid
+    where not t.tgisinternal
+      and p.proname = 'tg_write_log_system'
+  loop
+    execute format(
+      'alter table %I.%I disable trigger %I',
+      r.schema_name,
+      r.table_name,
+      r.trigger_name
+    );
+  end loop;
+end $$;
 
 delete from public.feedback_comments;
 delete from public.feedback_ticket_participants;
@@ -104,18 +133,25 @@ delete from public.staff_availability;
 delete from public.studio_amenities_config;
 delete from public.subscription_packages;
 
--- tickets.creator_account_id is ON DELETE RESTRICT. Drop tickets owned by
--- accounts that are about to be removed. The delete trigger would insert a
--- ticket_logs row pointing at the ticket that was just removed.
-alter table public.tickets disable trigger user;
-delete from public.tickets t
-where not exists (
-  select 1
-  from public.accounts a
-  where a.id = t.creator_account_id
-    and lower(a.email) = 'admin@balanse.com'
-);
-alter table public.tickets enable trigger user;
+-- tickets.creator_account_id is ON DELETE RESTRICT when that table exists.
+-- Drop tickets owned by accounts that are about to be removed. The delete
+-- trigger would insert a ticket_logs row pointing at the removed ticket.
+do $$
+begin
+  if to_regclass('public.tickets') is null then
+    return;
+  end if;
+
+  alter table public.tickets disable trigger user;
+  delete from public.tickets t
+  where not exists (
+    select 1
+    from public.accounts a
+    where a.id = t.creator_account_id
+      and lower(a.email) = 'admin@balanse.com'
+  );
+  alter table public.tickets enable trigger user;
+end $$;
 
 delete from public.profiles_client;
 delete from public.profiles_staff ps
@@ -163,8 +199,29 @@ where not exists (
     and lower(a.email) = 'admin@balanse.com'
 );
 
--- Audit triggers repopulate this table while the deletes above run.
 delete from public.log_system;
+
+do $$
+declare
+  r record;
+begin
+  for r in
+    select n.nspname as schema_name, c.relname as table_name, t.tgname as trigger_name
+    from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    join pg_proc p on p.oid = t.tgfoid
+    where not t.tgisinternal
+      and p.proname = 'tg_write_log_system'
+  loop
+    execute format(
+      'alter table %I.%I enable trigger %I',
+      r.schema_name,
+      r.table_name,
+      r.trigger_name
+    );
+  end loop;
+end $$;
 
 -- Admin login reads profiles_staff. Restore the staff row if this reset
 -- removed it or it was never created.

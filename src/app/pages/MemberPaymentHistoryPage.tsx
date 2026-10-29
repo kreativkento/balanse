@@ -110,28 +110,30 @@ export default function MemberPaymentHistoryPage() {
     [paymentRows],
   );
 
+  const [tablePage, setTablePage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [sourceFilters, setSourceFilters] = useState<string[]>([]);
+  const { containerRef: tableContainerRef, pageSize: fitPageSize } = useFitPageSize({
+    layout: 'table',
+    fallback: 6,
+    itemHeightOverride: 73,
+  });
+
   const filteredOfficialReceipts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return officialReceipts.filter((row) => {
+    const matched = officialReceipts.filter((row) => {
       const matchQuery =
         !q
         || `${row.orNumber} ${row.title} ${row.subtitle} ${row.kind}`.toLowerCase().includes(q);
       return matchQuery && matchesAnySelected(sourceFilters, row.kind);
     });
-  }, [officialReceipts, search, sourceFilters]);
+    return sortChronologically(matched, (row) => row.sortAt, chronoOrder);
+  }, [officialReceipts, search, sourceFilters, chronoOrder]);
 
-  const [tablePage, setTablePage] = useState(1);
-  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
-  const [sourceFilters, setSourceFilters] = useState<string[]>([]);
-    layout: 'table',
-    fallback: 6,
-    itemHeightOverride: 73,
-  });
   const tablePageSize = Math.min(Math.max(fitPageSize, 1), 8);
 
   useEffect(() => {
     setTablePage(1);
-  }, [search]);
   }, [search, chronoOrder, sourceFilters]);
   const totalPages = Math.max(1, Math.ceil(filteredOfficialReceipts.length / tablePageSize));
   const currentPage = Math.min(tablePage, totalPages);
@@ -303,19 +305,18 @@ export default function MemberPaymentHistoryPage() {
                 className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm"
               >
                 <div className="shrink-0 border-b border-[#D4CDB5]/50 px-4 py-3 sm:px-5">
-                  <h3
-                    className="text-[#1E2A35] leading-none"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}
-                  >
-                    Official receipts
-                  </h3>
-                  <p className="text-[10px] text-[#8A7E6E] mt-1">
-                    Subscriptions (Mode 2) appear as soon as cleared · Drop-ins (Mode 1) after the lock window
-                  </p>
-                </div>
-                {loading ? (
-                  <div className="flex flex-1 items-center justify-center px-6 py-8">
-                    <div className="text-center">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3
+                        className="text-[#1E2A35] leading-none"
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}
+                      >
+                        Official receipts
+                      </h3>
+                      <p className="text-[10px] text-[#8A7E6E] mt-1">
+                        Subscriptions (Mode 2) appear as soon as cleared · Drop-ins (Mode 1) after the lock window
+                      </p>
+                    </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <CategorizedAddFilter
                         groups={[{
@@ -331,8 +332,11 @@ export default function MemberPaymentHistoryPage() {
                       />
                       <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
                     </div>
-                      <p className="text-[#8A7E6E] text-sm">Loading billing records…</p>
-                    </div>
+                  </div>
+                </div>
+                {loading ? (
+                  <div className="flex flex-1 items-center justify-center px-6 py-8">
+                    <p className="text-[#8A7E6E] text-sm">Loading billing records…</p>
                   </div>
                 ) : filteredOfficialReceipts.length === 0 ? (
                   <div className="flex flex-1 items-center justify-center px-6 py-8">
@@ -403,7 +407,7 @@ export default function MemberPaymentHistoryPage() {
                 )}
               </div>
             </div>
-                        total={orderedReceipts.length}
+          )}
         </div>
       </MemberPageShell>
     </>

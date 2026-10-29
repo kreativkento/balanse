@@ -4,6 +4,12 @@ import { toastCreated, toastDeleted, toastUpdated } from '../../lib/operation-to
 import { Upload, Images, X, Check, Pencil, Trash2, Tag } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -169,15 +175,19 @@ export default function StaffGalleryPage() {
   const { staffUser } = useStaffAuth();
 
   const [photos, setPhotos]           = useState<GalleryPhoto[]>(INITIAL_PHOTOS);
-  const [filter, setFilter]           = useState<'All' | Category>('All');
+  const [categoryFilters, setCategoryFilters] = useState<Category[]>([]);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [showModal, setShowModal]     = useState(false);
   const [editingPhoto, setEditingPhoto] = useState<GalleryPhoto | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
+  const filtered = useMemo(() => {
+    const matched = photos.filter((photo) => matchesAnySelected(categoryFilters, photo.category));
+    return sortChronologically(matched, (photo) => photo.uploadedAt, chronoOrder);
+  }, [photos, categoryFilters, chronoOrder]);
+
   useEffect(() => { if (!staffUser) navigate('/staff-login'); }, [staffUser, navigate]);
   if (!staffUser) return null;
-
-  const filtered = photos.filter(p => filter === 'All' || p.category === filter);
 
   const openUpload = () => { setEditingPhoto(null); setShowModal(true); };
   const openEdit   = (p: GalleryPhoto) => { setEditingPhoto(p); setShowModal(true); };
@@ -235,21 +245,6 @@ export default function StaffGalleryPage() {
       <div className="max-w-8xl mx-auto px-4 md:px-8">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between gap-4 border-b border-[#D4CDB5]/60 pb-5 pt-6">
-          <div>
-            <h1 className="leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)', letterSpacing: '0.04em' }}>
-              Studio Gallery
-            </h1>
-            <p className="mt-0.5 text-xs text-[#8A7E6E]">Post photos and tag enrolled students</p>
-          </div>
-          <button
-            onClick={openUpload}
-            className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
-           
-          >
-            <Upload size={15} /> Post Photo
-          </button>
-        </div>
         <div className={`${PAGE_HEADING_TOOLBAR_ROW_CLASS} border-b border-[#D4CDB5]/60 pb-5 pt-6`}>
           <div className="min-w-0 shrink-0">
             <h1 className="leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)', letterSpacing: '0.04em' }}>
@@ -264,7 +259,7 @@ export default function StaffGalleryPage() {
               options: CATEGORIES.map((category) => ({ value: category, label: category })),
             }]}
             selected={{ category: categoryFilters }}
-            onChange={(next) => setCategoryFilters(next.category ?? [])}
+            onChange={(next) => setCategoryFilters((next.category ?? []) as Category[])}
           />
           <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
           <span className="text-[#8A7E6E] text-sm">{filtered.length} photo{filtered.length !== 1 ? 's' : ''}</span>
@@ -274,6 +269,20 @@ export default function StaffGalleryPage() {
           >
             <Upload size={15} /> Post Photo
           </button>
+        </div>
+
+        {/* ── Grid ── */}
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center pb-10">
+            <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm"><Images size={26} className="text-[#c49a3c]/50" /></div>
+            <h3 className="text-[#1E2A35] mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>No Photos Yet</h3>
+            <p className="text-[#8A7E6E] text-sm max-w-xs">Post your first studio photo to get started.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-10">
+            {filtered.map(photo => (
+              <div key={photo.id} className={`group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md ${CARD_HOVER_GROW}`}>
+                <div className="relative overflow-hidden">
                   <img src={photo.url} alt={photo.caption} className={`w-full h-48 object-cover ${IMAGE_HOVER_ZOOM}`} />
                   <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/15 transition-colors" />
                   {/* Category badge */}
