@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BadgeCheck, CalendarDays, Coins, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { AlertTriangle, BadgeCheck, CalendarDays, Coins, Plus, Sparkles, X } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { MemberReturnedPaymentResubmitModal } from '../components/payments/MemberReturnedPaymentResubmitModal';
 import {
   creditAllotmentStatus,
@@ -9,7 +11,6 @@ import {
 } from '../../lib/credit-transaction-service';
 import { toast } from 'sonner';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
-import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
 import { CategorizedAddFilter } from '../components/filters/CategorizedAddFilter';
 import {
@@ -23,6 +24,10 @@ import {
   type ExpiringCreditsCallout,
   type MemberSubscriptionRow,
 } from '../../lib/member-credits-service';
+import {
+  fetchActiveSubscriptionPackagesForMember,
+  type SubscriptionPackageRecord,
+} from '../../lib/subscription-package-service';
 import {
   fetchSubscriptionPackagePaymentsForMember,
   type SubscriptionPackagePaymentDisplay,
@@ -96,7 +101,11 @@ const LEDGER_STATUS_STYLE: Record<LedgerStatusTag, string> = {
   Returned: 'bg-red-50 text-red-700 border-red-200',
 };
 
+const HEADER_OUTLINE_BTN =
+  'inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-[#D4CDB5]/70 bg-white text-[#5A5048] text-sm font-medium hover:bg-[#F8F3E8] transition-all';
+
 export default function MemberCreditsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [creditTxnFilters, setCreditTxnFilters] = useState<string[]>([]);
@@ -108,7 +117,21 @@ export default function MemberCreditsPage() {
   const [ledgerTransactions, setLedgerTransactions] = useState<CreditTransactionDisplay[]>([]);
   const [activeSubscription, setActiveSubscription] = useState<MemberSubscriptionRow | null>(null);
   const [expiringCredits, setExpiringCredits] = useState<ExpiringCreditsCallout | null>(null);
+  const [showAddCredits, setShowAddCredits] = useState(false);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [availablePackages, setAvailablePackages] = useState<SubscriptionPackageRecord[]>([]);
   const [purchaseRequests, setPurchaseRequests] = useState<SubscriptionPackagePaymentDisplay[]>([]);
+
+  const openAddCredits = useCallback(() => {
+    setShowAddCredits(true);
+    setPackagesLoading(true);
+    void (async () => {
+      const { data, error } = await fetchActiveSubscriptionPackagesForMember();
+      if (error) toast.error(error);
+      setAvailablePackages(data);
+      setPackagesLoading(false);
+    })();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -141,15 +164,27 @@ export default function MemberCreditsPage() {
     if (!user) return;
     let cancelled = false;
     void (async () => {
-      const payResult = await fetchSubscriptionPackagePaymentsForMember();
+      const [payResult, pkgResult] = await Promise.all([
+        fetchSubscriptionPackagePaymentsForMember(),
+        fetchActiveSubscriptionPackagesForMember(),
+      ]);
       if (cancelled) return;
       if (payResult.error) toast.error(payResult.error);
       else setPurchaseRequests(payResult.data);
+      if (!pkgResult.error) setAvailablePackages(pkgResult.data);
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  const goCheckout = useCallback(
+    (pkg: SubscriptionPackageRecord) => {
+      setShowAddCredits(false);
+      navigate('/credits/checkout', { state: { pkg } });
+    },
+    [navigate],
+  );
 
   const reloadPurchaseRequests = useCallback(async () => {
     const { data, error } = await fetchSubscriptionPackagePaymentsForMember();
@@ -237,6 +272,84 @@ export default function MemberCreditsPage() {
           onSuccess={() => void reloadPurchaseRequests()}
         />
       ) : null}
+      {showAddCredits && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowAddCredits(false)}
+          role="presentation"
+        >
+          <div
+            className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="add-credits-title"
+          >
+            <div className="px-6 pt-6 pb-4 border-b border-[#D4CDB5]/50 flex items-center justify-between shrink-0">
+              <h3
+                id="add-credits-title"
+                className="text-[#1E2A35]"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.04em' }}
+              >
+                Add credits
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddCredits(false)}
+                className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto flex-1">
+              <p className="text-[#8A7E6E] text-sm mb-4">
+                Choose a membership or pack. Pay online and upload proof — credits apply after admin approval.
+              </p>
+              {packagesLoading ? (
+                <div role="status" aria-live="polite" aria-label="Loading packages">
+                  <ContentSkeleton variant="list" />
+                </div>
+              ) : availablePackages.length === 0 ? (
+                <p className="text-center text-[#8A7E6E] text-sm py-10">No packages available right now.</p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {availablePackages.map((pkg) => (
+                    <li
+                      key={pkg.id}
+                      className="rounded-2xl border border-[#D4CDB5]/60 bg-[#FBF9F3] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#1E2A35] truncate">{pkg.name}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#9A8E7E]">{pkg.uid}</p>
+                        <p className="text-xs text-[#8A7E6E] mt-1 line-clamp-2">
+                          {pkg.description || `${pkg.creditsGranted} credits · ${pkg.creditValidityDays} days valid`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <p
+                          className="text-[#1E2A35] tabular-nums"
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em',  fontSize: '1.25rem' }}
+                        >
+                          ₱{pkg.priceAmount.toLocaleString()}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => goCheckout(pkg)}
+                          className="action-button rounded-full bg-[#1E2A35] text-white text-xs font-bold px-4 py-2 hover:bg-[#263545] transition-colors"
+                        >
+                          Select
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     <MemberPageShell
       viewportBody="desktop"
       searchPlaceholder={searchPlaceholder}
@@ -260,6 +373,12 @@ export default function MemberCreditsPage() {
               <p className="text-[#8A7E6E] text-xs mt-1 max-w-xl hidden sm:block">
                 Usable credits, membership renewal, and activity on your pass.
               </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <button type="button" onClick={openAddCredits} className={`action-button ${HEADER_OUTLINE_BTN}`}>
+                <Plus size={14} strokeWidth={2} aria-hidden />
+                Add credits
+              </button>
             </div>
           </div>
         </div>
@@ -386,8 +505,16 @@ export default function MemberCreditsPage() {
               <div className="relative mt-2 rounded-xl border border-dashed border-[#D4CDB5]/80 bg-white/80 px-3 py-2.5">
                 <p className="text-xs font-semibold text-[#1E2A35]">No active membership</p>
                 <p className="text-[11px] text-[#8A7E6E] mt-0.5 leading-snug">
-                  Contact the studio to add or renew a membership plan.
+                  Add a plan to unlock recurring credits.
                 </p>
+                <button
+                  type="button"
+                  onClick={openAddCredits}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[#a67f2e] hover:text-[#8a6824]"
+                >
+                  Browse memberships
+                  <span aria-hidden>→</span>
+                </button>
               </div>
             )}
           </div>

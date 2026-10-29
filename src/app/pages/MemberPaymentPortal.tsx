@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ComponentType, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useMemo, type ComponentType, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
   ArrowLeft, Check, Upload, FileImage,
@@ -272,10 +272,30 @@ function BookingSummaryRow({
 // MEMBER PAYMENT PORTAL
 // ─────────────────────────────────────────────
 
+const MEMBER_CLASS_BOOKING_KEY = 'balanse:member-class-booking';
+
+function readStoredClassBooking(): Record<string, unknown> | null {
+  try {
+    const raw = sessionStorage.getItem(MEMBER_CLASS_BOOKING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed?.classId ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function MemberPaymentPortal() {
   const navigate = useNavigate();
   const location = useLocation();
-  const booking = location.state?.booking;
+  const booking = useMemo(() => {
+    const fromNav = location.state?.booking as Record<string, unknown> | undefined;
+    if (fromNav?.classId) {
+      sessionStorage.setItem(MEMBER_CLASS_BOOKING_KEY, JSON.stringify(fromNav));
+      return fromNav;
+    }
+    return readStoredClassBooking();
+  }, [location.state]);
 
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannel[]>(FALLBACK_PAYMENT_CHANNELS);
   const [channelsLoading, setChannelsLoading] = useState(true);
@@ -385,6 +405,7 @@ export default function MemberPaymentPortal() {
         return;
       }
       toastCreated('Enrollment confirmed');
+      sessionStorage.removeItem(MEMBER_CLASS_BOOKING_KEY);
       navigate('/booking-pending', {
         state: {
           booking,
@@ -438,6 +459,7 @@ export default function MemberPaymentPortal() {
         return;
       }
       toastCreated('Payment submission');
+      sessionStorage.removeItem(MEMBER_CLASS_BOOKING_KEY);
       navigate('/booking-pending', {
         state: {
           booking,

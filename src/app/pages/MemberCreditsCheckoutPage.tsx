@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
   ArrowLeft,
@@ -145,13 +145,33 @@ type CheckoutLocationState = {
   rejectionNote?: string;
 };
 
+const MEMBER_PACK_CHECKOUT_KEY = 'balanse:member-pack-checkout';
+
+function readStoredPackCheckout(): CheckoutLocationState | null {
+  try {
+    const raw = sessionStorage.getItem(MEMBER_PACK_CHECKOUT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CheckoutLocationState;
+    return parsed?.pkg?.id ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function MemberCreditsCheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as CheckoutLocationState | null;
-  const pkg = state?.pkg;
-  const resubmitPaymentId = state?.resubmitPaymentId;
-  const rejectionNote = state?.rejectionNote?.trim() ?? '';
+  const checkoutState = useMemo(() => {
+    const fromNav = location.state as CheckoutLocationState | null;
+    if (fromNav?.pkg?.id) {
+      sessionStorage.setItem(MEMBER_PACK_CHECKOUT_KEY, JSON.stringify(fromNav));
+      return fromNav;
+    }
+    return readStoredPackCheckout();
+  }, [location.state]);
+  const pkg = checkoutState?.pkg;
+  const resubmitPaymentId = checkoutState?.resubmitPaymentId;
+  const rejectionNote = checkoutState?.rejectionNote?.trim() ?? '';
 
   const [step, setStep] = useState<2 | 3>(2);
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannel[]>(FALLBACK_PAYMENT_CHANNELS);
@@ -256,6 +276,7 @@ export default function MemberCreditsCheckoutPage() {
       }
       notifySubscriptionPackagePaymentsChanged();
       toastCreated(resubmitPaymentId ? 'Payment resubmitted' : 'Payment submission');
+      sessionStorage.removeItem(MEMBER_PACK_CHECKOUT_KEY);
       setSubmittedUid(result.uid ?? null);
       setStep(3);
     } finally {

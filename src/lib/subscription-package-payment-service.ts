@@ -386,7 +386,7 @@ export async function fetchSubscriptionPackagePaymentByIdForMember(
 ): Promise<{ data: SubscriptionPackagePaymentDisplay | null; error: string | null }> {
   const { data, error } = await supabase
     .from('subscription_package_payments_escrow')
-    .select(SELECT)
+    .select(MEMBER_SELECT)
     .eq('id', paymentId)
     .maybeSingle();
 
@@ -396,10 +396,10 @@ export async function fetchSubscriptionPackagePaymentByIdForMember(
   const finalMeta = row.final_transaction_id
     ? await loadFinalMetaById([row.final_transaction_id])
     : new Map<string, FinalMeta>();
-  const [withPhoto] = await attachPhotos([
-    mapRow(row, row.final_transaction_id ? finalMeta.get(row.final_transaction_id) : undefined),
-  ]);
-  return { data: withPhoto, error: null };
+  return {
+    data: mapRow(row, row.final_transaction_id ? finalMeta.get(row.final_transaction_id) : undefined),
+    error: null,
+  };
 }
 
 export async function submitMemberSubscriptionPackagePayment(input: {
