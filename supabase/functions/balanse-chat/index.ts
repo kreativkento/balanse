@@ -3,9 +3,13 @@
 type RecordData = Record<string, unknown>;
 type Turn = { role: 'user' | 'assistant'; content: string };
 type Env = (key: string) => string | undefined;
-const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://balanse.kentveloso.com'];
+const DEFAULT_ORIGINS = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://balanse.kentveloso.com',
+  'https://balanse.pages.dev',
+];
 
-/** Vite may move off 5173 when that port is taken. Local hosts are not a public website origin. */
 export function isLocalDevOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);
@@ -17,8 +21,20 @@ export function isLocalDevOrigin(origin: string): boolean {
   }
 }
 
+export function isProductionSiteOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'https:') return false;
+    return url.hostname === 'balanse.kentveloso.com'
+      || url.hostname === 'balanse.pages.dev'
+      || url.hostname.endsWith('.balanse.pages.dev');
+  } catch {
+    return false;
+  }
+}
+
 export function originAllowed(origin: string, configured: string[]): boolean {
-  return configured.includes(origin) || isLocalDevOrigin(origin);
+  return configured.includes(origin) || isProductionSiteOrigin(origin) || isLocalDevOrigin(origin);
 }
 const WEBHOOK = 'https://kychver.app.n8n.cloud/webhook/balanse-assistant-v1';
 const buckets = new Map<string, { count: number; until: number }>();

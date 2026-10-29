@@ -17,6 +17,18 @@ const alternatePort = await handler(new Request('https://example.test/balanse-ch
 }));
 assert.equal(alternatePort.status, 503, 'a non-default Vite port is still an allowed local origin');
 assert.equal(alternatePort.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5174');
+
+const productionSite = await handler(new Request('https://example.test/balanse-chat', {
+  method: 'POST',
+  headers: {
+    origin: 'https://balanse.pages.dev',
+    'content-type': 'application/json',
+    'x-real-ip': 'pages-origin',
+  },
+  body: JSON.stringify({ message: 'Hello', history: [] }),
+}));
+assert.equal(productionSite.status, 503, 'the Cloudflare Pages origin is allowed');
+assert.equal(productionSite.headers.get('Access-Control-Allow-Origin'), 'https://balanse.pages.dev');
 const request = () => new Request('https://example.test/balanse-chat', {
   method: 'POST',
   headers: {

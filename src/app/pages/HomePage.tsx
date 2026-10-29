@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { ChevronLeft, ChevronRight, Check, Leaf, Users, Clock, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GymButton } from '../components/ui/GymButton';
-import { HelpSupportFab } from '../components/layout/HelpSupportFab';
 import { HomeStorySection } from '../components/home/HomeStorySection';
 import { HomeCoachesSection } from '../components/home/HomeCoachesSection';
 import { ICON_HOVER_GROW } from '../../lib/motion-classes';
@@ -359,8 +358,6 @@ export default function HomePage() {
         </section>
 
       </div>
-
-      <HelpSupportFab withBottomCta />
     </div>
   );
 }

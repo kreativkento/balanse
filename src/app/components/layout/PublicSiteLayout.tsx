@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router';
 import { Suspense } from 'react';
 import { NavBar } from './NavBar';
 import { BottomCTA } from './BottomCTA';
+import { HelpSupportFab } from './HelpSupportFab';
 import { ContentAreaFallback } from './PortalRouteOutlet';
 
 const PAGES_WITH_CTA = [
@@ -18,6 +19,7 @@ const PAGES_WITH_CTA = [
 ];
 
 const LOCK_SCROLL_PATHS = ['/login', '/signup'];
+const HIDE_CHAT_PATHS = ['/login', '/signup', '/auth', '/member-forgot-password'];
 
 /** Full-height calendar (same flex chain as member class schedule). */
 const FILL_VIEWPORT_PATHS = ['/classes'];
@@ -46,6 +48,9 @@ export function PublicSiteLayout() {
         </Suspense>
       </main>
       {showBottomCTA && <BottomCTA />}
+      {!HIDE_CHAT_PATHS.includes(location.pathname) && (
+        <HelpSupportFab withBottomCta={showBottomCTA} />
+      )}
     </div>
   );
 }
