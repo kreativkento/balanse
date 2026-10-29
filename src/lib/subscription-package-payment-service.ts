@@ -111,6 +111,32 @@ const SELECT = `
   )
 `;
 
+const MEMBER_SELECT = `
+  id,
+  uid,
+  subscription_package_id,
+  account_id,
+  status,
+  verified,
+  escrow_state,
+  final_transaction_id,
+  payment_channel_id,
+  payment_method_label,
+  payment_reference,
+  proof_storage_path,
+  proof_original_filename,
+  member_notes,
+  amount_paid,
+  total_amount_due,
+  package_name_snapshot,
+  package_uid_snapshot,
+  credits_granted_snapshot,
+  credit_validity_days_snapshot,
+  request_physical_receipt,
+  review_note,
+  created_at
+`;
+
 type FinalMeta = {
   email_receipt_sent: boolean;
   receipt_printed: boolean;
@@ -294,6 +320,16 @@ async function queryRows(): Promise<{ rows: Row[]; error: string | null }> {
   return { rows: (data ?? []) as Row[], error: null };
 }
 
+async function queryMemberRows(): Promise<{ rows: Row[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from('subscription_package_payments_escrow')
+    .select(MEMBER_SELECT)
+    .order('created_at', { ascending: false });
+
+  if (error) return { rows: [], error: error.message };
+  return { rows: (data ?? []) as Row[], error: null };
+}
+
 async function mapRowsWithFinal(rows: Row[]): Promise<SubscriptionPackagePaymentDisplay[]> {
   const finalIds = rows.map((r) => r.final_transaction_id).filter(Boolean) as string[];
   const finalMeta = await loadFinalMetaById(finalIds);
@@ -307,12 +343,17 @@ export async function fetchSubscriptionPackagePaymentsForMember(): Promise<{
   data: SubscriptionPackagePaymentDisplay[];
   error: string | null;
 }> {
-  const { rows, error } = await queryRows();
+  const { rows, error } = await queryMemberRows();
   if (error) {
     console.error('fetchSubscriptionPackagePaymentsForMember:', error);
     return { data: [], error };
   }
-  return { data: await mapRowsWithFinal(rows), error: null };
+  const finalIds = rows.map((r) => r.final_transaction_id).filter(Boolean) as string[];
+  const finalMeta = await loadFinalMetaById(finalIds);
+  const data = rows.map((r) =>
+    mapRow(r, r.final_transaction_id ? finalMeta.get(r.final_transaction_id) : undefined),
+  );
+  return { data, error: null };
 }
 
 export async function fetchPendingSubscriptionPackagePaymentCount(): Promise<number> {

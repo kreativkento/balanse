@@ -507,6 +507,66 @@ const CLASS_PAYMENTS_SELECT = `
   )
 `;
 
+/** Member billing views — skip accounts embed (nested profile RLS can break the whole row). */
+const MEMBER_CLASS_PAYMENTS_SELECT = `
+  id,
+  uid,
+  class_id,
+  pricing_offering_id,
+  account_id,
+  status,
+  verified,
+  escrow_state,
+  refundable_until,
+  final_transaction_id,
+  payment_channel_id,
+  payment_method_label,
+  payment_reference,
+  proof_storage_path,
+  proof_original_filename,
+  member_notes,
+  amount_paid,
+  total_amount_due,
+  class_starts_at,
+  class_ends_at,
+  request_physical_receipt,
+  review_note,
+  created_at,
+  classes ( name ),
+  pricing_offerings ( title ),
+  final_transaction:final_transactions!final_transaction_id (
+    id,
+    email_receipt_sent,
+    receipt_printed,
+    receipt_issued_at,
+    receipt_html,
+    official_receipt_number
+  )
+`;
+
+async function queryMemberClassPaymentRows(): Promise<{
+  rows: ClassPaymentRow[];
+  error: string | null;
+}> {
+  const run = (select: string) =>
+    supabase.from('class_payments_escrow').select(select).order('created_at', { ascending: false });
+
+  let { data: rows, error } = await run(MEMBER_CLASS_PAYMENTS_SELECT);
+  if (error?.message?.includes('pricing_offerings')) {
+    const fallbackSelect = MEMBER_CLASS_PAYMENTS_SELECT.replace(
+      /\n  pricing_offerings \( title \),/,
+      '',
+    );
+    ({ data: rows, error } = await run(fallbackSelect));
+  }
+
+  if (error) {
+    return { rows: [], error: error.message };
+  }
+
+  return { rows: (rows ?? []) as ClassPaymentRow[], error: null };
+}
+
 async function attachCoachNamesToPaymentRows(
   rows: ClassPaymentRow[],
 ): Promise<ClassPaymentDisplay[]> {
@@ -576,12 +636,12 @@ export async function fetchClassPaymentsForMember(): Promise<{
   data: ClassPaymentDisplay[];
   error: string | null;
 }> {
-  const { rows, error } = await queryClassPaymentRows();
+  const { rows, error } = await queryMemberClassPaymentRows();
   if (error) {
     console.error('fetchClassPaymentsForMember:', error);
     return { data: [], error };
   }
-  const data = await attachCoachNamesToPaymentRows(rows);
+  const data = rows.map((row) => mapPaymentRow(row, '—'));
   return { data, error: null };
 }
 

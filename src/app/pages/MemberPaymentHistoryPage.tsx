@@ -4,7 +4,6 @@ import {
   CreditCard,
   Receipt,
   Download,
-  Clock,
   AlertCircle,
   ChevronDown,
 } from 'lucide-react';
@@ -18,8 +17,6 @@ import {
   sortChronologically,
   type ChronologicalOrder,
 } from '../components/layout/ChronologicalSortSelect';
-import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
-import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import {
   downloadOfficialReceiptPdfFromHtml,
   fetchClassPaymentReceiptHtml,
@@ -43,9 +40,33 @@ function isReturnedClassPayment(row: ClassPaymentDisplay): boolean {
   return row.status === 'rejected' || row.escrowState === 'rejected';
 }
 
+async function loadMemberBillingRecords(): Promise<{
+  classRows: ClassPaymentDisplay[];
+  subscriptionRows: SubscriptionPackagePaymentDisplay[];
+  error: string | null;
+}> {
+  const [classResult, subResult] = await Promise.all([
+    fetchClassPaymentsForMember(),
+    fetchSubscriptionPackagePaymentsForMember(),
+  ]);
+
+  const errors = [classResult.error, subResult.error].filter(Boolean) as string[];
+  const classRows = classResult.error ? [] : classResult.data;
+  const subscriptionRows = subResult.error ? [] : subResult.data;
+
+  if (errors.length === 2) {
+    return { classRows, subscriptionRows, error: errors[0] };
+  }
+  if (errors.length === 1) {
+    toast.error(errors[0]);
+  }
+
+  return { classRows, subscriptionRows, error: null };
+}
+
 export default function MemberPaymentHistoryPage() {
   const navigate = useNavigate();
-  const { user, profileComplete } = useAuth();
+  const { user } = useAuth();
 
   const [search, setSearch] = useState('');
   const [returnedPayment, setReturnedPayment] = useState<ClassPaymentDisplay | null>(null);
@@ -61,7 +82,7 @@ export default function MemberPaymentHistoryPage() {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (!user || !profileComplete) {
+    if (!user) {
       setPaymentRows([]);
       setSubscriptionRows([]);
       setLoading(false);
@@ -73,27 +94,27 @@ export default function MemberPaymentHistoryPage() {
     setLoadError(null);
 
     void (async () => {
-      const [classResult, subResult] = await Promise.all([
-        fetchClassPaymentsForMember(),
-        fetchSubscriptionPackagePaymentsForMember(),
-      ]);
-      if (cancelled) return;
-      const error = classResult.error ?? subResult.error;
-      if (error) {
-        setLoadError(error);
+      try {
+        const result = await loadMemberBillingRecords();
+        if (cancelled) return;
+        setLoadError(result.error);
+        setPaymentRows(result.classRows);
+        setSubscriptionRows(result.subscriptionRows);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('MemberPaymentHistoryPage load:', err);
+        setLoadError('Could not load billing records. Please refresh and try again.');
         setPaymentRows([]);
         setSubscriptionRows([]);
-      } else {
-        setPaymentRows(classResult.data);
-        setSubscriptionRows(subResult.data);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user, profileComplete]);
+  }, [user]);
 
   const returnedPayments = useMemo(
     () => paymentRows.filter(isReturnedClassPayment),
@@ -147,20 +168,17 @@ export default function MemberPaymentHistoryPage() {
   }, [filteredOfficialReceipts, currentPage, tablePageSize]);
 
   const reloadPayments = async () => {
-    const [classResult, subResult] = await Promise.all([
-      fetchClassPaymentsForMember(),
-      fetchSubscriptionPackagePaymentsForMember(),
-    ]);
-    const error = classResult.error ?? subResult.error;
-    if (error) {
-      setLoadError(error);
+    try {
+      const result = await loadMemberBillingRecords();
+      setLoadError(result.error);
+      setPaymentRows(result.classRows);
+      setSubscriptionRows(result.subscriptionRows);
+    } catch (err) {
+      console.error('MemberPaymentHistoryPage reload:', err);
+      setLoadError('Could not load billing records. Please refresh and try again.');
       setPaymentRows([]);
       setSubscriptionRows([]);
-      return;
     }
-    setLoadError(null);
-    setPaymentRows(classResult.data);
-    setSubscriptionRows(subResult.data);
   };
 
   const handleDownloadOfficialReceipt = async (row: OfficialReceiptRow) => {
@@ -216,16 +234,7 @@ export default function MemberPaymentHistoryPage() {
             </p>
           </div>
 
-          {!profileComplete && (
-            <div className={`bg-white border border-[#D4CDB5]/60 rounded-3xl shadow-sm ${CARD_HOVER_GROW}`}>
-              <ProfileIncompleteState
-                description="Complete your profile to view billing, official receipts, and pending approvals."
-              />
-            </div>
-          )}
-
-          {profileComplete && (
-            <div className="flex min-h-0 flex-1 flex-col md:overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col md:overflow-hidden">
               {loadError && (
                 <div className="mb-3 flex shrink-0 items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
                   <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
@@ -407,7 +416,6 @@ export default function MemberPaymentHistoryPage() {
                 )}
               </div>
             </div>
-          )}
         </div>
       </MemberPageShell>
     </>
