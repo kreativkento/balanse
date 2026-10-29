@@ -92,10 +92,8 @@ function buildMemberGroups(
       key: 'finances',
       label: 'Finances',
       icon: <Coins size={16} />,
-      disabled: featuresLocked,
       links: financeLinks.map((link) => ({
         ...link,
-        disabled: featuresLocked,
         pendingCount:
           link.path === '/payment-history'
             ? financeAttention.classReturned
@@ -141,7 +139,7 @@ function MemberSidebarNav({
             <div className="mb-2 rounded-xl border border-[#c49a3c]/30 bg-[#c49a3c]/10 px-2.5 py-2">
               <p className="flex items-start gap-2 text-[11px] font-semibold leading-relaxed text-[#8a6824]">
                 <Info size={13} className="mt-0.5 shrink-0" />
-                Finish setting up your profile to unlock all features.
+                Finish setting up your profile to unlock classes, studio, and community features.
               </p>
             </div>
           )}
@@ -164,7 +162,11 @@ function MemberSidebarNav({
             <SidebarNavGroupButton
               key={group.key}
               group={group}
-              active={!featuresLocked && group.links.some((link) => isActive(link.path))}
+              active={
+                group.key === 'finances'
+                  ? group.links.some((link) => isActive(link.path))
+                  : !featuresLocked && group.links.some((link) => isActive(link.path))
+              }
               onNavigate={onNavigate}
             />
           ))}
