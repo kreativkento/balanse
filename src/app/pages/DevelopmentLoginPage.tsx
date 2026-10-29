@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { Eye, EyeOff, Lock, Mail, Code2 } from 'lucide-react';
 import { useDevAuth } from '../context/DevAuthContext';
 import { passwordInputGuardProps } from '../components/auth/password-input-guards';
@@ -9,7 +9,9 @@ const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 export default function DevelopmentLoginPage() {
   const navigate = useNavigate();
-  const { devLogin, devUser } = useDevAuth();
+  const location = useLocation();
+  const { devLogin, devUser, devAuthReady } = useDevAuth();
+  const redirectFrom = (location.state as { from?: string } | null)?.from;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,8 +21,13 @@ export default function DevelopmentLoginPage() {
   const submitting = useRef(false);
 
   useEffect(() => {
-    if (devUser) navigate('/development/dashboard', { replace: true });
-  }, [devUser, navigate]);
+    if (!devAuthReady || !devUser) return;
+    if (redirectFrom?.startsWith('/development/')) {
+      navigate(redirectFrom, { replace: true });
+      return;
+    }
+    navigate('/development/dashboard', { replace: true });
+  }, [devAuthReady, devUser, navigate, redirectFrom]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +54,11 @@ export default function DevelopmentLoginPage() {
     try {
       const result = await devLogin(email.trim(), password);
       if (result.success) {
-        navigate('/development/dashboard');
+        if (redirectFrom?.startsWith('/development/')) {
+          navigate(redirectFrom, { replace: true });
+        } else {
+          navigate('/development/dashboard');
+        }
       } else {
         setError(result.error || 'Login failed.');
       }
@@ -59,7 +70,7 @@ export default function DevelopmentLoginPage() {
     }
   };
 
-  if (devUser) return null;
+  if (devAuthReady && devUser) return null;
 
   return (
     <div className="min-h-screen bg-[#F8F3E8] flex items-center justify-center px-6 py-10">
@@ -72,7 +83,7 @@ export default function DevelopmentLoginPage() {
           </div>
           <h1
             className="text-[#1E2A35] leading-none mb-2"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}
           >
             Dev Access
           </h1>

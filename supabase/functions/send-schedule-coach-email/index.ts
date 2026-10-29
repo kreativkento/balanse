@@ -2,6 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   buildClassCancellationMemberEmail,
   buildCoachAssignedEmail,
+  buildHoldingPendingMemberEmail,
+  buildHoldingRefundedMemberEmail,
   buildSlotRequestDecisionEmail,
 } from './email-html.ts';
 
@@ -17,11 +19,12 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
-async function assertAdminReviewer(
+async function assertReviewerRole(
   supabaseUrl: string,
   supabaseAnonKey: string,
   serviceRoleKey: string,
   authHeader: string,
+  allowedRoles: string[],
 ): Promise<{ ok: true } | { ok: false; response: Response }> {
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } },
@@ -48,8 +51,8 @@ async function assertAdminReviewer(
   }
 
   const role = reviewerAccount.role as string;
-  if (role !== 'admin' && role !== 'dev') {
-    return { ok: false, response: jsonResponse({ ok: false, error: 'Admin access required' }, 403) };
+  if (!allowedRoles.includes(role)) {
+    return { ok: false, response: jsonResponse({ ok: false, error: 'Access required' }, 403) };
   }
 
   return { ok: true };
@@ -258,19 +261,12 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, error: 'Unauthorized' }, 401);
   }
 
-  const authCheck = await assertAdminReviewer(
-    supabaseUrl,
-    supabaseAnonKey,
-    serviceRoleKey,
-    authHeader,
-  );
-  if (!authCheck.ok) return authCheck.response;
-
   let kind: string;
   let requestId: string | undefined;
   let classId: string | undefined;
   let variant: string | undefined;
   let replacementCoachAccountId: string | undefined;
+  let holdingId: string | undefined;
 
   try {
     const body = await req.json();
@@ -281,9 +277,22 @@ Deno.serve(async (req) => {
     replacementCoachAccountId = body?.replacementCoachAccountId
       ? String(body.replacementCoachAccountId).trim()
       : undefined;
+    holdingId = body?.holdingId ? String(body.holdingId).trim() : undefined;
   } catch {
     return jsonResponse({ ok: false, error: 'Invalid JSON body' }, 400);
   }
+
+  const allowedRoles = kind === 'holding_pending'
+    ? ['admin', 'dev', 'frontdesk']
+    : ['admin', 'dev'];
+  const authCheck = await assertReviewerRole(
+    supabaseUrl,
+    supabaseAnonKey,
+    serviceRoleKey,
+    authHeader,
+    allowedRoles,
+  );
+  if (!authCheck.ok) return authCheck.response;
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
@@ -517,6 +526,77 @@ Deno.serve(async (req) => {
     }
 
     return jsonResponse({ ok: true, sentTo, recipientCount: recipientIds.size });
+  }
+
+  if (kind === 'holding_pending' || kind === 'holding_refunded') {
+    if (!holdingId) {
+      return jsonResponse({ ok: false, error: 'holdingId is required' }, 400);
+    }
+
+    const { data: holding, error: holdingError } = await supabaseAdmin
+      .from('class_cancel_holdings')
+      .select('id, account_id, class_id, refund_kind')
+      .eq('id', holdingId)
+      .maybeSingle();
+
+    if (holdingError || !holding) {
+      return jsonResponse({ ok: false, error: 'Holding row not found' }, 404);
+    }
+
+    const { data: classRow, error: classError } = await supabaseAdmin
+      .from('classes')
+      .select('name, starts_at, ends_at, disciplines ( name )')
+      .eq('id', holding.class_id as string)
+      .maybeSingle();
+
+    if (classError || !classRow) {
+      return jsonResponse({ ok: false, error: 'Class not found' }, 404);
+    }
+
+    const recipient = await memberRecipient(supabaseAdmin, holding.account_id as string);
+    if (!recipient) {
+      return jsonResponse({ ok: false, error: 'Member email not found' }, 404);
+    }
+
+    const disciplineJoin = classRow.disciplines as { name?: string } | { name?: string }[] | null;
+    const disciplineName = Array.isArray(disciplineJoin)
+      ? disciplineJoin[0]?.name ?? ''
+      : disciplineJoin?.name ?? '';
+    const className = (classRow.name as string | undefined)?.trim() || 'Class session';
+    const startsAt = (classRow.starts_at as string | null) ?? null;
+    const endsAt = (classRow.ends_at as string | null) ?? null;
+
+    const built = kind === 'holding_pending'
+      ? buildHoldingPendingMemberEmail({
+        memberName: recipient.name,
+        className,
+        disciplineName: disciplineName || '—',
+        startsAt,
+        endsAt,
+        siteUrl,
+      })
+      : buildHoldingRefundedMemberEmail({
+        memberName: recipient.name,
+        className,
+        disciplineName: disciplineName || '—',
+        startsAt,
+        endsAt,
+        refundKind: String(holding.refund_kind ?? 'cash'),
+        siteUrl,
+      });
+
+    const sent = await sendResendEmail(
+      resendApiKey,
+      fromEmail,
+      recipient.email,
+      built.subject,
+      built.html,
+    );
+    if (!sent.ok) {
+      return jsonResponse({ ok: false, error: sent.error }, 502);
+    }
+
+    return jsonResponse({ ok: true, sentTo: recipient.email });
   }
 
   return jsonResponse({ ok: false, error: 'Unknown kind' }, 400);

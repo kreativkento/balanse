@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import {
   deletePaymentChannelRecord,
@@ -228,17 +229,10 @@ export default function AdminPaymentChannelsPage() {
       : paymentChannelPublicQrUrl(editing?.qrStoragePath ?? null);
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
+    <div className="max-w-8xl mx-auto px-6 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Finance</p>
-          <h1
-            className="text-[#1E2A35] leading-none"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.05em' }}
-          >
-            Payment Channels
-          </h1>
-          <p className="text-[#8A7E6E] text-sm mt-2 max-w-xl">
+          <p className="text-[#8A7E6E] text-sm mt-0 max-w-xl">
             Configure where members send class payments. Changes are logged in system audit history.
           </p>
         </div>
@@ -253,9 +247,8 @@ export default function AdminPaymentChannelsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-[#8A7E6E] gap-2">
-          <Loader2 size={18} className="animate-spin" />
-          Loading channels…
+        <div role="status" aria-live="polite" aria-label="Loading channels">
+          <ContentSkeleton variant="list" />
         </div>
       ) : (
         <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
@@ -347,7 +340,7 @@ export default function AdminPaymentChannelsPage() {
             <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between">
               <h2
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 {editing.id ? 'Edit channel' : 'New channel'}
               </h2>

@@ -1,12 +1,35 @@
 import { useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { useDevAuth } from '../../context/DevAuthContext';
 import { useStaffAuth } from '../../context/StaffAuthContext';
 import { staffPortalHomePath } from '../../../lib/staff-portal-routes';
 import { PageLoadingScreen } from './PageLoadingScreen';
 
 function PortalAuthLoading() {
   return <PageLoadingScreen />;
+}
+
+/** Wait for Supabase session restore before rendering member routes or redirecting to login. */
+export function MemberAuthGate({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, authReady } = useAuth();
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (!user) {
+      navigate('/login', {
+        replace: true,
+        state: { from: `${location.pathname}${location.search}` },
+      });
+    }
+  }, [authReady, user, navigate, location.pathname, location.search]);
+
+  if (!authReady && !user) return <PortalAuthLoading />;
+  if (!user) return null;
+  return <>{children}</>;
 }
 
 /** Wait for Supabase session restore before rendering coach staff routes or redirecting. */
@@ -25,7 +48,7 @@ export function StaffAuthGate({ children }: { children: ReactNode }) {
     }
   }, [staffAuthReady, staffUser, navigate]);
 
-  if (!staffAuthReady) return <PortalAuthLoading />;
+  if (!staffAuthReady && !staffUser) return <PortalAuthLoading />;
   if (!staffUser || staffUser.accountRole !== 'coach') return null;
   return <>{children}</>;
 }
@@ -49,8 +72,29 @@ export function AdminAuthGate({ children }: { children: ReactNode }) {
     }
   }, [adminAuthReady, adminUser, navigate]);
 
-  if (!adminAuthReady) return <PortalAuthLoading />;
+  if (!adminAuthReady && !adminUser) return <PortalAuthLoading />;
   if (!adminUser || adminUser.role === 'frontdesk' || adminUser.role === 'marketing') return null;
+  return <>{children}</>;
+}
+
+/** Wait for Supabase session restore before rendering dev portal routes or redirecting. */
+export function DevAuthGate({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { devUser, devAuthReady } = useDevAuth();
+
+  useEffect(() => {
+    if (!devAuthReady) return;
+    if (!devUser) {
+      navigate('/development', {
+        replace: true,
+        state: { from: `${location.pathname}${location.search}` },
+      });
+    }
+  }, [devAuthReady, devUser, navigate, location.pathname, location.search]);
+
+  if (!devAuthReady && !devUser) return <PortalAuthLoading />;
+  if (!devUser) return null;
   return <>{children}</>;
 }
 
@@ -78,7 +122,8 @@ export function FrontdeskAuthGate({ children }: { children: ReactNode }) {
     navigate('/staff-login', { replace: true });
   }, [ready, isFrontdesk, staffUser, adminUser, navigate]);
 
-  if (!ready || !isFrontdesk) return null;
+  if (!ready && !isFrontdesk) return <PortalAuthLoading />;
+  if (!isFrontdesk) return null;
   return <>{children}</>;
 }
 
@@ -106,6 +151,7 @@ export function MarketingAuthGate({ children }: { children: ReactNode }) {
     navigate('/staff-login', { replace: true });
   }, [ready, isMarketing, staffUser, adminUser, navigate]);
 
-  if (!ready || !isMarketing) return null;
+  if (!ready && !isMarketing) return <PortalAuthLoading />;
+  if (!isMarketing) return null;
   return <>{children}</>;
 }

@@ -63,11 +63,8 @@ function ChapterCopy({
       </p>
       <h3
         className="text-[#1E2A35] leading-none mb-4"
-        style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: 'clamp(1.85rem, 4vw, 2.6rem)',
-          letterSpacing: '0.04em',
-        }}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.85rem, 4vw, 2.6rem)',
+          letterSpacing: '0.04em' }}
       >
         {chapter.title}
       </h3>
@@ -212,11 +209,8 @@ export function HomeStorySection() {
           </p>
           <h2
             className="text-[#1E2A35] leading-none"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
-              letterSpacing: '0.05em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
+              letterSpacing: '0.04em' }}
           >
             A way of living
           </h2>

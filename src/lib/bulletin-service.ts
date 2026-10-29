@@ -5,6 +5,13 @@ import type {
   BulletinVisibility,
 } from './database.types';
 
+export const BULLETIN_POSTS_CHANGED = 'balanse:bulletin-posts-changed';
+
+function notifyBulletinPostsChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(BULLETIN_POSTS_CHANGED));
+}
+
 export const BULLETIN_RESOURCES_BUCKET = 'bulletin_resources';
 export const BULLETIN_TITLE_MAX = 200;
 export const BULLETIN_BODY_MAX = 8000;
@@ -189,6 +196,18 @@ export async function listBulletinPosts(options?: {
   return { data: data ?? [], error: null };
 }
 
+export async function countPendingBulletinPosts(): Promise<number> {
+  const { count, error } = await supabase
+    .from('bulletin_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('admin_approved', false);
+  if (error) {
+    console.error('Failed to count pending bulletin posts:', error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export async function createBulletinPost(
   input: BulletinPostInput,
 ): Promise<{ data: BulletinPostRow | null; error: string | null }> {
@@ -262,6 +281,7 @@ export async function createBulletinPost(
   }
 
   if (Object.keys(updates).length === 0) {
+    notifyBulletinPostsChanged();
     return { data: inserted, error: null };
   }
 
@@ -273,9 +293,11 @@ export async function createBulletinPost(
     .single();
 
   if (updateError || !updated) {
+    notifyBulletinPostsChanged();
     return { data: { ...inserted, ...updates }, error: null };
   }
 
+  notifyBulletinPostsChanged();
   return { data: updated, error: null };
 }
 
@@ -348,6 +370,7 @@ export async function updateBulletinPost(
     return { data: null, error: error?.message ?? 'Could not update the post.' };
   }
 
+  notifyBulletinPostsChanged();
   return { data, error: null };
 }
 
@@ -366,6 +389,7 @@ async function setBulletinApproval(
   if (error || !data) {
     return { data: null, error: error?.message ?? failMessage };
   }
+  notifyBulletinPostsChanged();
   return { data, error: null };
 }
 
@@ -387,5 +411,6 @@ export async function deleteBulletinPost(
   await removeBulletinFiles([post.imagePath, post.attachmentPath]);
   const { error } = await supabase.from('bulletin_posts').delete().eq('id', post.id);
   if (error) return { error: error.message };
+  notifyBulletinPostsChanged();
   return { error: null };
 }

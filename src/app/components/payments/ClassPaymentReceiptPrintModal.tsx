@@ -177,7 +177,7 @@ export function ClassPaymentReceiptPrintModal({
           <h3
             id="receipt-preview-title"
             className="text-white"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.08em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.04em' }}
           >
             {paymentUid}
           </h3>

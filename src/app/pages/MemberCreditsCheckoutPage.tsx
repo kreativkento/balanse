@@ -81,7 +81,7 @@ function SectionCard({
       <div className="border-b border-[#D4CDB5]/45 bg-[#FBF9F3]/80 px-4 py-3 sm:px-5">
         <p
           className="text-[#1E2A35] leading-none"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.06em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}
         >
           {title}
         </p>
@@ -272,7 +272,7 @@ export default function MemberCreditsCheckoutPage() {
           </div>
           <h1
             className="text-[#1E2A35] mb-2"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem', letterSpacing: '0.04em' }}
           >
             Submitted for review
           </h1>
@@ -297,7 +297,7 @@ export default function MemberCreditsCheckoutPage() {
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen pb-40 lg:pb-10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-[#D4CDB5]/60">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3 min-w-0">
@@ -315,11 +315,8 @@ export default function MemberCreditsCheckoutPage() {
                 </p>
                 <h1
                   className="text-[#1E2A35] leading-none truncate"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: 'clamp(1.5rem, 4vw, 2.1rem)',
-                    letterSpacing: '0.05em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)',
+                    letterSpacing: '0.04em' }}
                 >
                   {resubmitPaymentId ? 'Resubmit payment' : 'Payment verification'}
                 </h1>
@@ -367,7 +364,7 @@ export default function MemberCreditsCheckoutPage() {
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8A7E6E]">Amount due</span>
                   <span
                     className="leading-none tabular-nums text-[#c49a3c]"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.85rem' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em',  fontSize: '1.85rem' }}
                   >
                     ₱{amount.toLocaleString()}
                   </span>
@@ -461,7 +458,7 @@ export default function MemberCreditsCheckoutPage() {
                       <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                         <p
                           className="text-[#1E2A35] tabular-nums"
-                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem' }}
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em',  fontSize: '1.15rem' }}
                         >
                           {channel.accountNumber}
                         </p>
@@ -473,7 +470,7 @@ export default function MemberCreditsCheckoutPage() {
                       <span className="text-[10px] font-bold uppercase text-[#9A8E7E]">Send exactly</span>
                       <span
                         className="text-[#c49a3c] tabular-nums"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.65rem' }}
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em',  fontSize: '1.65rem' }}
                       >
                         ₱{amount.toLocaleString()}
                       </span>
@@ -556,11 +553,8 @@ export default function MemberCreditsCheckoutPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p
                       className="text-[#1E2A35] leading-none"
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '1.1rem',
-                        letterSpacing: '0.06em',
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem',
+                        letterSpacing: '0.05em' }}
                     >
                       Transaction details
                     </p>

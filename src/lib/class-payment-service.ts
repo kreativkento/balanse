@@ -18,7 +18,8 @@ export type PaymentEscrowState =
 export interface ClassPaymentDisplay {
   id: string;
   uid: string;
-  classId: string;
+  classId: string | null;
+  pricingOfferingId: string | null;
   accountId: string;
   status: ClassPaymentStatus;
   verified: boolean;
@@ -64,7 +65,8 @@ type FinalTransactionJoin = {
 type ClassPaymentRow = {
   id: string;
   uid: string;
-  class_id: string;
+  class_id: string | null;
+  pricing_offering_id: string | null;
   account_id: string;
   status: ClassPaymentStatus;
   verified: boolean;
@@ -92,6 +94,7 @@ type ClassPaymentRow = {
   review_note: string;
   created_at: string;
   classes: { name: string } | { name: string }[] | null;
+  pricing_offerings: { title: string } | { title: string }[] | null;
 };
 
 function extensionForProofFile(file: File): string {
@@ -309,10 +312,15 @@ function finalTransactionFromRow(row: ClassPaymentRow): FinalTransactionJoin {
 
 function mapPaymentRow(row: ClassPaymentRow, coachNames: string): ClassPaymentDisplay {
   const classJoin = row.classes;
+  const offeringJoin = row.pricing_offerings;
   const buyer = accountFromPaymentRow(row);
   const className = Array.isArray(classJoin)
-    ? classJoin[0]?.name ?? 'Class'
-    : classJoin?.name ?? 'Class';
+    ? classJoin[0]?.name
+    : classJoin?.name;
+  const offeringTitle = Array.isArray(offeringJoin)
+    ? offeringJoin[0]?.title
+    : offeringJoin?.title;
+  const itemName = className?.trim() || offeringTitle?.trim() || 'Payment';
 
   const finalTx = finalTransactionFromRow(row);
   const receiptFromFinal = finalTx != null;
@@ -321,6 +329,7 @@ function mapPaymentRow(row: ClassPaymentRow, coachNames: string): ClassPaymentDi
     id: row.id,
     uid: row.uid,
     classId: row.class_id,
+    pricingOfferingId: row.pricing_offering_id,
     accountId: row.account_id,
     status: row.status,
     verified: row.verified,
@@ -339,7 +348,7 @@ function mapPaymentRow(row: ClassPaymentRow, coachNames: string): ClassPaymentDi
     totalAmountDue: Number(row.total_amount_due),
     buyerName: buyer.name,
     buyerEmail: buyer.email,
-    serviceDescription: className,
+    serviceDescription: itemName,
     classStartsAt: row.class_starts_at,
     classEndsAt: row.class_ends_at,
     requestPhysicalReceipt: row.request_physical_receipt,
@@ -351,7 +360,7 @@ function mapPaymentRow(row: ClassPaymentRow, coachNames: string): ClassPaymentDi
       : null,
     reviewNote: row.review_note,
     createdAt: row.created_at,
-    className,
+    className: itemName,
     coachNames,
     studentPhotoUrl: '',
   };
@@ -408,6 +417,7 @@ const CLASS_PAYMENTS_SELECT = `
   id,
   uid,
   class_id,
+  pricing_offering_id,
   account_id,
   status,
   verified,
@@ -428,6 +438,7 @@ const CLASS_PAYMENTS_SELECT = `
   review_note,
   created_at,
   classes ( name ),
+  pricing_offerings ( title ),
   accounts!account_id (
     email,
     profiles_client ( name )
@@ -445,7 +456,7 @@ const CLASS_PAYMENTS_SELECT = `
 async function attachCoachNamesToPaymentRows(
   rows: ClassPaymentRow[],
 ): Promise<ClassPaymentDisplay[]> {
-  const classIds = [...new Set(rows.map((r) => r.class_id))];
+  const classIds = [...new Set(rows.map((r) => r.class_id).filter((id): id is string => Boolean(id)))];
   const coachByClass = new Map<string, string>();
 
   if (classIds.length > 0) {
@@ -485,7 +496,7 @@ async function attachCoachNamesToPaymentRows(
   }
 
   const displays = rows.map((row) =>
-    mapPaymentRow(row, coachByClass.get(row.class_id) ?? '—'),
+    mapPaymentRow(row, row.class_id ? coachByClass.get(row.class_id) ?? '—' : '—'),
   );
   return attachStudentProfilePhotos(displays);
 }
@@ -535,7 +546,8 @@ export async function fetchClassPaymentsForAdmin(): Promise<{
 
 export async function adminCreateClassPayment(input: {
   accountId: string;
-  classId: string;
+  classId?: string | null;
+  pricingOfferingId?: string | null;
   paymentChannelId: string;
   amountPaid: number;
   paymentReference?: string;
@@ -555,7 +567,8 @@ export async function adminCreateClassPayment(input: {
 }> {
   const { data, error } = await supabase.rpc('admin_create_class_payment', {
     p_account_id: input.accountId,
-    p_class_id: input.classId,
+    p_class_id: input.classId ?? null,
+    p_pricing_offering_id: input.pricingOfferingId ?? null,
     p_payment_channel_id: input.paymentChannelId,
     p_amount_paid: input.amountPaid,
     p_payment_reference: input.paymentReference ?? '',

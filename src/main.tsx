@@ -13,7 +13,7 @@ function ConfigError() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
         background: '#F8F3E8',
         color: '#1E2A35',
       }}

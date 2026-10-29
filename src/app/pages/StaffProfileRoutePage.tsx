@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router';
+import { ContentAreaFallback } from '../components/layout/PortalRouteOutlet';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import StaffCoachProfilePage from './StaffCoachProfilePage';
 import StaffProfilePage from './StaffProfilePage';
@@ -7,7 +8,7 @@ import StaffProfilePage from './StaffProfilePage';
 export default function StaffProfileRoutePage() {
   const { staffUser, staffAuthReady } = useStaffAuth();
 
-  if (!staffAuthReady) return null;
+  if (!staffAuthReady && !staffUser) return <ContentAreaFallback />;
   if (!staffUser) return <Navigate to="/staff-login" replace />;
 
   if (staffUser.staffType === 'Administrator') {

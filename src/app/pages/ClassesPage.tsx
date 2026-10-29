@@ -40,7 +40,7 @@ export default function ClassesPage() {
             <h2
               id="classes-sign-in-title"
               className="text-[#1E2A35] leading-none mb-2"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}
             >
               Sign in to book
             </h2>
@@ -75,11 +75,8 @@ export default function ClassesPage() {
           <PublicBreadcrumb parent="Our Classes" current="Class Schedules" parentTo="/classes" />
           <h1
             className="text-[#1E2A35] leading-none"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-              letterSpacing: '0.05em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+              letterSpacing: '0.04em' }}
           >
             Class Schedules
           </h1>

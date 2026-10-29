@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Calendar as CalendarIcon, Check, ChevronDown, Clock, Eye, Newspaper, Paperclip, Pause, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
+import { CategorizedAddFilter, type CategorizedFilterGroup } from '../components/filters/CategorizedAddFilter';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
 import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import {
   toastCreated,
   toastDeleted,
@@ -10,10 +13,14 @@ import {
   toastUpdated,
 } from '../../lib/operation-toast';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Switch } from '../components/ui/switch';
-import { IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 import {
   BULLETIN_POST_TYPES,
   BULLETIN_VISIBILITIES,
@@ -32,122 +39,44 @@ import {
   type BulletinVisibility,
 } from '../../lib/bulletin';
 
-type StatusFilter = 'featured' | 'pending';
-type ListTab = 'active' | 'inactive' | 'scheduled';
+type StatusFilter = 'active' | 'inactive' | 'scheduled' | 'featured' | 'pending';
 
-const LIST_TABS: { id: ListTab; label: string }[] = [
-  { id: 'active', label: 'Active Posts' },
-  { id: 'inactive', label: 'Inactive Posts' },
-  { id: 'scheduled', label: 'Scheduled Posts' },
-];
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  scheduled: 'Scheduled',
+  featured: 'Featured',
+  pending: 'Pending approval',
+};
 
-function postListTab(post: BulletinPost): ListTab {
+const TABLE_GRID =
+  'grid-cols-[5.75rem_minmax(0,2.4fr)_minmax(0,0.9fr)_minmax(0,0.95fr)_minmax(0,1.35fr)_minmax(0,1.1fr)]';
+
+function postMatchesStatus(post: BulletinPost, status: StatusFilter) {
+  if (status === 'featured') return Boolean(post.pinned);
+  if (status === 'pending') return !post.adminApproved;
+  return bulletinScheduleState(post) === status;
+}
+
+function postLifecycleLabel(post: BulletinPost) {
+  if (!post.adminApproved) return 'Pending approval';
   const state = bulletinScheduleState(post);
-  if (state === 'scheduled') return 'scheduled';
-  if (state === 'active') return 'active';
-  return 'inactive';
+  if (state === 'scheduled') return 'Scheduled';
+  if (state === 'active') return 'Active';
+  return 'Inactive';
 }
 
-function toggleValue<T>(list: T[], value: T): T[] {
-  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+function postLifecycleClass(post: BulletinPost) {
+  if (!post.adminApproved) return 'border-amber-200 bg-amber-50 text-amber-800';
+  const state = bulletinScheduleState(post);
+  if (state === 'scheduled') return 'border-sky-200 bg-sky-50 text-sky-700';
+  if (state === 'active') return 'border-green-200 bg-green-50 text-green-700';
+  return 'border-[#D4CDB5]/70 bg-[#EDE8D8] text-[#5A5048]';
 }
 
-function FilterDropdown<T extends string>({
-  label,
-  options,
-  selected,
-  onChange,
-  getLabel = (value) => value,
-}: {
-  label: string;
-  options: readonly T[];
-  selected: T[];
-  onChange: (next: T[]) => void;
-  getLabel?: (value: T) => string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [open]);
-
-  const summary =
-    selected.length === 0
-      ? `All ${label.toLowerCase()}`
-      : selected.length === 1
-        ? getLabel(selected[0])
-        : `${selected.length} selected`;
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((current) => !current)}
-        className={`flex h-9 min-w-[9.5rem] items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all ${
-          selected.length > 0
-            ? 'border-[#c49a3c]/45 bg-[#c49a3c]/10 text-[#a67f2e]'
-            : 'border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/35'
-        }`}
-      >
-        <span className="text-[10px] uppercase tracking-widest text-[#B0A898]">{label}</span>
-        <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
-        {selected.length > 0 && (
-          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c49a3c] px-1 text-[9px] text-white">
-            {selected.length}
-          </span>
-        )}
-        <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          aria-multiselectable="true"
-          className="absolute left-0 top-full z-30 mt-1.5 w-56 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1.5 shadow-[0_8px_28px_rgba(30,42,53,0.16)]"
-        >
-          <button
-            type="button"
-            onClick={() => onChange([])}
-            className="mb-0.5 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold text-[#c49a3c] transition-colors hover:bg-[#F5F2E8]"
-          >
-            All {label.toLowerCase()}
-          </button>
-          {options.map((option) => {
-            const isSelected = selected.includes(option);
-            return (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => onChange(toggleValue(selected, option))}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
-                  isSelected ? 'bg-[#c49a3c]/12 text-[#1E2A35]' : 'text-[#5A5048] hover:bg-[#F5F2E8]'
-                }`}
-              >
-                <span
-                  className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${
-                    isSelected ? 'border-[#c49a3c] bg-[#c49a3c] text-white' : 'border-[#D4CDB5]'
-                  }`}
-                >
-                  {isSelected && <span className="block h-1.5 w-1.5 rounded-[1px] bg-white" />}
-                </span>
-                {getLabel(option)}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+function matchesSelected<T>(selected: T[], predicate: (value: T) => boolean) {
+  if (selected.length === 0) return true;
+  return selected.some(predicate);
 }
 
 const FORM_AUDIENCES: BulletinVisibility[] = ['public', 'private', 'staff', 'user', 'coach'];
@@ -429,132 +358,7 @@ function formFromPost(post: BulletinPost): FormState {
   };
 }
 
-const BULLETIN_PAGE_CONTAINER = 'mx-auto w-full min-w-0 max-w-7xl px-6';
-const POST_CARD_CLASS = 'group relative h-[92px] w-full min-w-0 shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-white shadow-sm transition-colors hover:border-[#c49a3c]/50 hover:shadow-md';
-const POST_CARD_OVERLAY = 'pointer-events-none absolute inset-0 z-10 bg-[#c49a3c]/14 opacity-0 transition-opacity duration-200 group-hover:opacity-100';
-
-function PendingApprovalList({
-  posts,
-  onSelect,
-}: {
-  posts: BulletinPost[];
-  onSelect: (post: BulletinPost) => void;
-}) {
-  const [page, setPage] = useState(1);
-  const { containerRef, pageSize } = useFitPageSize({ layout: 'bulletin-card', fallback: 5 });
-
-  useEffect(() => {
-    setPage(1);
-  }, [posts.length]);
-
-  const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pageStart = (currentPage - 1) * pageSize;
-  const pagePosts = posts.slice(pageStart, pageStart + pageSize);
-  const rangeStart = posts.length === 0 ? 0 : pageStart + 1;
-  const rangeEnd = posts.length === 0 ? 0 : pageStart + pagePosts.length;
-
-  return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <header className="mb-4 flex shrink-0 items-end justify-between gap-3">
-        <div className="min-w-0">
-          <span className="text-xs uppercase tracking-widest text-[#8A7E6E]">Queue</span>
-          <h2
-            className="mt-0.5 leading-none text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 2.4vw, 1.8rem)', letterSpacing: '0.04em' }}
-          >
-            Pending Approval
-          </h2>
-        </div>
-        <span className="rounded-full bg-[#EDE8D8] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#5A5048]">
-          {posts.length}
-        </span>
-      </header>
-
-      {posts.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#D4CDB5]/70 bg-white px-6 text-center shadow-sm">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D4CDB5]/60 bg-[#F8F3E8]">
-            <Check size={18} className="text-[#c49a3c]" />
-          </div>
-          <p className="text-sm font-semibold text-[#1E2A35]">No pending posts</p>
-          <p className="max-w-xs text-xs text-[#8A7E6E]">
-            Posts waiting for admin approval will appear here.
-          </p>
-        </div>
-      ) : (
-        <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
-          {pagePosts.map((post) => {
-            const audience = BULLETIN_VISIBILITY_META[post.visibility];
-            const displayImage = bulletinDisplayImageUrl(post);
-            return (
-              <article
-                key={post.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelect(post)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    onSelect(post);
-                  }
-                }}
-                className={POST_CARD_CLASS}
-              >
-                <div className={POST_CARD_OVERLAY} />
-                <div className="flex h-full min-w-0 items-stretch">
-                  <div
-                    className="relative w-[4.75rem] shrink-0 overflow-hidden sm:w-24"
-                    style={{ backgroundColor: post.imageColor }}
-                  >
-                    {displayImage ? (
-                      <img src={displayImage} alt="" className={`absolute inset-0 h-full w-full object-cover ${IMAGE_HOVER_ZOOM}`} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <Newspaper size={16} className="text-white/70" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2">
-                    <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${post.badgeColor}`}>
-                        {post.badgeText}
-                      </span>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${audience.badgeClass}`}>
-                        {audience.label}
-                      </span>
-                      <span className="ml-auto hidden shrink-0 font-semibold tracking-wide text-[#5A5048] sm:inline text-[10px]">
-                        {post.uid}
-                      </span>
-                    </div>
-                    <h3
-                      className="truncate leading-tight text-[#1E2A35]"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.04em' }}
-                    >
-                      {post.title}
-                    </h3>
-                    <p className="truncate text-[11px] text-[#8A7E6E]">
-                      Submitted {formatBulletinDateTime(post.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-
-      <AdminTablePagination
-        page={currentPage}
-        totalPages={totalPages}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={posts.length}
-        noun="posts"
-        onPageChange={setPage}
-      />
-    </div>
-  );
-}
+const BULLETIN_PAGE_CONTAINER = 'mx-auto w-full min-w-0 max-w-8xl px-4 md:px-6';
 
 function ReadOnlyField({
   label,
@@ -578,12 +382,14 @@ function ReadOnlyField({
 function PendingPostViewModal({
   post,
   actionBusy,
+  canApprove,
   onClose,
   onEdit,
   onApprovalAction,
 }: {
   post: BulletinPost;
   actionBusy: ApprovalAction | null;
+  canApprove: boolean;
   onClose: () => void;
   onEdit: () => void;
   onApprovalAction: (action: ApprovalAction) => void;
@@ -611,12 +417,12 @@ function PendingPostViewModal({
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 bg-white px-6 pb-4 pt-5">
           <h3
             className="flex min-w-0 flex-wrap items-center gap-2.5 text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
           >
             <span>{post.uid}</span>
             <span
               className="inline-flex items-center gap-1 rounded-full bg-[#EDE8D8] px-2 py-0.5 text-[10px] font-semibold tracking-normal text-[#5A5048]"
-              style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', letterSpacing: '0.04em' }}
+              style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', letterSpacing: '0.05em' }}
             >
               <Eye size={11} />
               View Mode
@@ -633,15 +439,17 @@ function PendingPostViewModal({
               Edit
             </button>
             <div className="flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] p-1">
-              <button
-                type="button"
-                disabled={headerBusy}
-                onClick={() => setPendingAction('approve')}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#1E2A35] px-3 text-xs font-semibold text-white transition-all hover:bg-[#263545] disabled:opacity-60"
-              >
-                <Check size={12} />
-                Approve
-              </button>
+              {canApprove && (
+                <button
+                  type="button"
+                  disabled={headerBusy}
+                  onClick={() => setPendingAction('approve')}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#1E2A35] px-3 text-xs font-semibold text-white transition-all hover:bg-[#263545] disabled:opacity-60"
+                >
+                  <Check size={12} />
+                  Approve
+                </button>
+              )}
               <button
                 type="button"
                 disabled={headerBusy}
@@ -807,7 +615,7 @@ function ConfirmActionDialog({
         </div>
         <h3
           className="mb-2 text-[#1E2A35]"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.04em' }}
         >
           {copy.title}
         </h3>
@@ -876,6 +684,7 @@ function PostFormModal({
   onClose,
   onSave,
   onApprovalAction,
+  canApprove = false,
 }: {
   initial?: BulletinPost | null;
   saving: boolean;
@@ -885,6 +694,7 @@ function PostFormModal({
   onClose: () => void;
   onSave: (data: FormState) => void;
   onApprovalAction?: (action: ApprovalAction) => void;
+  canApprove?: boolean;
 }) {
   const [form, setForm] = useState<FormState>(() => (initial ? formFromPost(initial) : emptyForm()));
   const [error, setError] = useState('');
@@ -988,7 +798,7 @@ function PostFormModal({
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 bg-white px-6 pb-4 pt-5">
           <h3
             className="flex min-w-0 flex-wrap items-center gap-2.5 text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
           >
             <span>{isExisting ? initial?.uid : 'Add Post'}</span>
             {isExisting && (
@@ -998,7 +808,7 @@ function PostFormModal({
                     ? 'bg-[#c49a3c]/15 text-[#a67f2e]'
                     : 'bg-[#EDE8D8] text-[#5A5048]'
                 }`}
-                style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', letterSpacing: '0.04em' }}
+                style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', letterSpacing: '0.05em' }}
               >
                 {editingActive ? <Pencil size={11} /> : <Eye size={11} />}
                 {editingActive ? 'Edit Mode' : 'View Mode'}
@@ -1026,7 +836,7 @@ function PostFormModal({
                   {editingActive ? 'Cancel Edit' : 'Edit'}
                 </button>
                 <div className="flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] p-1">
-                  {isApproved ? (
+                  {canApprove && isApproved && (
                     <button
                       type="button"
                       disabled={headerBusy}
@@ -1036,7 +846,8 @@ function PostFormModal({
                       <Pause size={12} />
                       Hold
                     </button>
-                  ) : (
+                  )}
+                  {canApprove && !isApproved && (
                     <button
                       type="button"
                       disabled={headerBusy}
@@ -1344,8 +1155,8 @@ export default function AdminBulletinPage() {
   const [selectedCategories, setSelectedCategories] = useState<BulletinPostType[]>([]);
   const [selectedVisibilities, setSelectedVisibilities] = useState<BulletinVisibility[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<StatusFilter[]>([]);
-  const [listTab, setListTab] = useState<ListTab>('active');
   const [page, setPage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [editingPost, setEditingPost] = useState<BulletinPost | null>(null);
   const [viewingPost, setViewingPost] = useState<BulletinPost | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1354,7 +1165,7 @@ export default function AdminBulletinPage() {
   const [actionBusy, setActionBusy] = useState<ApprovalAction | null>(null);
   const [formError, setFormError] = useState('');
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const { containerRef, pageSize } = useFitPageSize({ layout: 'bulletin-card', fallback: 5 });
+  const { containerRef, pageSize } = useFitPageSize({ layout: 'table', fallback: 8 });
 
   useEffect(() => {
     if (!adminUser) navigate('/admin-login');
@@ -1368,42 +1179,80 @@ export default function AdminBulletinPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedCategories, selectedVisibilities, selectedStatuses, listTab, urlSearchQuery]);
+  }, [selectedCategories, selectedVisibilities, selectedStatuses, urlSearchQuery]);
+
+  const canApprovePosts = adminUser?.role === 'admin';
+
+  const pendingCount = useMemo(
+    () => posts.filter((post) => !post.adminApproved).length,
+    [posts],
+  );
+
+  const filterGroups = useMemo<CategorizedFilterGroup[]>(() => {
+    const statusCounts: Record<StatusFilter, number> = {
+      active: 0,
+      inactive: 0,
+      scheduled: 0,
+      featured: 0,
+      pending: pendingCount,
+    };
+    for (const post of posts) {
+      if (post.pinned) statusCounts.featured += 1;
+      const state = bulletinScheduleState(post);
+      if (state === 'active' || state === 'inactive' || state === 'scheduled') {
+        statusCounts[state] += 1;
+      }
+    }
+    return [
+      {
+        id: 'type',
+        label: 'Type',
+        options: BULLETIN_POST_TYPES.map((type) => ({ value: type, label: type })),
+      },
+      {
+        id: 'audience',
+        label: 'Audience',
+        options: BULLETIN_VISIBILITIES.map((visibility) => ({
+          value: visibility,
+          label: BULLETIN_VISIBILITY_META[visibility].label,
+        })),
+      },
+      {
+        id: 'status',
+        label: 'Status',
+        options: (Object.keys(STATUS_FILTER_LABELS) as StatusFilter[]).map((status) => ({
+          value: status,
+          label: STATUS_FILTER_LABELS[status],
+          count: statusCounts[status],
+          tone: status === 'pending' ? 'warning' : 'default',
+        })),
+      },
+    ];
+  }, [pendingCount, posts]);
+
+  const selectedFilters: Record<string, string[]> = {
+    type: selectedCategories,
+    audience: selectedVisibilities,
+    status: selectedStatuses,
+  };
 
   const hasActiveFilters =
     selectedCategories.length > 0 || selectedVisibilities.length > 0 || selectedStatuses.length > 0;
 
   const filtered = useMemo(() => {
     const q = urlSearchQuery.trim().toLowerCase();
-    const inTab = posts.filter((post) => postListTab(post) === listTab);
-    const withQuery = !q
-      ? inTab
-      : inTab.filter(
-          (post) =>
-            post.title.toLowerCase().includes(q)
-            || post.body.toLowerCase().includes(q),
-        );
-    if (
-      selectedCategories.length === 0
-      && selectedVisibilities.length === 0
-      && selectedStatuses.length === 0
-    ) {
-      return withQuery;
-    }
-    return withQuery.filter((post) => {
-      if (selectedCategories.includes(post.category)) return true;
-      if (selectedVisibilities.includes(post.visibility)) return true;
-      if (selectedStatuses.includes('featured') && Boolean(post.pinned)) return true;
-      if (selectedStatuses.includes('pending') && !post.adminApproved) return true;
-      return false;
+    const matched = posts.filter((post) => {
+      if (q && !post.title.toLowerCase().includes(q) && !post.body.toLowerCase().includes(q)) {
+        return false;
+      }
+      return (
+        matchesSelected(selectedCategories, (category) => post.category === category)
+        && matchesSelected(selectedVisibilities, (visibility) => post.visibility === visibility)
+        && matchesSelected(selectedStatuses, (status) => postMatchesStatus(post, status))
+      );
     });
-  }, [posts, listTab, selectedCategories, selectedVisibilities, selectedStatuses, urlSearchQuery]);
-
-  const tabCounts = useMemo(() => {
-    const counts: Record<ListTab, number> = { active: 0, inactive: 0, scheduled: 0 };
-    for (const post of posts) counts[postListTab(post)] += 1;
-    return counts;
-  }, [posts]);
+    return sortChronologically(matched, (post) => post.postedAt, chronoOrder);
+  }, [posts, selectedCategories, selectedVisibilities, selectedStatuses, urlSearchQuery, chronoOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -1411,15 +1260,28 @@ export default function AdminBulletinPage() {
   const pagePosts = filtered.slice(pageStart, pageStart + pageSize);
   const rangeStart = filtered.length === 0 ? 0 : pageStart + 1;
   const rangeEnd = filtered.length === 0 ? 0 : pageStart + pagePosts.length;
-  const pendingPosts = useMemo(
-    () => posts.filter((post) => !post.adminApproved),
-    [posts],
-  );
 
-  const clearFilters = () => {
-    setSelectedCategories([]);
-    setSelectedVisibilities([]);
-    setSelectedStatuses([]);
+  const applyFilterChange = (next: Record<string, string[]>) => {
+    setSelectedCategories((next.type ?? []) as BulletinPostType[]);
+    setSelectedVisibilities((next.audience ?? []) as BulletinVisibility[]);
+    setSelectedStatuses((next.status ?? []) as StatusFilter[]);
+  };
+
+  const togglePendingFilter = () => {
+    setSelectedStatuses((current) => (
+      current.includes('pending')
+        ? current.filter((status) => status !== 'pending')
+        : [...current, 'pending']
+    ));
+  };
+
+  const openPost = (post: BulletinPost) => {
+    if (!post.adminApproved) {
+      setViewingPost(post);
+      return;
+    }
+    setFormStartEditing(false);
+    setEditingPost(post);
   };
 
   const closeModal = () => {
@@ -1441,7 +1303,7 @@ export default function AdminBulletinPage() {
       visibility: data.visibility,
       pinned: data.pinned,
       isActive: data.isActive,
-      adminApproved: adminUser.role === 'admin',
+      adminApproved: canApprovePosts,
       postedAt: data.postedAt,
       activeUntil: data.activeUntil,
       imageFile: data.imageFile,
@@ -1465,7 +1327,9 @@ export default function AdminBulletinPage() {
       return;
     }
     closeModal();
-    const successMessage = editingPost ? 'Post updated.' : 'Post saved.';
+    const successMessage = editingPost
+      ? (canApprovePosts ? 'Post updated.' : 'Post updated and sent for admin approval.')
+      : (canApprovePosts ? 'Post saved.' : 'Post submitted for admin approval.');
     setNotice({ type: 'success', message: successMessage });
     if (editingPost) {
       toastUpdated('Bulletin post');
@@ -1478,6 +1342,7 @@ export default function AdminBulletinPage() {
   const handleApprovalAction = async (action: ApprovalAction, post?: BulletinPost | null) => {
     const target = post ?? editingPost ?? viewingPost;
     if (!target) return;
+    if ((action === 'approve' || action === 'hold') && !canApprovePosts) return;
     setActionBusy(action);
     setFormError('');
 
@@ -1544,6 +1409,7 @@ export default function AdminBulletinPage() {
         <PendingPostViewModal
           post={viewingPost}
           actionBusy={actionBusy}
+          canApprove={canApprovePosts}
           onClose={() => setViewingPost(null)}
           onEdit={() => {
             setFormStartEditing(true);
@@ -1569,230 +1435,162 @@ export default function AdminBulletinPage() {
             void handleSavePost(data);
           }}
           onApprovalAction={editingPost ? (action) => { void handleApprovalAction(action); } : undefined}
+          canApprove={canApprovePosts}
         />
       )}
 
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className={`${BULLETIN_PAGE_CONTAINER} flex flex-1 min-h-0 overflow-hidden py-5`}>
-          <section className="flex min-h-0 w-full flex-1 overflow-hidden">
-            <div className="flex w-[50%] min-w-0 flex-col overflow-hidden">
-              {formError && (
-                <div className="mb-3 shrink-0 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
-                  {formError}
-          </div>
-              )}
-
-              <div className="mb-3 flex w-full shrink-0 gap-1 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
-                {LIST_TABS.map((tab) => (
-                <button
-                    key={tab.id}
-                  type="button"
-                    onClick={() => setListTab(tab.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold transition-all ${
-                      listTab === tab.id
-                      ? 'bg-[#1E2A35] text-white shadow-sm'
-                      : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                  }`}
-                >
-                    <span className="truncate">{tab.label}</span>
-                    <span
-                      className={`rounded-full px-1.5 text-[10px] tabular-nums ${
-                        listTab === tab.id ? 'bg-white/20 text-white' : 'bg-[#EDE8D8] text-[#8A7E6E]'
-                      }`}
-                    >
-                      {tabCounts[tab.id]}
-                    </span>
-                </button>
-              ))}
-            </div>
-
-              <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <FilterDropdown
-                    label="Type"
-                    options={BULLETIN_POST_TYPES}
-                    selected={selectedCategories}
-                    onChange={setSelectedCategories}
-                  />
-                  <FilterDropdown
-                    label="Reach"
-                    options={BULLETIN_VISIBILITIES}
-                    selected={selectedVisibilities}
-                    onChange={setSelectedVisibilities}
-                    getLabel={(visibility) => BULLETIN_VISIBILITY_META[visibility].label}
-                  />
-                  <FilterDropdown
-                    label="Status"
-                    options={['featured', 'pending'] as const}
-                    selected={selectedStatuses}
-                    onChange={setSelectedStatuses}
-                    getLabel={(status) => (status === 'featured' ? 'Featured' : 'Pending')}
-                  />
-                  {hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="text-[11px] font-semibold text-[#8A7E6E] underline-offset-2 hover:text-[#1E2A35] hover:underline"
-                    >
-                      Clear
-                    </button>
-                  )}
-          </div>
-                <button
-                  type="button"
-                  onClick={openAddPost}
-                  className="action-button flex shrink-0 items-center gap-2 rounded-full bg-[#1E2A35] px-5 py-2.5 text-white shadow-sm transition-all hover:bg-[#263545] active:scale-[0.97]"
-                 
-                >
-                  <Plus size={15} />
-                  Add Post
-                </button>
-              </div>
-          {filtered.length === 0 ? (
-                <div
-                  ref={containerRef}
-                  className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-[#D4CDB5]/60 bg-white px-6 text-center shadow-sm"
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D4CDB5]/60 bg-[#F8F3E8]">
-                    <Newspaper size={18} className="text-[#c49a3c]" />
-              </div>
-                  <p className="text-sm font-semibold text-[#1E2A35]">{loading ? 'Loading posts…' : 'No posts found'}</p>
-                  <p className="max-w-sm text-xs text-[#8A7E6E]">
-                    {loading
-                      ? 'Fetching bulletin posts from the studio database.'
-                      : hasActiveFilters
-                        ? 'No posts match the selected filters. Clear a chip or try another combination.'
-                        : 'Create your first bulletin post for members and the public site.'}
-                  </p>
-                  {!loading && !hasActiveFilters && (
-              <button
-                type="button"
-                      onClick={openAddPost}
-                      className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#D4CDB5]/70 bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1E2A35] transition-all hover:border-[#c49a3c]/40 hover:bg-[#F8F3E8]"
-              >
-                      <Plus size={13} />
-                Add Post
-              </button>
-                  )}
-        </div>
-          ) : (
-                <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
-                  {pagePosts.map((post) => {
-                    const audience = BULLETIN_VISIBILITY_META[post.visibility];
-                    const displayImage = bulletinDisplayImageUrl(post);
-                    const schedule = bulletinScheduleState(post);
-                    return (
-                <article
-                  key={post.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          setFormStartEditing(false);
-                          setEditingPost(post);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            setFormStartEditing(false);
-                            setEditingPost(post);
-                          }
-                        }}
-                        className={POST_CARD_CLASS}
-                      >
-                        <div className={POST_CARD_OVERLAY} />
-                        <div className="flex h-full min-w-0 items-stretch">
-                          <div
-                            className="relative w-[4.75rem] shrink-0 overflow-hidden sm:w-24"
-                      style={{ backgroundColor: post.imageColor }}
-                    >
-                            {displayImage ? (
-                              <img src={displayImage} alt="" className={`absolute inset-0 h-full w-full object-cover ${IMAGE_HOVER_ZOOM}`} />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                                <Newspaper size={18} className="text-white/70" />
-          </div>
-                      )}
-                    </div>
-                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2">
-                            <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${post.badgeColor}`}>
-                          {post.badgeText}
-                        </span>
-                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${audience.badgeClass}`}>
-                                {audience.label}
-                              </span>
-                              {post.pinned && (
-                                <span className="shrink-0 rounded-full bg-[#c49a3c]/12 px-2 py-0.5 text-[10px] font-bold text-[#a67f2e]">
-                                  Featured
-                                </span>
-                              )}
-                              {schedule === 'pending' && (
-                                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                                  Pending
-                                </span>
-                              )}
-                              {schedule === 'scheduled' && (
-                                <span className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
-                                  Scheduled
-                                </span>
-                              )}
-                              {schedule === 'inactive' && (
-                                <span className="shrink-0 rounded-full border border-[#D4CDB5]/70 bg-[#EDE8D8] px-2 py-0.5 text-[10px] font-bold text-[#5A5048]">
-                                  Inactive
-                                </span>
-                              )}
-                              <span className="ml-auto hidden shrink-0 items-center gap-2 text-[10px] text-[#B0A898] sm:flex">
-                                <span className="font-semibold tracking-wide text-[#5A5048]">{post.uid}</span>
-                                <span className="flex items-center gap-1">
-                                  <CalendarIcon size={10} />
-                          {post.date}
-                                </span>
-                        </span>
-                      </div>
-                      <h2
-                              className="truncate leading-tight text-[#1E2A35]"
-                        style={{
-                          fontFamily: "'Bebas Neue', sans-serif",
-                                fontSize: '1.05rem',
-                          letterSpacing: '0.04em',
-                        }}
-                      >
-                        {post.title}
-                      </h2>
-                            <p className="truncate text-xs text-[#8A7E6E]">
-                              {post.excerpt}
-                              {post.attachmentName ? ` · ${post.attachmentName}` : ''}
-          </p>
-        </div>
-      </div>
-                </article>
-                    );
-                  })}
+        <div className={`${BULLETIN_PAGE_CONTAINER} flex flex-1 min-h-0 flex-col overflow-hidden pb-5 pt-1`}>
+          {formError && (
+            <div className="mb-3 shrink-0 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+              {formError}
             </div>
           )}
 
-              <AdminTablePagination
-                page={currentPage}
-                totalPages={totalPages}
-                rangeStart={rangeStart}
-                rangeEnd={rangeEnd}
-                total={filtered.length}
-                noun="posts"
-                onPageChange={setPage}
+          <PortalTitleToolbar>
+            <CategorizedAddFilter
+              groups={filterGroups}
+              selected={selectedFilters}
+              onChange={applyFilterChange}
+            />
+            {pendingCount > 0 && (
+              <button
+                type="button"
+                onClick={togglePendingFilter}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                  selectedStatuses.includes('pending')
+                    ? 'border-amber-300 bg-amber-50 text-amber-800'
+                    : 'border-amber-200 bg-white text-amber-800 hover:bg-amber-50'
+                }`}
+              >
+                Pending approval
+                <span className="rounded-full bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-amber-900">
+                  {pendingCount}
+                </span>
+              </button>
+            )}
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              <ChronologicalSortSelect
+                value={chronoOrder}
+                onChange={(order) => {
+                  setChronoOrder(order);
+                  setPage(1);
+                }}
               />
+              <span className="text-sm text-[#8A7E6E] whitespace-nowrap">
+                {filtered.length} of {posts.length} posts
+              </span>
+              <button
+                type="button"
+                onClick={openAddPost}
+                className="action-button flex shrink-0 items-center gap-2 rounded-full bg-[#1E2A35] px-5 py-2.5 text-white shadow-sm transition-all hover:bg-[#263545] active:scale-[0.97]"
+              >
+                <Plus size={15} />
+                Add Post
+              </button>
+            </div>
+          </PortalTitleToolbar>
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
+            <div className={`grid gap-x-4 ${TABLE_GRID} shrink-0 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 px-6 py-3`}>
+              {['UID', 'Title', 'Type', 'Audience', 'Status', 'Posted'].map((heading) => (
+                <p key={heading} className="text-xs font-medium uppercase tracking-widest text-[#8A7E6E]">
+                  {heading}
+                </p>
+              ))}
             </div>
 
-            <div className="flex w-[5%] shrink-0 items-stretch justify-center" aria-hidden="true">
-              <div className="w-px self-stretch bg-[#D4CDB5]/70" />
-            </div>
+            {loading ? (
+              <div
+                ref={containerRef}
+                className="min-h-0 flex-1 overflow-auto px-6 py-4"
+                role="status"
+                aria-live="polite"
+                aria-label="Loading bulletin posts"
+              >
+                <ContentSkeleton variant="list" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div
+                ref={containerRef}
+                className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center"
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D4CDB5]/60 bg-[#F8F3E8]">
+                  <Newspaper size={18} className="text-[#c49a3c]" />
+                </div>
+                <p className="text-sm font-semibold text-[#1E2A35]">No posts found</p>
+                <p className="max-w-sm text-xs text-[#8A7E6E]">
+                  {hasActiveFilters
+                    ? 'No posts match the selected filters. Clear a chip or try another combination.'
+                    : 'Create your first bulletin post for members and the public site.'}
+                </p>
+                {!hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={openAddPost}
+                    className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#D4CDB5]/70 bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1E2A35] transition-all hover:border-[#c49a3c]/40 hover:bg-[#F8F3E8]"
+                  >
+                    <Plus size={13} />
+                    Add Post
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div ref={containerRef} className="min-h-0 flex-1 divide-y divide-[#D4CDB5]/30">
+                {pagePosts.map((post) => {
+                  const audience = BULLETIN_VISIBILITY_META[post.visibility];
+                  return (
+                    <div
+                      key={post.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openPost(post)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openPost(post);
+                        }
+                      }}
+                      className={`grid min-h-[64px] cursor-pointer items-center gap-x-4 ${TABLE_GRID} px-6 py-3.5 transition-colors hover:bg-[#F8F3E8]/50`}
+                    >
+                      <span className="truncate text-xs font-semibold tracking-wide text-[#5A5048]">{post.uid}</span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#1E2A35]">{post.title}</p>
+                        <p className="truncate text-xs text-[#8A7E6E]">{post.excerpt}</p>
+                      </div>
+                      <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-bold ${post.badgeColor}`}>
+                        {post.badgeText}
+                      </span>
+                      <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-bold ${audience.badgeClass}`}>
+                        {audience.label}
+                      </span>
+                      <div className="flex min-w-0 flex-wrap items-center gap-1">
+                        <span className={`w-fit rounded-full border px-2 py-0.5 text-[10px] font-bold ${postLifecycleClass(post)}`}>
+                          {postLifecycleLabel(post)}
+                        </span>
+                        {post.pinned && (
+                          <span className="w-fit rounded-full bg-[#c49a3c]/12 px-2 py-0.5 text-[10px] font-bold text-[#a67f2e]">
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm text-[#5A5048]">{post.date}</span>
+                    </div>
+                  );
+                })}
+        </div>
+            )}
+          </div>
 
-            <aside className="flex w-[45%] min-w-0 flex-col overflow-hidden">
-              <PendingApprovalList
-                posts={pendingPosts}
-                onSelect={setViewingPost}
-              />
-            </aside>
-        </section>
+          <AdminTablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={filtered.length}
+            noun="posts"
+            onPageChange={setPage}
+          />
         </div>
       </div>
     </>

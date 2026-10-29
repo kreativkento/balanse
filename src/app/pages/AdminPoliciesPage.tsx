@@ -6,6 +6,7 @@ import { Check, Loader2, RotateCcw } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useAdminHeaderActions } from '../context/AdminHeaderActionsContext';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import {
   fetchStudioPolicySettings,
   STUDIO_POLICY_DEFAULTS,
@@ -242,15 +243,19 @@ export default function AdminPoliciesPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-16 flex items-center justify-center gap-2 text-[#8A7E6E] text-sm">
-        <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-        Loading policy settings…
+      <div
+        className="max-w-8xl mx-auto px-6 py-8"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading policy settings"
+      >
+        <ContentSkeleton variant="form" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-8xl mx-auto px-6 py-8">
       {hasChanges && !saved && (
         <div className="sticky top-0 z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#c49a3c]/40 bg-[#FFF9EE] px-4 py-3 shadow-sm">
           <p className="text-[#8a6824] text-sm font-semibold">You have unsaved policy changes.</p>

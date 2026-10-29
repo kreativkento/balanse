@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowLeft, Eye, EyeOff, AlertCircle, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { passwordInputGuardProps } from '../components/auth/password-input-guards';
@@ -8,7 +8,9 @@ const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const redirectFrom = (location.state as { from?: string } | null)?.from;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +46,11 @@ export default function LoginPage() {
     try {
       const result = await login(email.trim(), password);
       if (result.success) {
-        navigate(result.profileComplete ? '/dashboard' : '/profile');
+        if (redirectFrom?.startsWith('/')) {
+          navigate(redirectFrom, { replace: true });
+        } else {
+          navigate(result.profileComplete ? '/dashboard' : '/profile');
+        }
       } else {
         setError(result.error || 'Login failed. Please try again.');
       }
@@ -87,7 +93,7 @@ export default function LoginPage() {
                 <div className="mt-auto">
                   <h1
                     className="text-[#1E2A35] leading-tight"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.05em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}
                   >
                     Welcome Back
                   </h1>

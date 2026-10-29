@@ -2,12 +2,21 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Search, Pencil, Trash2, X, Plus,
-  Activity, CalendarDays, Mail, Phone, MapPin, Globe,
+  Activity, CalendarDays, Mail, Phone, MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { toastOperationFailed, toastUpdated } from '../../lib/operation-toast';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { PROFILE_COMPLETE_FILTER_GROUP } from '../components/filters/status-filter-groups';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import {
   deleteManagedAccount,
@@ -28,7 +37,6 @@ const EMPTY_FORM = {
   name: '',
   email: '',
   phone: '',
-  nationality: '',
   province: '',
   city: '',
   barangay: '',
@@ -188,10 +196,6 @@ function ClientProfileModal({
                   <MapPin size={13} className="text-[#c49a3c] shrink-0 mt-0.5" />
                   <span>{formatClientLocation(student) || 'Not provided'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                  <Globe size={13} className="text-[#c49a3c] shrink-0" />
-                  <span>{student.nationality || 'Not provided'}</span>
-                </div>
               </div>
             </div>
 
@@ -231,7 +235,7 @@ function ClientProfileModal({
                     </div>
                     <p
                       className="text-[#1E2A35] leading-none"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.04em' }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
                     >
                       {metric.value}
                     </p>
@@ -294,7 +298,8 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
   const [students, setStudents] = useState<ClientDirectoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterProfile, setFilterProfile] = useState<'All' | 'Complete' | 'Incomplete'>('All');
+  const [profileFilters, setProfileFilters] = useState<string[]>([]);
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClientDirectoryItem | null>(null);
@@ -324,18 +329,16 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return students.filter((s) => {
+    const matched = students.filter((s) => {
       const matchSearch =
         s.name.toLowerCase().includes(q)
         || s.email.toLowerCase().includes(q)
         || s.phone.toLowerCase().includes(q);
-      const matchProfile =
-        filterProfile === 'All'
-        || (filterProfile === 'Complete' && s.profileComplete)
-        || (filterProfile === 'Incomplete' && !s.profileComplete);
-      return matchSearch && matchProfile;
+      const profileValue = s.profileComplete ? 'complete' : 'incomplete';
+      return matchSearch && matchesAnySelected(profileFilters, profileValue);
     });
-  }, [students, search, filterProfile]);
+    return sortAlphabetically(matched, (s) => s.name, alphaOrder);
+  }, [students, search, profileFilters, alphaOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -348,7 +351,7 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
 
   useEffect(() => {
     setPage(1);
-  }, [search, filterProfile]);
+  }, [search, profileFilters, alphaOrder]);
 
   useEffect(() => {
     setDeleteConfirmInput('');
@@ -371,7 +374,6 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
       name: student.name,
       email: student.email,
       phone: student.phone,
-      nationality: student.nationality,
       province: student.province,
       city: student.city,
       barangay: student.barangay,
@@ -397,7 +399,6 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      nationality: form.nationality.trim(),
       province: form.province.trim(),
       city: form.city.trim(),
       barangay: form.barangay.trim(),
@@ -441,14 +442,11 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
   const inputClass =
     "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]";
 
-  const PROFILE_FILTERS = ['All', 'Complete', 'Incomplete'] as const;
-
   return (
     <>
-      <div className="h-full min-h-0 overflow-hidden flex flex-col">
-      <div className="max-w-7xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col">
-        <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
-          <div className="relative flex-1 max-w-sm">
+      <div className="max-w-8xl mx-auto px-6 pb-8 pt-1 w-full flex-1 min-h-0 flex flex-col">
+        <PortalTitleToolbar>
+          <div className="relative flex-1 max-w-sm min-w-[200px]">
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
             <input
               type="text"
@@ -458,17 +456,12 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
               className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
             />
           </div>
-          <div className="flex items-center gap-2">
-            {PROFILE_FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilterProfile(f)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${filterProfile === f ? 'bg-[#1E2A35] text-white' : 'bg-white border border-[#D4CDB5]/60 text-[#8A7E6E] hover:border-[#c49a3c]/40 hover:text-[#1E2A35]'}`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+          <CategorizedAddFilter
+            groups={[PROFILE_COMPLETE_FILTER_GROUP]}
+            selected={{ profile: profileFilters }}
+            onChange={(next) => setProfileFilters(next.profile ?? [])}
+          />
+          <AlphabeticalSortSelect value={alphaOrder} onChange={setAlphaOrder} />
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
               {filtered.length} of {students.length} clients
@@ -477,14 +470,14 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
               <button
                 type="button"
                 onClick={openAdd}
-                className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
+                className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full text-sm hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm"
               >
                 <Plus size={16} className="shrink-0" />
                 <span>Add Client</span>
               </button>
             )}
           </div>
-        </div>
+        </PortalTitleToolbar>
 
         <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
           <div
@@ -503,7 +496,9 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
           </div>
 
           {loading ? (
-            <div ref={containerRef} className="flex-1 min-h-0 px-6 py-12 text-center text-[#B0A898] text-sm">Loading clients…</div>
+            <div ref={containerRef} className="flex-1 min-h-0 overflow-auto px-6 py-4" role="status" aria-live="polite" aria-label="Loading clients">
+              <ContentSkeleton variant="list" />
+            </div>
           ) : filtered.length === 0 ? (
             <div ref={containerRef} className="flex-1 min-h-0 px-6 py-12 text-center text-[#B0A898] text-sm">No clients match your search.</div>
           ) : (
@@ -587,7 +582,6 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
           onPageChange={setPage}
         />
       </div>
-      </div>
 
       {viewingStudent && (
         <ClientProfileModal student={viewingStudent} onClose={() => setViewingStudent(null)} />
@@ -614,7 +608,7 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
               <h3
                 id="delete-client-title"
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 Delete client account?
               </h3>
@@ -671,7 +665,7 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
             <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between">
               <h3
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 {editingId ? 'Edit Client' : 'Add Client'}
               </h3>
@@ -694,11 +688,6 @@ export default function AdminStudentsPage({ viewOnly = false }: { viewOnly?: boo
               <div>
                 <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Phone</label>
                 <input type="text" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+63 917 000 0000" className={inputClass} />
-              </div>
-
-              <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Nationality</label>
-                <input type="text" value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} placeholder="Filipino" className={inputClass} />
               </div>
 
               <div>

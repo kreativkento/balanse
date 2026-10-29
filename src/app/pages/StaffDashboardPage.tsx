@@ -6,12 +6,12 @@ import {
   ChevronRight,
   Clock,
   LayoutGrid,
-  Loader2,
   SendHorizonal,
   Users,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { STAFF_PAGE_CONTAINER } from '../lib/staff-page-meta';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import {
   fetchCoachAssignedClassDisplays,
   fetchClassesForStaffSchedule,
@@ -26,6 +26,10 @@ import {
   type PortalRequestStatus,
 } from '../../lib/portal-request-service';
 import { toast } from 'sonner';
+import {
+  DashboardWeekdayChart,
+  weekdayCountsFromIsoDates,
+} from '../components/dashboard/DashboardWeekdayChart';
 
 const DASHBOARD_CLASS_DETAIL_TOAST = 'Go to my classes to view class details';
 
@@ -46,10 +50,7 @@ const CLASS_COLOR_FALLBACK: Record<string, string> = {
   'Personal Coaching': '#a67f2e',
 };
 
-const bebas = {
-  fontFamily: "'Bebas Neue', sans-serif",
-  letterSpacing: '0.05em',
-} as const;
+const headingType = { fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' } as const;
 
 function phDateKey(iso: string | Date): string {
   const date = typeof iso === 'string' ? new Date(iso) : iso;
@@ -142,7 +143,7 @@ function StatCard({
         <p className="truncate text-[#8A7E6E] text-[11px] uppercase tracking-widest">{label}</p>
         <p
           className="text-[#1E2A35] leading-none tabular-nums"
-          style={{ ...bebas, fontSize: '1.65rem' }}
+          style={{ ...headingType, fontSize: '1.65rem' }}
         >
           {value}
         </p>
@@ -189,7 +190,7 @@ function Panel({
             {tone === 'requests' ? (
               <SendHorizonal size={14} className="shrink-0 text-amber-600" aria-hidden />
             ) : null}
-            <h2 className="truncate text-[#1E2A35]" style={{ ...bebas, fontSize: '1.15rem' }}>
+            <h2 className="truncate text-[#1E2A35]" style={{ ...headingType, fontSize: '1.15rem' }}>
               {title}
             </h2>
           </div>
@@ -433,7 +434,7 @@ export default function StaffDashboardPage() {
   return (
     <>
       <div
-        className={`${STAFF_PAGE_CONTAINER} flex h-full min-h-0 flex-col gap-4 overflow-hidden py-4 md:py-5`}
+        className={`${STAFF_PAGE_CONTAINER} flex h-full min-h-0 flex-col gap-4 overflow-y-auto py-4 md:py-5`}
       >
         {loadError ? (
           <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-red-800 text-sm">
@@ -441,6 +442,52 @@ export default function StaffDashboardPage() {
             <span className="truncate">{loadError}</span>
           </div>
         ) : null}
+
+        <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <Link
+            to="/staff-my-classes"
+            className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#1E2A35] shadow-sm hover:bg-[#F8F3E8]"
+          >
+            My classes
+          </Link>
+          <Link
+            to="/staff-time-slots"
+            className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#1E2A35] shadow-sm hover:bg-[#F8F3E8]"
+          >
+            Time slots
+          </Link>
+          <Link
+            to="/staff-class-schedule"
+            className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#1E2A35] shadow-sm hover:bg-[#F8F3E8]"
+          >
+            Class schedule
+          </Link>
+          <Link
+            to="/staff-requests"
+            className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#1E2A35] shadow-sm hover:bg-[#F8F3E8]"
+          >
+            Requests
+          </Link>
+          <Link
+            to="/staff-availability"
+            className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#1E2A35] shadow-sm hover:bg-[#F8F3E8]"
+          >
+            Availability
+          </Link>
+          <Link
+            to="/staff-profile"
+            className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-4 py-3 text-sm font-semibold text-[#1E2A35] shadow-sm hover:bg-[#F8F3E8]"
+          >
+            My profile
+          </Link>
+        </div>
+
+        <DashboardWeekdayChart
+          data={weekdayCountsFromIsoDates(assignedClasses.map((row) => row.startsAt))}
+          loading={loading}
+          title="Your assigned week"
+          hint="Sessions on your roster by weekday"
+        />
 
         <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-3">
           <StatCard
@@ -463,9 +510,13 @@ export default function StaffDashboardPage() {
         </div>
 
         {loading ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-[#8A7E6E]">
-            <Loader2 size={28} className="animate-spin text-[#c49a3c]" />
-            <p className="text-sm">Loading your dashboard…</p>
+          <div
+            className="min-h-0 flex-1 overflow-auto"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading your dashboard"
+          >
+            <ContentSkeleton />
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-3 lg:gap-5 lg:overflow-hidden">

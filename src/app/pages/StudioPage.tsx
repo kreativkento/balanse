@@ -325,11 +325,8 @@ export default function StudioPage() {
           <PublicBreadcrumb parent="Our Studio" current="Amenities" parentTo="/studio" />
           <h1
             className="text-[#1E2A35] leading-none"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-              letterSpacing: '0.05em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+              letterSpacing: '0.04em' }}
           >
             Amenities
           </h1>
@@ -429,7 +426,7 @@ export default function StudioPage() {
                   <p className="text-[#8A7E6E] text-[0.65rem] uppercase tracking-widest mb-1">Studio Details</p>
                   <h2
                     className="text-[#1E2A35] leading-none mb-3"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.05em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.04em' }}
                   >
                     {STUDIO_DETAILS.name}
                   </h2>
@@ -483,11 +480,8 @@ export default function StudioPage() {
               <div className="flex items-center gap-3 mb-4 px-1">
                 <h2
                   className="text-[#1E2A35]"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
-                    letterSpacing: '0.06em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
+                    letterSpacing: '0.04em' }}
                 >
                   What this space offers
                 </h2>
@@ -517,11 +511,8 @@ export default function StudioPage() {
             <div className="flex items-center gap-3 mb-4 px-1">
               <h2
                 className="text-[#1E2A35]"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
-                  letterSpacing: '0.06em',
-                }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
+                  letterSpacing: '0.04em' }}
               >
                 Studio Gallery
               </h2>
@@ -612,11 +603,8 @@ export default function StudioPage() {
                   type="button"
                   onClick={() => setShowMore((v) => !v)}
                   className="flex items-center gap-2 px-7 py-3 rounded-full border-2 border-[#c49a3c] text-[#c49a3c] hover:bg-[#c49a3c] hover:text-white active:scale-95 transition-all"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1rem',
-                    letterSpacing: '0.1em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem',
+                    letterSpacing: '0.05em' }}
                 >
                   {showMore ? 'See Less' : `See More  (+${extraCount})`}
                 </button>

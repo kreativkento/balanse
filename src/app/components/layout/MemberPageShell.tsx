@@ -1,12 +1,12 @@
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { MemberGreetingHeader } from './DashboardGreetingBar';
 import { useAuth } from '../../context/AuthContext';
+import { usePortalSearchOverride } from '../../context/PortalChromeContext';
 import { CURRENT_DOCUMENTS, memberNeedsReaccept } from '../../../lib/member-documents';
 
-/** Shared member content column: full-width on phones, capped at 1152px when wide. */
+/** Shared member content column. Bottom inset comes from the portal main gutter. */
 export const MEMBER_PAGE_COLUMN =
-  'max-w-6xl mx-auto w-full min-w-0 px-4 md:px-8 pb-16';
+  'max-w-8xl mx-auto w-full min-w-0 px-4 md:px-8';
 
 interface MemberPageShellProps {
   children: ReactNode;
@@ -14,7 +14,6 @@ interface MemberPageShellProps {
   onSearch?: (query: string) => void;
   /** Override default immediate logout (e.g. show a confirm modal). */
   onLogout?: () => void;
-  header?: ReactNode;
   className?: string;
   /**
    * Dashboard only: fill viewport below the header on md+.
@@ -23,7 +22,7 @@ interface MemberPageShellProps {
   viewportBody?: 'desktop';
 }
 
-function DocumentReacceptBanner() {
+export function DocumentReacceptBanner() {
   const { user } = useAuth();
   const profile = user?.profile;
   const needed = memberNeedsReaccept({
@@ -53,53 +52,29 @@ function DocumentReacceptBanner() {
   );
 }
 
-function PageHeader({
-  header,
-  searchPlaceholder,
-  onSearch,
-  onLogout,
-}: Pick<MemberPageShellProps, 'header' | 'searchPlaceholder' | 'onSearch' | 'onLogout'>) {
-  return (
-    <div>
-      {header ?? (
-        <MemberGreetingHeader
-          searchPlaceholder={searchPlaceholder}
-          onSearch={onSearch}
-          onLogout={onLogout}
-        />
-      )}
-      <DocumentReacceptBanner />
-    </div>
-  );
-}
-
 /**
- * Standard chrome for MemberSidebar pages:
- * `bg` + `max-w-6xl mx-auto px-4 md:px-8 pb-16` + greeting bar.
+ * Standard content column for member pages. Greeting and subnav stay in MemberSidebar.
  */
 export function MemberPageShell({
   children,
   searchPlaceholder,
   onSearch,
-  onLogout,
-  header,
   className = '',
   viewportBody,
 }: MemberPageShellProps) {
+  usePortalSearchOverride(
+    onSearch || searchPlaceholder
+      ? { onSearch, placeholder: searchPlaceholder }
+      : null,
+  );
+
   if (viewportBody === 'desktop') {
     return (
       <div className="min-h-full bg-[#F8F3E8] md:flex md:h-0 md:min-h-0 md:flex-1 md:flex-col">
-        {/* Same MEMBER_PAGE_COLUMN wrapper as every other page — only the children slot fills on desktop */}
         <div
-          className={`${MEMBER_PAGE_COLUMN} md:grid md:h-full md:min-h-0 md:flex-1 md:grid-rows-[auto_minmax(0,1fr)] md:pb-3${className ? ` ${className}` : ''}`}
+          className={`${MEMBER_PAGE_COLUMN} md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col${className ? ` ${className}` : ''}`}
         >
-          <PageHeader
-            header={header}
-            searchPlaceholder={searchPlaceholder}
-            onSearch={onSearch}
-            onLogout={onLogout}
-          />
-          <div className="min-h-0 md:h-full">
+          <div className="min-h-0 md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col">
             {children}
           </div>
         </div>
@@ -110,12 +85,6 @@ export function MemberPageShell({
   return (
     <div className="bg-[#F8F3E8] min-h-full">
       <div className={`${MEMBER_PAGE_COLUMN}${className ? ` ${className}` : ''}`}>
-        <PageHeader
-          header={header}
-          searchPlaceholder={searchPlaceholder}
-          onSearch={onSearch}
-          onLogout={onLogout}
-        />
         {children}
       </div>
     </div>

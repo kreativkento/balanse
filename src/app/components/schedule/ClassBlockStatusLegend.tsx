@@ -3,7 +3,7 @@ import { CLASS_BLOCK_STATUS_LEGEND } from '../../../lib/admin-schedule-map';
 /** `status_block` swatches for admin class schedule & time blocking toolbars. */
 export function ClassBlockStatusLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div className="hidden md:flex flex-wrap items-center gap-x-3 gap-y-1">
       {CLASS_BLOCK_STATUS_LEGEND.map(({ status, label, color }) => (
         <span
           key={status}

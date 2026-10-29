@@ -9,11 +9,8 @@ export default function GuidelinesPage() {
           <PublicBreadcrumb parent="Our Studio" current="Guidelines" parentTo="/studio" />
           <h1
             className="text-[#1E2A35] leading-none"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-              letterSpacing: '0.05em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+              letterSpacing: '0.04em' }}
           >
             Studio Guidelines
           </h1>
@@ -36,11 +33,8 @@ export default function GuidelinesPage() {
                 </div>
                 <h2
                   className="text-[#1E2A35] leading-none"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.25rem',
-                    letterSpacing: '0.05em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem',
+                    letterSpacing: '0.05em' }}
                 >
                   {title}
                 </h2>

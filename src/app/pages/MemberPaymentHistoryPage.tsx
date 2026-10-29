@@ -11,7 +11,13 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import {
@@ -106,14 +112,17 @@ export default function MemberPaymentHistoryPage() {
 
   const filteredOfficialReceipts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return officialReceipts;
-    return officialReceipts.filter((row) =>
-      `${row.orNumber} ${row.title} ${row.subtitle} ${row.kind}`.toLowerCase().includes(q),
-    );
-  }, [officialReceipts, search]);
+    return officialReceipts.filter((row) => {
+      const matchQuery =
+        !q
+        || `${row.orNumber} ${row.title} ${row.subtitle} ${row.kind}`.toLowerCase().includes(q);
+      return matchQuery && matchesAnySelected(sourceFilters, row.kind);
+    });
+  }, [officialReceipts, search, sourceFilters]);
 
   const [tablePage, setTablePage] = useState(1);
-  const { containerRef: tableContainerRef, pageSize: fitPageSize } = useFitPageSize({
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [sourceFilters, setSourceFilters] = useState<string[]>([]);
     layout: 'table',
     fallback: 6,
     itemHeightOverride: 73,
@@ -123,7 +132,7 @@ export default function MemberPaymentHistoryPage() {
   useEffect(() => {
     setTablePage(1);
   }, [search]);
-
+  }, [search, chronoOrder, sourceFilters]);
   const totalPages = Math.max(1, Math.ceil(filteredOfficialReceipts.length / tablePageSize));
   const currentPage = Math.min(tablePage, totalPages);
   const rangeStart =
@@ -307,7 +316,21 @@ export default function MemberPaymentHistoryPage() {
                 {loading ? (
                   <div className="flex flex-1 items-center justify-center px-6 py-8">
                     <div className="text-center">
-                      <Clock size={24} className="mx-auto text-[#c49a3c] mb-3 animate-pulse" />
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <CategorizedAddFilter
+                        groups={[{
+                          id: 'source',
+                          label: 'Source',
+                          options: [
+                            { value: 'class_drop_in', label: 'Drop-in' },
+                            { value: 'subscription', label: 'Credit pack' },
+                          ],
+                        }]}
+                        selected={{ source: sourceFilters }}
+                        onChange={(next) => setSourceFilters(next.source ?? [])}
+                      />
+                      <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+                    </div>
                       <p className="text-[#8A7E6E] text-sm">Loading billing records…</p>
                     </div>
                   </div>
@@ -380,7 +403,7 @@ export default function MemberPaymentHistoryPage() {
                 )}
               </div>
             </div>
-          )}
+                        total={orderedReceipts.length}
         </div>
       </MemberPageShell>
     </>

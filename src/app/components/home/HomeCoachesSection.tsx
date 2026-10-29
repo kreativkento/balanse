@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Search, Star, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Users } from 'lucide-react';
 import { fetchPublicCoaches, type PublicCoachProfile } from '../../../lib/admin-service';
 import { CoachProfileModal } from '../coaches/CoachProfileModal';
 import { DisciplineChip, DisciplineCountChip } from '../disciplines/DisciplineChip';
@@ -43,13 +43,6 @@ function infoMotion(reduce: boolean) {
   };
 }
 
-function ratingFromCoachId(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  const score = 4.3 + (hash % 70) / 100;
-  return Math.min(5, score).toFixed(1);
-}
-
 export function HomeCoachesSection() {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
@@ -77,7 +70,6 @@ export function HomeCoachesSection() {
   const info = infoMotion(!!reduceMotion);
 
   const selected = coaches.find((coach) => coach.id === selectedId) ?? coaches[0] ?? null;
-  const selectedRating = selected ? ratingFromCoachId(selected.id) : '0.0';
   const selectedIndex = selected ? coaches.findIndex((coach) => coach.id === selected.id) : -1;
 
   const pageCount = Math.max(1, Math.ceil(coaches.length / COACHES_PER_PAGE));
@@ -113,11 +105,8 @@ export function HomeCoachesSection() {
           <p className="text-[#c49a3c] text-xs uppercase tracking-[0.22em] font-semibold mb-2">Our coaches</p>
           <h2
             className="text-[#1E2A35] leading-none"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
-              letterSpacing: '0.05em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
+              letterSpacing: '0.04em' }}
           >
             Choose your guide
           </h2>
@@ -200,7 +189,7 @@ export function HomeCoachesSection() {
                     >
                       <span
                         className="text-white/35"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '6rem', letterSpacing: '0.08em' }}
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '6rem', letterSpacing: '0.04em' }}
                       >
                         {selected.initials}
                       </span>
@@ -221,65 +210,39 @@ export function HomeCoachesSection() {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={selected.id}
-                className="mt-4 flex items-start justify-between gap-4 px-1 md:mt-5"
+                className="mt-4 flex flex-col items-start gap-3 px-1 md:mt-5"
                 variants={info.group}
                 initial="hidden"
                 animate="show"
                 exit="hide"
               >
-                <motion.div variants={info.item} className="flex min-w-0 flex-col items-start gap-3">
-                  <h3
-                    className="text-[#1E2A35] leading-none"
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: 'clamp(2rem, 4vw, 2.8rem)',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {coachLabel(selected.name)}
-                  </h3>
-                  {selected.classes.length > 0 && (
-                    <div className="flex flex-wrap justify-start gap-2">
-                      {selected.classes.slice(0, 4).map((discipline) => (
-                        <DisciplineChip key={discipline} name={discipline} color={selected.color} />
-                      ))}
-                      {selected.classes.length > 4 && (
-                        <DisciplineCountChip count={selected.classes.length - 4} />
-                      )}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setProfileOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#1E2A35] text-white px-4 py-2 text-xs font-semibold hover:bg-[#263545] transition-colors"
-                  >
-                    <Search size={14} />
-                    Coach's Profile
-                  </button>
-                </motion.div>
-
-                <motion.div
+                <motion.h3
                   variants={info.item}
-                  className="flex shrink-0 flex-col items-center"
-                  aria-label={`Rated ${selectedRating} out of 5`}
+                  className="text-[#1E2A35] leading-none"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4vw, 2.8rem)',
+                    letterSpacing: '0.04em' }}
                 >
-                  <div className="flex min-w-[4.75rem] items-center justify-center rounded-2xl border-2 border-[#D4CDB5] bg-white/60 px-3.5 py-5 md:min-w-[5.25rem] md:px-4">
-                    <span
-                      className="tabular-nums leading-none text-[#1E2A35]"
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: 'clamp(2.5rem, 6vw, 3.4rem)',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      {selectedRating}
-                    </span>
-                  </div>
-                  <span className="mt-2 flex items-center gap-1.5 text-[0.8125rem] font-bold uppercase tracking-[0.12em] text-[#8A7E6E]">
-                    <Star size={14} className="fill-[#C49A3C] text-[#C49A3C]" strokeWidth={0} />
-                    Rating
-                  </span>
-                </motion.div>
+                  {coachLabel(selected.name)}
+                </motion.h3>
+                {selected.classes.length > 0 && (
+                  <motion.div variants={info.item} className="flex flex-wrap justify-start gap-2">
+                    {selected.classes.slice(0, 4).map((discipline) => (
+                      <DisciplineChip key={discipline} name={discipline} color={selected.color} />
+                    ))}
+                    {selected.classes.length > 4 && (
+                      <DisciplineCountChip count={selected.classes.length - 4} />
+                    )}
+                  </motion.div>
+                )}
+                <motion.button
+                  variants={info.item}
+                  type="button"
+                  onClick={() => setProfileOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#1E2A35] text-white px-4 py-2 text-xs font-semibold hover:bg-[#263545] transition-colors"
+                >
+                  <Search size={14} />
+                  Coach's Profile
+                </motion.button>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -334,12 +297,9 @@ export function HomeCoachesSection() {
                             style={{ backgroundColor: `${coach.color}22` }}
                           >
                             <span
-                              style={{
-                                fontFamily: "'Bebas Neue', sans-serif",
-                                fontSize: '1.6rem',
-                                letterSpacing: '0.06em',
-                                color: coach.color,
-                              }}
+                              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem',
+                                letterSpacing: '0.04em',
+                                color: coach.color }}
                             >
                               {coach.initials}
                             </span>
@@ -362,11 +322,8 @@ export function HomeCoachesSection() {
                         <div className="absolute inset-x-0 bottom-0 p-2.5">
                           <p
                             className="truncate leading-none text-white"
-                            style={{
-                              fontFamily: "'Bebas Neue', sans-serif",
-                              fontSize: '1.05rem',
-                              letterSpacing: '0.04em',
-                            }}
+                            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem',
+                              letterSpacing: '0.05em' }}
                           >
                             {coachLabel(coach.name)}
                           </p>

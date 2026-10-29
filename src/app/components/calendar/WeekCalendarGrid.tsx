@@ -139,7 +139,7 @@ export function WeekCalendarGrid({
                           ? 'text-[#8A6520]'
                           : 'text-[#1E2A35]'
                     }`}
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.03em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}
                   >
                     {date.getDate()}
                   </span>

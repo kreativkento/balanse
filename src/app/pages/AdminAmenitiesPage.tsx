@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import { Check, Loader2 } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import {
@@ -112,7 +113,7 @@ export default function AdminAmenitiesPage() {
 
   return (
     <div className="h-full min-h-0 overflow-hidden flex flex-col">
-      <div className="max-w-5xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col gap-5">
+      <div className="max-w-8xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col gap-5">
         <div className="shrink-0 rounded-2xl border border-[#D4CDB5]/60 bg-[#F8F3E8]/80 px-5 py-4">
           <p className="text-[#5A5048] text-sm leading-relaxed">
             Choose which amenities appear on the{' '}
@@ -126,9 +127,8 @@ export default function AdminAmenitiesPage() {
         </div>
 
         {loading ? (
-          <div className="flex flex-1 items-center justify-center gap-2 text-[#8A7E6E]">
-            <Loader2 size={18} className="animate-spin" />
-            <span className="text-sm">Loading amenities…</span>
+          <div className="flex-1 overflow-auto" role="status" aria-live="polite" aria-label="Loading amenities">
+            <ContentSkeleton variant="list" />
           </div>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pb-24">
@@ -171,7 +171,7 @@ export default function AdminAmenitiesPage() {
         )}
 
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#D4CDB5]/60 bg-white/95 backdrop-blur-sm px-6 py-4 md:pl-[calc(var(--admin-sidebar-width,16rem)+1.5rem)]">
-          <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-3">
+          <div className="max-w-8xl mx-auto flex flex-wrap items-center gap-3">
             <button
               type="button"
               disabled={loading || saving}

@@ -34,6 +34,6 @@ export function getStaffPageMeta(pathname: string): StaffPageMeta | null {
 }
 
 /** Match admin list/calendar pages: max width + horizontal padding. */
-export const STAFF_PAGE_CONTAINER = 'mx-auto w-full min-w-0 max-w-7xl px-6';
+export const STAFF_PAGE_CONTAINER = 'mx-auto w-full min-w-0 max-w-8xl px-4 md:px-6';
 
-export const STAFF_PAGE_CONTAINER_PADDED = `${STAFF_PAGE_CONTAINER} py-8`;
+export const STAFF_PAGE_CONTAINER_PADDED = `${STAFF_PAGE_CONTAINER} py-4 md:py-8`;

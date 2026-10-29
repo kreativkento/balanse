@@ -68,7 +68,7 @@ function FooterLinkColumn({
     <div>
       <h3
         className="text-white/90 text-[11px] uppercase tracking-[0.14em] mb-3"
-        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.95rem', letterSpacing: '0.12em' }}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.95rem', letterSpacing: '0.05em' }}
       >
         {title}
       </h3>

@@ -171,7 +171,7 @@ export function buildClassCancellationMemberEmail(input: {
     ? 'Class session cancelled'
     : 'Your class coach has changed';
   const lead = input.variant === 'class_cancelled'
-    ? 'We’re writing to let you know that the following class session has been cancelled.'
+    ? 'We’re writing to let you know that the following class session has been cancelled. A refund of your drop-in payment or session credit will be processed soon.'
     : 'The coach for your upcoming class session has changed. Your enrollment is still confirmed for the same date and time.';
   const coachRow = input.variant === 'coach_replaced' && input.replacementCoachName?.trim()
     ? `<p style="margin:10px 0 0;padding-top:10px;border-top:1px solid #E8E2D4;color:#5A5048;font-size:15px;line-height:1.5;"><strong style="color:#1E2A35;">New coach:</strong> ${escapeHtml(input.replacementCoachName.trim())}</p>`
@@ -206,6 +206,67 @@ export function buildClassCancellationMemberEmail(input: {
     : `Balansé — Coach update: ${input.className}`;
 
   return { subject, html };
+}
+
+export function buildHoldingPendingMemberEmail(input: {
+  memberName: string;
+  className: string;
+  disciplineName: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const html = wrapEmail({
+    siteUrl: input.siteUrl,
+    title: 'Possible change to your class',
+    body: `
+      <p style="margin:0 0 12px;color:#5A5048;font-size:15px;line-height:1.55;">Hi ${escapeHtml(input.memberName)},</p>
+      <p style="margin:0 0 18px;color:#5A5048;font-size:15px;line-height:1.55;">The studio is reviewing a schedule change for the class below. It may be assigned a new coach, or the session may be cancelled. Your booking stays in place until we confirm.</p>
+      ${classSessionDetailsBlock({
+        sectionLabel: 'Session',
+        className: input.className,
+        disciplineName: input.disciplineName,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+      })}
+      <p style="margin:20px 0 0;color:#5A5048;font-size:14px;line-height:1.55;">We’ll email you again when the studio confirms the outcome.</p>
+    `,
+    ctaLabel: 'Open My Classes',
+    ctaHref: `${input.siteUrl.replace(/\/$/, '')}/my-classes`,
+  });
+  return { subject: `Balansé — Schedule update pending: ${input.className}`, html };
+}
+
+export function buildHoldingRefundedMemberEmail(input: {
+  memberName: string;
+  className: string;
+  disciplineName: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  refundKind: 'credit' | 'cash' | string;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const refundLine = input.refundKind === 'credit'
+    ? 'Your session credit has been restored to your wallet with its original expiry.'
+    : 'Your drop-in payment has been approved for refund. If you paid by cash, the studio will complete the payout.';
+  const html = wrapEmail({
+    siteUrl: input.siteUrl,
+    title: 'Your refund is complete',
+    body: `
+      <p style="margin:0 0 12px;color:#5A5048;font-size:15px;line-height:1.55;">Hi ${escapeHtml(input.memberName)},</p>
+      <p style="margin:0 0 18px;color:#5A5048;font-size:15px;line-height:1.55;">The cancelled class below has been refunded. ${refundLine}</p>
+      ${classSessionDetailsBlock({
+        sectionLabel: 'Session',
+        className: input.className,
+        disciplineName: input.disciplineName,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+      })}
+    `,
+    ctaLabel: 'Open Billing',
+    ctaHref: `${input.siteUrl.replace(/\/$/, '')}/payment-history`,
+  });
+  return { subject: `Balansé — Refund processed: ${input.className}`, html };
 }
 
 function wrapEmail(input: {

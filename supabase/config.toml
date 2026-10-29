@@ -399,6 +399,9 @@ verify_jwt = false
 [functions.send-enrollment-cancellation-email]
 verify_jwt = true
 
+[functions.send-feedback-comment-email]
+verify_jwt = true
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

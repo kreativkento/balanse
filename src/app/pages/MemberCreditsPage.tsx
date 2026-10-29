@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertTriangle, BadgeCheck, CalendarDays, Coins, Loader2, Plus, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, BadgeCheck, CalendarDays, Coins, Plus, Sparkles, X } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { MemberReturnedPaymentResubmitModal } from '../components/payments/MemberReturnedPaymentResubmitModal';
 import {
   creditAllotmentStatus,
@@ -11,6 +12,12 @@ import {
 import { toast } from 'sonner';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import { CategorizedAddFilter } from '../components/filters/CategorizedAddFilter';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { useAuth } from '../context/AuthContext';
 import {
   fetchMemberCreditsOverview,
@@ -26,7 +33,6 @@ import {
   type SubscriptionPackagePaymentDisplay,
 } from '../../lib/subscription-package-payment-service';
 
-type CreditTxnFilter = 'all' | 'pending' | 'approved' | 'returned';
 type LedgerStatusTag = CreditAllotmentStatus | 'Pending' | 'Returned';
 
 const PH_TZ = 'Asia/Manila';
@@ -102,9 +108,10 @@ export default function MemberCreditsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [search, setSearch] = useState('');
-  const [creditTxnFilter, setCreditTxnFilter] = useState<CreditTxnFilter>('all');
+  const [creditTxnFilters, setCreditTxnFilters] = useState<string[]>([]);
   const [returnedCheckout, setReturnedCheckout] = useState<SubscriptionPackagePaymentDisplay | null>(null);
   const [tablePage, setTablePage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [loading, setLoading] = useState(true);
   const [creditBalance, setCreditBalance] = useState(0);
   const [ledgerTransactions, setLedgerTransactions] = useState<CreditTransactionDisplay[]>([]);
@@ -199,29 +206,34 @@ export default function MemberCreditsPage() {
       ...purchaseRequests.map(checkoutPaymentToTableRow),
       ...ledgerTransactions.map(ledgerTxnToTableRow),
     ];
-    rows.sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
     return rows;
   }, [purchaseRequests, ledgerTransactions]);
 
   const filteredCredits = useMemo(() => {
     let rows = creditTableRows;
-    if (creditTxnFilter === 'pending') {
-      rows = rows.filter((row) => row.statusTag === 'Pending');
-    } else if (creditTxnFilter === 'approved') {
+    if (creditTxnFilters.length > 0) {
       rows = rows.filter((row) =>
-        row.statusTag === 'Active' || row.statusTag === 'Consumed' || row.statusTag === 'Expired',
+        creditTxnFilters.some((id) => {
+          if (id === 'pending') return row.statusTag === 'Pending';
+          if (id === 'cleared') {
+            return row.statusTag === 'Active' || row.statusTag === 'Consumed' || row.statusTag === 'Expired';
+          }
+          if (id === 'returned') return row.statusTag === 'Returned';
+          return false;
+        }),
       );
-    } else if (creditTxnFilter === 'returned') {
-      rows = rows.filter((row) => row.statusTag === 'Returned');
     }
     const query = search.trim().toLowerCase();
     if (!query) return rows;
     return rows.filter((row) =>
       `${row.activityType} ${row.date} ${row.refId} ${row.statusTag} ${row.expiresAt}`.toLowerCase().includes(query),
     );
-  }, [search, creditTableRows, creditTxnFilter]);
+  }, [search, creditTableRows, creditTxnFilters]);
 
-  const activeRows = filteredCredits;
+  const activeRows = useMemo(
+    () => sortChronologically(filteredCredits, (row) => row.sortAt, chronoOrder),
+    [filteredCredits, chronoOrder],
+  );
 
   const { containerRef: tableBodyRef, pageSize: fitPageSize } = useFitPageSize({
     layout: 'table',
@@ -232,7 +244,7 @@ export default function MemberCreditsPage() {
 
   useEffect(() => {
     setTablePage(1);
-  }, [search, creditTxnFilter]);
+  }, [search, creditTxnFilters, chronoOrder]);
 
   const totalPages = Math.max(1, Math.ceil(activeRows.length / tablePageSize));
   const currentPage = Math.min(tablePage, totalPages);
@@ -241,8 +253,8 @@ export default function MemberCreditsPage() {
 
   const pagedCredits = useMemo(() => {
     const start = (currentPage - 1) * tablePageSize;
-    return filteredCredits.slice(start, start + tablePageSize);
-  }, [filteredCredits, currentPage, tablePageSize]);
+    return activeRows.slice(start, start + tablePageSize);
+  }, [activeRows, currentPage, tablePageSize]);
 
   const searchPlaceholder = 'Search credit activity…';
 
@@ -277,7 +289,7 @@ export default function MemberCreditsPage() {
               <h3
                 id="add-credits-title"
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.04em' }}
               >
                 Add credits
               </h3>
@@ -295,9 +307,8 @@ export default function MemberCreditsPage() {
                 Choose a membership or pack. Pay online and upload proof — credits apply after admin approval.
               </p>
               {packagesLoading ? (
-                <div className="flex items-center justify-center gap-2 py-10 text-[#8A7E6E] text-sm">
-                  <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-                  Loading packages…
+                <div role="status" aria-live="polite" aria-label="Loading packages">
+                  <ContentSkeleton variant="list" />
                 </div>
               ) : availablePackages.length === 0 ? (
                 <p className="text-center text-[#8A7E6E] text-sm py-10">No packages available right now.</p>
@@ -318,7 +329,7 @@ export default function MemberCreditsPage() {
                       <div className="flex items-center gap-3 shrink-0">
                         <p
                           className="text-[#1E2A35] tabular-nums"
-                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem' }}
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em',  fontSize: '1.25rem' }}
                         >
                           ₱{pkg.priceAmount.toLocaleString()}
                         </p>
@@ -354,11 +365,8 @@ export default function MemberCreditsPage() {
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Finances</p>
               <h2
                 className="text-[#1E2A35] leading-tight"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: 'clamp(1.25rem, 2.5vw, 1.65rem)',
-                  letterSpacing: '0.04em',
-                }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.25rem, 2.5vw, 1.65rem)',
+                  letterSpacing: '0.04em' }}
               >
                 Credits &amp; Pass
               </h2>
@@ -367,15 +375,6 @@ export default function MemberCreditsPage() {
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                title="Redeem codes — coming soon"
-                className={`${HEADER_OUTLINE_BTN} cursor-not-allowed text-[#9A8E7E] hover:bg-white disabled:opacity-100`}
-              >
-                Redeem
-              </button>
               <button type="button" onClick={openAddCredits} className={`action-button ${HEADER_OUTLINE_BTN}`}>
                 <Plus size={14} strokeWidth={2} aria-hidden />
                 Add credits
@@ -482,11 +481,8 @@ export default function MemberCreditsPage() {
               <div className="relative mt-2">
                 <p
                   className="text-white leading-tight truncate"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: 'clamp(1.35rem, 3.2vw, 1.65rem)',
-                    letterSpacing: '0.04em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.35rem, 3.2vw, 1.65rem)',
+                    letterSpacing: '0.04em' }}
                 >
                   {activeSubscription.packageName}
                 </p>
@@ -535,45 +531,27 @@ export default function MemberCreditsPage() {
               Credit activity
             </h3>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end min-w-0">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#8A7E6E] shrink-0">
-                Filter:
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {(
-                  [
-                    { id: 'all' as const, label: 'All' },
-                    { id: 'pending' as const, label: 'Pending' },
-                    { id: 'approved' as const, label: 'Cleared' },
-                    { id: 'returned' as const, label: 'Returned', count: returnedCount },
-                  ] as const
-                ).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setCreditTxnFilter(item.id)}
-                    className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold transition-all sm:text-[11px] ${
-                      creditTxnFilter === item.id
-                        ? 'bg-[#1E2A35] text-white'
-                        : 'bg-white border border-[#D4CDB5]/60 text-[#8A7E6E] hover:text-[#1E2A35]'
-                    }`}
-                  >
-                    {item.label}
-                    {'count' in item && item.count > 0 ? (
-                      <span className="ml-1 rounded-full bg-red-500 text-white px-1.5 py-px text-[9px]">
-                        {item.count}
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
+              <CategorizedAddFilter
+                groups={[{
+                  id: 'status',
+                  label: 'Status',
+                  options: [
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'cleared', label: 'Cleared' },
+                    { value: 'returned', label: 'Returned', count: returnedCount, tone: returnedCount > 0 ? 'warning' : 'default' },
+                  ],
+                }]}
+                selected={{ status: creditTxnFilters }}
+                onChange={(next) => setCreditTxnFilters(next.status ?? [])}
+              />
+              <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
             </div>
           </div>
 
           <div ref={tableBodyRef} className="min-h-0 flex-1 overflow-auto">
             {loading ? (
-              <div className="flex h-full items-center justify-center gap-2 px-5 py-6 text-[#8A7E6E] text-sm">
-                <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-                Loading…
+              <div className="px-5 py-4" role="status" aria-live="polite" aria-label="Loading credit activity">
+                <ContentSkeleton variant="list" />
               </div>
             ) : activeRows.length === 0 ? (
               <div className="flex h-full items-center justify-center px-5 py-6 text-[#8A7E6E] text-sm">

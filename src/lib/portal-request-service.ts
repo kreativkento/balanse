@@ -208,11 +208,20 @@ export function notifyPortalRequestsChanged(): void {
   }
 }
 
-export async function fetchPendingPortalRequestCount(): Promise<number> {
-  const { count, error } = await supabase
+export async function fetchPendingPortalRequestCount(
+  requestTypes?: PortalRequestType[],
+): Promise<number> {
+  let query = supabase
     .from('portal_requests')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'pending');
+  if (requestTypes?.length === 1) {
+    query = query.eq('request_type', requestTypes[0]);
+  } else if (requestTypes && requestTypes.length > 1) {
+    query = query.in('request_type', requestTypes);
+  }
+
+  const { count, error } = await query;
 
   if (error) {
     console.error('fetchPendingPortalRequestCount:', error.message);

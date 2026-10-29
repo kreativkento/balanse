@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Check, X, Search, Receipt,
@@ -7,7 +7,14 @@ import {
   ChevronRight, Plus, Lock, Timer, Wallet,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
+import { CategorizedAddFilter } from '../components/filters/CategorizedAddFilter';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { ProfileAvatar } from '../components/ProfileImages';
 import { toast } from 'sonner';
 import {
@@ -24,6 +31,10 @@ import {
 import { fetchSubscriptionPackagePaymentsForAdmin } from '../../lib/subscription-package-payment-service';
 import { fetchClientDirectory, type ClientDirectoryItem } from '../../lib/admin-service';
 import { fetchClassesForAdmin, type ClassDisplay } from '../../lib/class-service';
+import {
+  fetchPricingOfferingsForAdmin,
+  type PricingOfferingRecord,
+} from '../../lib/pricing-offering-service';
 import {
   fetchPaymentChannelsForAdmin,
   type PaymentChannelRecord,
@@ -55,6 +66,7 @@ interface Payment {
   proofOriginalFilename: string;
   proofStoragePath?: string;
   submittedAt: string;
+  sortAt: string;
   status: PaymentStatus;
   escrowState: PaymentEscrowState | null;
   refundableUntil: string | null;
@@ -66,6 +78,7 @@ interface Payment {
   receiptPrinted: boolean;
   receiptIssuedAt?: string;
   notes?: string;
+  isOffering: boolean;
 }
 
 const PH_TZ = 'Asia/Manila';
@@ -133,6 +146,7 @@ function classPaymentToPayment(row: ClassPaymentDisplay): Payment {
     date,
     time,
     coach: row.coachNames,
+    isOffering: Boolean(row.pricingOfferingId),
     amount: row.amountPaid,
     method,
     ref: row.paymentReference.trim() || row.uid,
@@ -140,6 +154,7 @@ function classPaymentToPayment(row: ClassPaymentDisplay): Payment {
     proofOriginalFilename: row.proofOriginalFilename?.trim() ?? '',
     proofStoragePath: row.proofStoragePath,
     submittedAt: formatSubmittedAt(row.createdAt),
+    sortAt: row.createdAt,
     status: row.status,
     escrowState: row.escrowState,
     refundableUntil: row.refundableUntil,
@@ -233,7 +248,7 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
         <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between">
           <div>
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Pending Payment</p>
-            <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+            <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>
               {payment.paymentUid}
             </h3>
           </div>
@@ -253,10 +268,18 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
           <div className="grid grid-cols-2 gap-4">
             <PaymentStudentContactPanel payment={payment} />
             <div className="bg-[#F8F3E8] rounded-2xl p-4 border border-[#D4CDB5]/40">
-              <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">Class</p>
+              <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">
+                {payment.isOffering ? 'Service' : 'Class'}
+              </p>
               <p className="text-[#1E2A35] text-sm font-semibold">{payment.class}</p>
-              <p className="text-[#9A8E7E] text-xs mt-0.5">{payment.date} · {payment.time}</p>
-              <p className="text-[#9A8E7E] text-xs">Coach: {payment.coach}</p>
+              {payment.isOffering ? (
+                <p className="text-[#9A8E7E] text-xs mt-0.5">Pricing catalog</p>
+              ) : (
+                <>
+                  <p className="text-[#9A8E7E] text-xs mt-0.5">{payment.date} · {payment.time}</p>
+                  <p className="text-[#9A8E7E] text-xs">Coach: {payment.coach}</p>
+                </>
+              )}
             </div>
           </div>
 
@@ -360,8 +383,17 @@ function PendingPaymentModal({ payment, onClose, onApprove, onReject }: {
                 <div>
                   <p className="text-green-800 text-sm font-semibold">Approve this payment?</p>
                   <p className="text-green-700 text-xs mt-0.5 leading-relaxed">
-                    This action is <span className="font-semibold">irreversible</span>. The student will be enrolled in{' '}
-                    <span className="font-semibold">{payment.class}</span>, a confirmation email and official e-receipt will be sent
+                    This action is <span className="font-semibold">irreversible</span>.{' '}
+                    {payment.isOffering ? (
+                      <>
+                        Payment for <span className="font-semibold">{payment.class}</span> will be verified
+                      </>
+                    ) : (
+                      <>
+                        The student will be enrolled in <span className="font-semibold">{payment.class}</span>
+                      </>
+                    )}
+                    , a confirmation email and official e-receipt will be sent
                     to <span className="font-semibold">{payment.email}</span>, and you can print a copy next.
                   </p>
                 </div>
@@ -612,7 +644,7 @@ function HistoryPaymentModal({
         <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between">
           <div>
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Payment Record</p>
-            <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+            <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>
               {payment.paymentUid}
             </h3>
           </div>
@@ -634,10 +666,18 @@ function HistoryPaymentModal({
           <div className="grid grid-cols-2 gap-4">
             <PaymentStudentContactPanel payment={payment} />
             <div className="bg-[#F8F3E8] rounded-2xl p-4 border border-[#D4CDB5]/40">
-              <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">Class</p>
+              <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">
+                {payment.isOffering ? 'Service' : 'Class'}
+              </p>
               <p className="text-[#1E2A35] text-sm font-semibold">{payment.class}</p>
-              <p className="text-[#9A8E7E] text-xs mt-0.5">{payment.date} · {payment.time}</p>
-              <p className="text-[#9A8E7E] text-xs">Coach: {payment.coach}</p>
+              {payment.isOffering ? (
+                <p className="text-[#9A8E7E] text-xs mt-0.5">Pricing catalog</p>
+              ) : (
+                <>
+                  <p className="text-[#9A8E7E] text-xs mt-0.5">{payment.date} · {payment.time}</p>
+                  <p className="text-[#9A8E7E] text-xs">Coach: {payment.coach}</p>
+                </>
+              )}
             </div>
           </div>
 
@@ -710,8 +750,6 @@ function HistoryPaymentModal({
 
 // ── Main Component ─────────────────────────────────────────────
 
-type LedgerTab = 'all' | 'held' | 'cleared' | 'voided';
-
 export default function AdminPaymentsPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
@@ -720,14 +758,16 @@ export default function AdminPaymentsPage() {
   const [packPayments, setPackPayments]   = useState<{ amountPaid: number; status: string; createdAt: string }[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentDomain, setPaymentDomain] = useState<'class' | 'credits'>('class');
-  const [ledgerTab, setLedgerTab]         = useState<LedgerTab>('all');
+  const [ledgerFilters, setLedgerFilters] = useState<string[]>([]);
   const [search, setSearch] = useAdminUrlSearchFilter();
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [selectedPending, setSelectedPending] = useState<Payment | null>(null);
   const [selectedHistory, setSelectedHistory] = useState<Payment | null>(null);
   const [printPayment, setPrintPayment]   = useState<Payment | null>(null);
   const [showAddRecord, setShowAddRecord] = useState(false);
   const [manualFormClients, setManualFormClients] = useState<ClientDirectoryItem[]>([]);
   const [manualFormClasses, setManualFormClasses] = useState<ClassDisplay[]>([]);
+  const [manualFormOfferings, setManualFormOfferings] = useState<PricingOfferingRecord[]>([]);
   const [manualFormChannels, setManualFormChannels] = useState<PaymentChannelRecord[]>([]);
   const [manualFormLoading, setManualFormLoading] = useState(false);
   const [refundBusyId, setRefundBusyId] = useState<string | null>(null);
@@ -746,13 +786,15 @@ export default function AdminPaymentsPage() {
     setShowAddRecord(true);
     setManualFormLoading(true);
     void (async () => {
-      const [clients, { data: classes }, { data: channels }] = await Promise.all([
+      const [clients, { data: classes }, { data: offerings }, { data: channels }] = await Promise.all([
         fetchClientDirectory(),
         fetchClassesForAdmin(),
+        fetchPricingOfferingsForAdmin(),
         fetchPaymentChannelsForAdmin(),
       ]);
       setManualFormClients(clients);
       setManualFormClasses(classes);
+      setManualFormOfferings(offerings);
       setManualFormChannels(channels);
       setManualFormLoading(false);
     })();
@@ -803,14 +845,29 @@ export default function AdminPaymentsPage() {
     };
   }, [adminUser]);
 
-  if (!adminUser) return null;
+  const ledgerRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const rows = payments.filter((payment) => {
+      const matchesSearch =
+        !query
+        || payment.student.toLowerCase().includes(query)
+        || payment.class.toLowerCase().includes(query)
+        || payment.ref.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+      if (ledgerFilters.length === 0) return true;
+      return ledgerFilters.some((id) => {
+        if (id === 'held') return isHeld(payment);
+        if (id === 'cleared') return isCleared(payment);
+        if (id === 'voided') return isVoided(payment);
+        return false;
+      });
+    });
+    return sortChronologically(rows, (payment) => payment.sortAt, chronoOrder);
+  }, [payments, search, ledgerFilters, chronoOrder]);
 
-  const filtered = (list: Payment[]) =>
-    list.filter(p =>
-      p.student.toLowerCase().includes(search.toLowerCase()) ||
-      p.class.toLowerCase().includes(search.toLowerCase()) ||
-      p.ref.toLowerCase().includes(search.toLowerCase())
-    );
+  const isHeldView = ledgerFilters.length === 1 && ledgerFilters[0] === 'held';
+
+  if (!adminUser) return null;
 
   const approvePayment = async (id: string) => {
     const result = await adminReviewClassPayment(id, true);
@@ -986,6 +1043,7 @@ export default function AdminPaymentsPage() {
         <AdminManualPaymentModal
           clients={manualFormClients}
           classes={manualFormClasses}
+          offerings={manualFormOfferings}
           channels={manualFormChannels}
           loadingOptions={manualFormLoading}
           onClose={() => setShowAddRecord(false)}
@@ -993,27 +1051,67 @@ export default function AdminPaymentsPage() {
         />
       )}
       <div className="flex h-full min-h-0 flex-col">
-      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col px-6 py-8">
-
-        <div className="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <div className="flex w-fit max-w-full gap-1 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
-          {(
-            [
-              ['class', 'Class enrollments'],
-              ['credits', 'Credit packs'],
-            ] as const
-          ).map(([id, label]) => (
+      <div className="mx-auto flex w-full min-w-0 max-w-8xl flex-1 flex-col px-6 pb-8 pt-1">
+        <PortalTitleToolbar>
+          <div className="relative min-w-[200px] max-w-sm flex-1">
+            <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search student, class, reference…"
+              className={INP}
+            />
+          </div>
+          {paymentDomain === 'class' ? (
+            <CategorizedAddFilter
+              groups={[{
+                id: 'status',
+                label: 'Status',
+                options: [
+                  { value: 'held', label: 'On hold', count: payments.filter(isHeld).length },
+                  { value: 'cleared', label: 'Locked / cleared', count: payments.filter(isCleared).length },
+                  { value: 'voided', label: 'Voided / refunded', count: payments.filter(isVoided).length },
+                ],
+              }]}
+              selected={{ status: ledgerFilters }}
+              onChange={(next) => setLedgerFilters(next.status ?? [])}
+            />
+          ) : null}
+          {paymentDomain === 'class' ? (
+            <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+          ) : null}
+          {paymentDomain === 'class' && isStudioAdmin ? (
             <button
-              key={id}
               type="button"
-              onClick={() => setPaymentDomain(id)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                paymentDomain === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-              }`}
+              onClick={openAddRecordModal}
+              className="action-button ml-auto inline-flex shrink-0 items-center gap-2 rounded-full bg-[#c49a3c] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(196,154,60,0.28)] transition-all hover:bg-[#a67f2e] active:scale-[0.98]"
             >
-              {label}
+              <Plus size={16} />
+              Add record
             </button>
-          ))}
+          ) : null}
+        </PortalTitleToolbar>
+
+        <div className="mb-5 flex min-w-0 flex-wrap items-center gap-3">
+          <div className="flex w-fit max-w-full gap-1 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
+            {(
+              [
+                ['class', 'Class enrollments'],
+                ['credits', 'Credit packs'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setPaymentDomain(id)}
+                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                  paymentDomain === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -1076,100 +1174,30 @@ export default function AdminPaymentsPage() {
           ))}
         </div>
 
-        <div className="mb-5 flex min-w-0 flex-nowrap items-center gap-3">
-          <div className="flex min-w-0 gap-1 overflow-x-auto rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
-            {(
-              [
-                ['all', 'All payments'],
-                ['held', 'On Hold'],
-                ['cleared', 'Locked / cleared'],
-                ['voided', 'Voided / refunded'],
-              ] as const
-            ).map(([id, label]) => {
-              const count = payments.filter((payment) => {
-                if (id === 'all') return true;
-                if (id === 'held') return isHeld(payment);
-                if (id === 'cleared') return isCleared(payment);
-                return isVoided(payment);
-              }).length;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setLedgerTab(id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-                    ledgerTab === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                  }`}
-                >
-                  {label}
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    ledgerTab === id ? 'bg-white/20 text-white' : 'bg-[#EDE8D8] text-[#5A5048]'
-                  }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {isStudioAdmin ? (
-              <button
-                type="button"
-                onClick={openAddRecordModal}
-                className="action-button inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#c49a3c] text-white text-sm font-bold shadow-[0_4px_14px_rgba(196,154,60,0.28)] hover:bg-[#a67f2e] active:scale-[0.98] transition-all"
-              >
-                <Plus size={16} />
-                Add record
-              </button>
-            ) : null}
-            <div className="relative w-52 min-w-0 sm:w-64">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search student, class, reference…"
-                className={INP}
-              />
-            </div>
-          </div>
-        </div>
-
         <div className="min-w-0 overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
           <div className={`hidden md:grid gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 ${
-            ledgerTab === 'held'
+            isHeldView
               ? 'grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_6rem_8rem_7rem_minmax(0,1.4fr)]'
               : 'grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_6rem_minmax(0,1fr)_minmax(0,1.5fr)]'
           }`}
           >
-            {(ledgerTab === 'held'
-              ? ['Student', 'Class', 'Amount', 'Class date', 'Auto-lock', 'Actions']
-              : ['Student', 'Class / date', 'Amount', 'Status', 'Actions']
+            {(isHeldView
+              ? ['Student', 'Item', 'Amount', 'Class date', 'Auto-lock', 'Actions']
+              : ['Student', 'Item / date', 'Amount', 'Status', 'Actions']
             ).map((header) => (
               <p key={header} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{header}</p>
             ))}
           </div>
           {paymentsLoading ? (
             <div className="px-6 py-14 text-center text-[#B0A898] text-sm">Loading payments…</div>
-          ) : filtered(payments.filter((payment) => {
-            if (ledgerTab === 'held') return isHeld(payment);
-            if (ledgerTab === 'cleared') return isCleared(payment);
-            if (ledgerTab === 'voided') return isVoided(payment);
-            return true;
-          })).length === 0 ? (
+          ) : ledgerRows.length === 0 ? (
             <div className="px-6 py-14 text-center">
               <RefreshCcw size={24} className="mx-auto text-[#D4CDB5] mb-3" />
               <p className="text-[#B0A898] text-sm">No payments in this ledger.</p>
             </div>
           ) : (
             <div className="divide-y divide-[#D4CDB5]/30">
-              {filtered(payments.filter((payment) => {
-                if (ledgerTab === 'held') return isHeld(payment);
-                if (ledgerTab === 'cleared') return isCleared(payment);
-                if (ledgerTab === 'voided') return isVoided(payment);
-                return true;
-              })).map((payment) => {
+              {ledgerRows.map((payment) => {
                 const lifecycleLabel = escrowBadgeLabel(payment);
                 return (
                 <div
@@ -1179,7 +1207,7 @@ export default function AdminPaymentsPage() {
                     else setSelectedHistory(payment);
                   }}
                   className={`grid gap-x-4 gap-y-2 px-6 py-4 items-center hover:bg-[#F8F3E8]/70 transition-colors cursor-pointer group ${
-                    ledgerTab === 'held'
+                    isHeldView
                       ? 'md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_6rem_8rem_7rem_minmax(0,1.4fr)]'
                       : 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_6rem_minmax(0,1fr)_minmax(0,1.5fr)]'
                   }`}
@@ -1193,16 +1221,18 @@ export default function AdminPaymentsPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[#1E2A35] text-sm font-medium truncate">{payment.class}</p>
-                    {ledgerTab !== 'held' ? (
-                      <p className="text-[#9A8E7E] text-xs truncate">{payment.date} · {payment.time}</p>
+                    {!isHeldView ? (
+                      <p className="text-[#9A8E7E] text-xs truncate">
+                        {payment.isOffering ? 'Pricing service' : `${payment.date} · ${payment.time}`}
+                      </p>
                     ) : (
                       <p className="text-[#9A8E7E] text-xs truncate">{payment.method}</p>
                     )}
                   </div>
-                  <p className="text-[#1E2A35] font-bold tabular-nums" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.04em' }}>
+                  <p className="text-[#1E2A35] font-bold tabular-nums" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>
                     {peso(payment.amount)}
                   </p>
-                  {ledgerTab === 'held' ? (
+                  {isHeldView ? (
                     <p className="text-[#1E2A35] text-sm whitespace-nowrap">{payment.date}</p>
                   ) : (
                     <div className="flex flex-col gap-1 items-start">
@@ -1223,7 +1253,7 @@ export default function AdminPaymentsPage() {
                       ) : null}
                     </div>
                   )}
-                  {ledgerTab === 'held' ? (
+                  {isHeldView ? (
                     <p className="text-sky-800 text-xs font-semibold whitespace-nowrap">{lockTimerLabel(payment.refundableUntil)}</p>
                   ) : null}
                   <div className="flex flex-wrap items-center gap-1.5 justify-start md:justify-end" onClick={(event) => event.stopPropagation()}>

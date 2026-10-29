@@ -40,12 +40,10 @@ function dateInputValue(iso: string): string {
 export function AdminCreditDesk({
   transactions,
   refreshKey,
-  grantSignal,
   onChanged,
 }: {
   transactions: CreditTransactionDisplay[];
   refreshKey: number;
-  grantSignal: number;
   onChanged: () => void;
 }) {
   const [clients, setClients] = useState<ClientDirectoryItem[]>([]);
@@ -79,12 +77,6 @@ export function AdminCreditDesk({
       else setLots(result.data);
     });
   }, [member, refreshKey]);
-
-  useEffect(() => {
-    if (grantSignal === 0) return;
-    document.getElementById('member-credit-lookup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (!member) toast.message('Look up a member before granting a courtesy credit.');
-  }, [grantSignal, member]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -174,7 +166,7 @@ export function AdminCreditDesk({
   };
 
   return (
-    <div id="member-credit-lookup" className="mb-4 grid min-w-0 shrink-0 gap-3 lg:grid-cols-2">
+    <div id="member-credit-lookup" className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
       <section className="flex max-h-[15.5rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-white shadow-sm">
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#D4CDB5]/40 px-4 py-2.5">
           <div className="min-w-0">
@@ -212,7 +204,7 @@ export function AdminCreditDesk({
         )}
       </section>
 
-      <section className="flex max-h-[15.5rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-white p-4 shadow-sm">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#D4CDB5]/60 bg-white p-4 shadow-sm">
         <p className="shrink-0 text-[10px] uppercase tracking-widest text-[#8A7E6E]">Member credit lookup</p>
         <div className="relative mt-2 shrink-0">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
@@ -252,7 +244,7 @@ export function AdminCreditDesk({
 
             <div className="rounded-xl border border-[#D4CDB5]/50 bg-[#FBF9F3] p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8A7E6E]">Grant courtesy credit</p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-[4.5rem_8rem_minmax(0,1fr)_auto]">
+              <div className="mt-2 grid grid-cols-2 gap-2">
                 <input value={grantQty} onChange={(event) => setGrantQty(event.target.value)} type="number" min={1} className="rounded-xl border border-[#D4CDB5] px-2.5 py-1.5 text-sm" aria-label="Credit amount" />
                 <input value={grantExpiry} onChange={(event) => setGrantExpiry(event.target.value)} type="date" className="rounded-xl border border-[#D4CDB5] px-2.5 py-1.5 text-sm" aria-label="Expiry date" />
                 <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} placeholder="Reason, e.g. instructor late" className="rounded-xl border border-[#D4CDB5] px-2.5 py-1.5 text-sm" />

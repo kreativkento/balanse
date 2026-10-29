@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router';
 import {
   ChevronRight,
@@ -10,15 +10,35 @@ import {
   Coins,
   Loader2,
   RefreshCcw,
-  Receipt,
+  Award,
   Wallet,
+  Sparkles,
 } from 'lucide-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import {
   fetchAdminDashboardSnapshot,
   type AdminDashboardSnapshot,
 } from '../../lib/admin-dashboard-service';
 import { formatDateLongFromKey, getTodayDateKey } from '../components/calendar/weekCalendarUtils';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
+import { DashboardWeekdayChart } from '../components/dashboard/DashboardWeekdayChart';
+import { AdminInsightPanel } from '../components/dashboard/AdminInsightPanel';
+
+function formatPeso(amount: number): string {
+  return `₱${Math.round(amount).toLocaleString('en-PH')}`;
+}
 
 function StatCard({
   to,
@@ -50,19 +70,13 @@ function StatCard({
           </p>
           <p
             className="mt-1 truncate leading-none text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.7rem', letterSpacing: '0.04em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.65rem', letterSpacing: '0.04em' }}
           >
             {value}
           </p>
         </div>
       </div>
-      {hint ? (
-        <p className="mt-2 truncate text-[11px] text-[#B0A898]">{hint}</p>
-      ) : (
-        <p className="mt-2 text-[11px] text-[#C0B8A8] opacity-0 transition-opacity group-hover:opacity-100">
-          Open
-        </p>
-      )}
+      {hint ? <p className="mt-2 truncate text-[11px] text-[#B0A898]">{hint}</p> : null}
     </Link>
   );
 }
@@ -117,50 +131,17 @@ function ApprovalRow({
   );
 }
 
-const QUICK_LINKS = [
-  {
-    to: '/admin-students',
-    icon: <Users size={18} />,
-    label: 'Clients',
-    detail: 'Directory and profiles',
-  },
-  {
-    to: '/admin-classes',
-    icon: <CalendarRange size={18} />,
-    label: 'Class schedule',
-    detail: 'Sessions this week',
-  },
-  {
-    to: '/admin-payments',
-    icon: <CreditCard size={18} />,
-    label: 'Payments',
-    detail: 'Escrow and receipts',
-  },
-  {
-    to: '/admin-credits',
-    icon: <Coins size={18} />,
-    label: 'Credits',
-    detail: 'Packs and overrides',
-  },
-  {
-    to: '/admin-official-receipts',
-    icon: <Receipt size={18} />,
-    label: 'OR register',
-    detail: 'Issued official receipts',
-  },
-  {
-    to: '/admin-coach-requests',
-    icon: <ClipboardList size={18} />,
-    label: 'Coach requests',
-    detail: 'Schedule changes',
-  },
-];
+const MIX_COLORS = {
+  classes: '#1E2A35',
+  packs: '#c49a3c',
+};
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
   const [snapshot, setSnapshot] = useState<AdminDashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [insightOpen, setInsightOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -178,19 +159,26 @@ export default function AdminDashboardPage() {
     void load();
   }, [adminUser, load]);
 
+  const mixData = useMemo(() => {
+    const classes = Math.round(snapshot?.classRevenueThisMonth ?? 0);
+    const packs = Math.round(snapshot?.packRevenueThisMonth ?? 0);
+    return [
+      { name: 'Class payments', key: 'classes', value: classes },
+      { name: 'Credit packs', key: 'packs', value: packs },
+    ].filter((row) => row.value > 0);
+  }, [snapshot]);
+
   if (!adminUser) return null;
 
   const s = snapshot;
-  const pendingAmountLabel =
-    s && s.pendingPaymentAmount > 0
-      ? `₱${Math.round(s.pendingPaymentAmount).toLocaleString()} awaiting`
-      : 'None awaiting';
+  const pendingInflow = (s?.pendingPaymentAmount ?? 0) + (s?.pendingPackAmount ?? 0);
+  const pendingCount = (s?.pendingPayments ?? 0) + (s?.pendingPackPayments ?? 0);
   const reviewTotal =
-    (s?.pendingPayments ?? 0) + (s?.portalRequestsPending ?? 0) + (s?.bulletinPending ?? 0);
+    pendingCount + (s?.portalRequestsPending ?? 0) + (s?.bulletinPending ?? 0);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="mx-auto flex w-full max-w-7xl min-h-0 flex-1 flex-col px-6 py-8">
+      <div className="mx-auto flex w-full max-w-8xl min-h-0 flex-1 flex-col px-6 py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 shrink-0">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-widest text-[#8A7E6E]">
@@ -198,20 +186,30 @@ export default function AdminDashboardPage() {
             </p>
             <h2
               className="mt-1 leading-none text-[#1E2A35]"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', letterSpacing: '0.04em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.04em' }}
             >
-              Overview
+              Studio overview
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-full border border-[#D4CDB5]/70 bg-white px-4 py-2 text-xs font-semibold text-[#5A5048] shadow-sm transition-colors hover:bg-[#EDE8D8] hover:text-[#1E2A35] disabled:opacity-50"
-          >
-            <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setInsightOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-[#c49a3c]/45 bg-[#FBF6EA] px-4 py-2 text-xs font-semibold text-[#745b3c] shadow-sm transition-colors hover:bg-[#F3E6C4] hover:text-[#1E2A35]"
+            >
+              <Sparkles size={13} />
+              AI Summary
+            </button>
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-full border border-[#D4CDB5]/70 bg-white px-4 py-2 text-xs font-semibold text-[#5A5048] shadow-sm transition-colors hover:bg-[#EDE8D8] hover:text-[#1E2A35] disabled:opacity-50"
+            >
+              <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {s?.error ? (
@@ -220,54 +218,182 @@ export default function AdminDashboardPage() {
           </p>
         ) : null}
 
-        <div className="mb-6 grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-5 grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            to="/admin-students"
-            icon={<Users size={17} className="text-[#745b3c]" />}
-            iconWrap="bg-[#EDE8D8]"
-            label="Clients"
-            value={loading ? '—' : String(s?.clientCount ?? 0)}
-            hint="Active member accounts"
+            to="/admin-official-receipts"
+            icon={<Wallet size={17} className="text-green-700" />}
+            iconWrap="bg-green-50"
+            label="Revenue this month"
+            value={loading ? '—' : formatPeso(s?.approvedThisMonthRevenue ?? 0)}
+            hint={
+              loading
+                ? undefined
+                : `${s?.approvedThisMonthCount ?? 0} approved payment${(s?.approvedThisMonthCount ?? 0) === 1 ? '' : 's'}`
+            }
           />
           <StatCard
             to="/admin-payments"
             icon={<CreditCard size={17} className="text-amber-800" />}
             iconWrap="bg-amber-50"
-            label="Pending pay"
-            value={loading ? '—' : String(s?.pendingPayments ?? 0)}
-            hint={loading ? undefined : pendingAmountLabel}
+            label="Awaiting review"
+            value={loading ? '—' : formatPeso(pendingInflow)}
+            hint={
+              loading
+                ? undefined
+                : pendingCount > 0
+                  ? `${pendingCount} class / pack payment${pendingCount === 1 ? '' : 's'}`
+                  : 'No pending inflows'
+            }
           />
           <StatCard
-            to="/admin-official-receipts"
-            icon={<Wallet size={17} className="text-green-700" />}
-            iconWrap="bg-green-50"
-            label="Month revenue"
-            value={
-              loading
-                ? '—'
-                : `₱${Math.round(s?.approvedThisMonthRevenue ?? 0).toLocaleString()}`
-            }
+            to="/admin-credits"
+            icon={<Coins size={17} className="text-[#745b3c]" />}
+            iconWrap="bg-[#EDE8D8]"
+            label="Credit pack sales"
+            value={loading ? '—' : formatPeso(s?.packRevenueThisMonth ?? 0)}
             hint={
-              loading ? undefined : `${s?.approvedThisMonthCount ?? 0} approved this month`
+              loading
+                ? undefined
+                : `${s?.pendingPackPayments ?? 0} pack checkout${(s?.pendingPackPayments ?? 0) === 1 ? '' : 's'} pending`
             }
           />
           <StatCard
             to="/admin-classes"
             icon={<CalendarRange size={17} className="text-sky-800" />}
             iconWrap="bg-sky-50"
-            label="Classes week"
+            label="Classes this week"
             value={loading ? '—' : String(s?.classesThisWeek ?? 0)}
-            hint="Sessions on this week's calendar"
+            hint={loading ? undefined : `${s?.classesToday ?? 0} on today's calendar`}
           />
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
+        <div className="mb-5 grid min-h-0 shrink-0 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,0.9fr)]">
+          <section className="rounded-3xl border border-[#D4CDB5]/60 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <h3
+                className="leading-none text-[#1E2A35]"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
+              >
+                Revenue, last 6 months
+              </h3>
+              <p className="mt-1 text-[11px] text-[#9A8E7E]">Approved class payments and credit packs (₱)</p>
+            </div>
+            {loading ? (
+              <ContentSkeleton variant="list" className="py-2" />
+            ) : (
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={s?.revenueByMonth ?? []} barGap={4} barCategoryGap="28%">
+                    <CartesianGrid stroke="#EDE8D8" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: '#8A7E6E', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      tick={{ fill: '#8A7E6E', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={52}
+                      tickFormatter={(value: number) =>
+                        value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+                      }
+                    />
+                    <Tooltip
+                      cursor={{ fill: '#F8F3E8' }}
+                      formatter={(value) => formatPeso(Number(value ?? 0))}
+                      contentStyle={{
+                        borderRadius: 12,
+                        border: '1px solid #E8E2D2',
+                        fontSize: 12,
+                      }}
+                    />
+                    <Bar dataKey="classes" name="Classes" stackId="rev" fill={MIX_COLORS.classes} radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="packs" name="Credit packs" stackId="rev" fill={MIX_COLORS.packs} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-[#8A7E6E]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm bg-[#1E2A35]" /> Classes
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm bg-[#c49a3c]" /> Credit packs
+              </span>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-[#D4CDB5]/60 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <h3
+                className="leading-none text-[#1E2A35]"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
+              >
+                This month mix
+              </h3>
+              <p className="mt-1 text-[11px] text-[#9A8E7E]">Share of approved inflows</p>
+            </div>
+            {loading ? (
+              <ContentSkeleton variant="form" />
+            ) : mixData.length === 0 ? (
+              <p className="py-10 text-center text-sm text-[#9A8E7E]">No approved payments this month yet.</p>
+            ) : (
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={mixData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={52}
+                      outerRadius={78}
+                      paddingAngle={2}
+                    >
+                      {mixData.map((row) => (
+                        <Cell
+                          key={row.key}
+                          fill={row.key === 'packs' ? MIX_COLORS.packs : MIX_COLORS.classes}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => formatPeso(Number(value ?? 0))}
+                      contentStyle={{
+                        borderRadius: 12,
+                        border: '1px solid #E8E2D2',
+                        fontSize: 12,
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {!loading && mixData.length > 0 ? (
+              <div className="mt-1 space-y-1.5 text-[12px] text-[#5A5048]">
+                <p>
+                  Classes {formatPeso(s?.classRevenueThisMonth ?? 0)}
+                </p>
+                <p>
+                  Credit packs {formatPeso(s?.packRevenueThisMonth ?? 0)}
+                </p>
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <div className="mb-5 shrink-0">
+          <DashboardWeekdayChart
+            data={s?.classesByWeekday ?? []}
+            loading={loading}
+            title="Classes this week"
+            hint="Live sessions on the studio calendar (not cancelled)"
+          />
+        </div>
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
           <section className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b border-[#D4CDB5]/40 px-5 py-4">
               <div>
                 <h3
                   className="leading-none text-[#1E2A35]"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
                 >
                   Needs your review
                 </h3>
@@ -285,12 +411,28 @@ export default function AdminDashboardPage() {
                 to="/admin-payments"
                 icon={<CreditCard size={17} />}
                 label="Class payments"
-                detail="Approvals, escrow, and refunds"
+                detail={
+                  loading
+                    ? 'Approvals and escrow'
+                    : `${formatPeso(s?.pendingPaymentAmount ?? 0)} awaiting approval`
+                }
                 count={s?.pendingPayments ?? 0}
                 loading={loading}
               />
               <ApprovalRow
-                to="/admin-coach-requests"
+                to="/admin-credits"
+                icon={<Coins size={17} />}
+                label="Credit pack checkouts"
+                detail={
+                  loading
+                    ? 'Pack purchases to verify'
+                    : `${formatPeso(s?.pendingPackAmount ?? 0)} in pending packs`
+                }
+                count={s?.pendingPackPayments ?? 0}
+                loading={loading}
+              />
+              <ApprovalRow
+                to="/admin-coach-slots"
                 icon={<ClipboardList size={17} />}
                 label="Coach schedule requests"
                 detail="Holds, swaps, and coverage"
@@ -308,37 +450,75 @@ export default function AdminDashboardPage() {
             </div>
           </section>
 
-          <section className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
-            <div className="border-b border-[#D4CDB5]/40 px-5 py-4">
-              <h3
-                className="leading-none text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
+          <section className="rounded-3xl border border-[#D4CDB5]/60 bg-white p-5 shadow-sm">
+            <h3
+              className="leading-none text-[#1E2A35]"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
+            >
+              Operations
+            </h3>
+            <p className="mt-1 text-[11px] text-[#9A8E7E]">Studio activity at a glance</p>
+            <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:grid-cols-1">
+              <Link
+                to="/admin-students"
+                className="flex items-center gap-3 rounded-2xl border border-[#EDE8D8] px-3.5 py-3 transition-colors hover:bg-[#F8F3E8]"
               >
-                Quick links
-              </h3>
-              <p className="mt-1 text-[11px] text-[#9A8E7E]">Jump to everyday desks</p>
-            </div>
-            <div className="grid grid-cols-1 gap-px bg-[#EDE8D8] sm:grid-cols-2">
-              {QUICK_LINKS.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className="flex items-center gap-3 bg-white px-4 py-3.5 text-left transition-colors hover:bg-[#F8F3E8]"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EDE8D8] text-[#c49a3c]">
-                    {item.icon}
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EDE8D8] text-[#745b3c]">
+                  <Users size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">
+                    Clients
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-[#1E2A35]">{item.label}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-[#9A8E7E]">{item.detail}</span>
+                  <span className="text-sm font-semibold text-[#1E2A35]">
+                    {loading ? '—' : s?.clientCount ?? 0}
                   </span>
-                  <ChevronRight size={14} className="shrink-0 text-[#C0B8A8]" />
-                </Link>
-              ))}
+                </span>
+              </Link>
+              <Link
+                to="/admin-coaches"
+                className="flex items-center gap-3 rounded-2xl border border-[#EDE8D8] px-3.5 py-3 transition-colors hover:bg-[#F8F3E8]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EDE8D8] text-[#c49a3c]">
+                  <Award size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">
+                    Coaches
+                  </span>
+                  <span className="text-sm font-semibold text-[#1E2A35]">
+                    {loading ? '—' : s?.coachCount ?? 0}
+                  </span>
+                </span>
+              </Link>
+              <Link
+                to="/admin-classes"
+                className="flex items-center gap-3 rounded-2xl border border-[#EDE8D8] px-3.5 py-3 transition-colors hover:bg-[#F8F3E8]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-800">
+                  <CalendarRange size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">
+                    Today
+                  </span>
+                  <span className="text-sm font-semibold text-[#1E2A35]">
+                    {loading ? '—' : `${s?.classesToday ?? 0} class${(s?.classesToday ?? 0) === 1 ? '' : 'es'}`}
+                  </span>
+                </span>
+              </Link>
             </div>
           </section>
         </div>
       </div>
+      <AdminInsightPanel
+        open={insightOpen}
+        onOpenChange={setInsightOpen}
+        snapshot={snapshot}
+        loading={loading}
+        asOfLabel={formatDateLongFromKey(getTodayDateKey())}
+        onRegenerate={() => void load()}
+      />
     </div>
   );
 }

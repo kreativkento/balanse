@@ -31,8 +31,18 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { PORTAL_REQUEST_STATUS_FILTER_GROUP } from '../components/filters/status-filter-groups';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
+import { CancellationHoldingRoster } from '../components/classes/CancellationHoldingRoster';
 import { PageLoadingScreen } from '../components/layout/PageLoadingScreen';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
+import { useIsMobile } from '../components/ui/use-mobile';
 import { useClassesScheduleRealtimeSync } from '../hooks/useClassesScheduleRealtime';
 import {
   fetchDisciplinesForAdmin,
@@ -187,6 +197,7 @@ import {
   toDateKey,
   toDateKeyFromParts,
   DAY_LABELS_FULL,
+  DAY_LABELS_SHORT,
   isWeekendDate,
   SCHEDULE_END_HOUR,
   SCHEDULE_START_HOUR,
@@ -234,6 +245,7 @@ interface ClassScheduleRequest {
   endTime: string;
   classLimit: number;
   submittedAt: string;
+  sortAt: string;
   status: ReqStatus;
   dayIndex: number;
   startHour: number;
@@ -369,6 +381,7 @@ interface CancelRequest {
   time: string;
   enrolled: number;
   requestedAt: string;
+  sortAt: string;
   hoursUntilClass: number;
   status: ReqStatus;
 }
@@ -438,6 +451,7 @@ function mapPortalSlotRequest(
     endTime,
     classLimit: payload.class_limit ?? classRow?.classLimit ?? 12,
     submittedAt: formatRelativeSubmitted(req.created_at),
+    sortAt: req.created_at,
     status: req.status,
     dayIndex,
     startHour: startDate.getHours(),
@@ -487,6 +501,7 @@ function mapPortalCancellationRequest(
     time: timeStr,
     enrolled: classRow?.enrolledCount ?? 0,
     requestedAt: formatRelativeSubmitted(req.created_at),
+    sortAt: req.created_at,
     hoursUntilClass: hoursUntil,
     status: req.status,
   };
@@ -501,6 +516,21 @@ const SERVICES  = Object.keys(CLASS_COLORS);
 const COACHES   = ['Rex', 'Jodi', 'Ephraim', 'Alec', 'Rachelle', 'Kate', 'Wolf'];
 const WEEK_LABELS = [...DAY_LABELS_FULL];
 const HOURS = CALENDAR_DAY_HOURS;
+const MOBILE_CALENDAR_MAX_WIDTH = 768;
+
+function isMobileCalendarViewport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < MOBILE_CALENDAR_MAX_WIDTH;
+}
+
+function getInitialCalendarView(): 'weekly' | 'threeDay' {
+  return isMobileCalendarViewport() ? 'threeDay' : 'weekly';
+}
+
+function getInitialRangeStart(): Date {
+  const today = getTodayLocal();
+  return isMobileCalendarViewport() ? today : getSundayOfWeekContaining(today);
+}
 const DEFAULT_BLOCK_CLASS_LIMIT = 12;
 
 const DEFAULT_START_MINUTES = 9 * 60;
@@ -1156,7 +1186,7 @@ function MemberClassBlockDetailModal({
               <h2
                 id="member-class-block-modal-title"
                 className="text-[#1E2A35] leading-tight truncate"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.04em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
               >
                 {block.title?.trim() || block.className?.trim() || 'Class'}
               </h2>
@@ -1837,6 +1867,8 @@ type SchedulePageVariant =
   | 'staff-class-schedule'
   | 'staff-time-slots'
   | 'coach-requests'
+  | 'coach-slots'
+  | 'coach-cancellations'
   | 'frontdesk-class-schedule'
   | 'frontdesk-bookings'
   | 'frontdesk-cancellations';
@@ -1872,9 +1904,18 @@ export default function AdminTimeBlockingPage({
   const isStaffSchedulePortal = isStaffClassSchedule || isStaffTimeSlots;
   const isReadOnlySchedule =
     isStaffSchedulePortal || isActiveClassCalendar || isFrontdeskClassSchedule;
+  const isAdminCoachSlots = variant === 'coach-slots' || variant === 'coach-requests';
+  const isAdminCoachCancellations = variant === 'coach-cancellations';
   const isCoachRequests =
-    variant === 'coach-requests' || isFrontdeskBookings || isFrontdeskCancellations;
-  const hideCoachRequestTabSwitcher = isFrontdeskBookings || isFrontdeskCancellations;
+    isAdminCoachSlots
+    || isAdminCoachCancellations
+    || isFrontdeskBookings
+    || isFrontdeskCancellations;
+  const hideCoachRequestTabSwitcher =
+    isFrontdeskBookings
+    || isFrontdeskCancellations
+    || isAdminCoachSlots
+    || isAdminCoachCancellations;
   const showClassScheduleFeatures =
     isClassSchedule || isStaffSchedulePortal || isActiveClassCalendar;
   const usesDisciplineCalendarColors =
@@ -1908,7 +1949,9 @@ export default function AdminTimeBlockingPage({
       : adminUser;
 
   const [coachRequestTab, setCoachRequestTab] = useState<CoachRequestTab>(() => {
-    if (variant === 'frontdesk-cancellations') return 'cancellations';
+    if (variant === 'frontdesk-cancellations' || variant === 'coach-cancellations') {
+      return 'cancellations';
+    }
     return 'requests';
   });
   const [classScheduleBlockPanelId, setClassScheduleBlockPanelId] = useState<string | null>(null);
@@ -1935,8 +1978,9 @@ export default function AdminTimeBlockingPage({
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [rangeStart, setRangeStart] = useState(() => getSundayOfWeekContaining(getTodayLocal()));
-  const [calendarView, setCalendarView] = useState<'weekly' | 'threeDay' | 'monthly'>('weekly');
+  const isMobileCalendar = useIsMobile();
+  const [rangeStart, setRangeStart] = useState(getInitialRangeStart);
+  const [calendarView, setCalendarView] = useState<'weekly' | 'threeDay' | 'monthly'>(getInitialCalendarView);
   const [calMonth, setCalMonth]       = useState(getInitialCalendarMonth);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
   const [showMonthDayPanel, setShowMonthDayPanel] = useState(false);
@@ -1961,8 +2005,9 @@ export default function AdminTimeBlockingPage({
   const [cancelReplacementCoachId, setCancelReplacementCoachId] = useState('');
   const [viewStartHour, setViewStartHour] = useState(SCHEDULE_START_HOUR);
   const [viewEndHour, setViewEndHour] = useState(SCHEDULE_END_HOUR);
-  const [reqStatusFilter, setReqStatusFilter] = useState<'all' | ReqStatus>('all');
-  const [cancelStatusFilter, setCancelStatusFilter] = useState<'all' | ReqStatus>('all');
+  const [reqStatusFilter, setReqStatusFilter] = useState<string[]>([]);
+  const [requestChronoOrder, setRequestChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [cancelStatusFilter, setCancelStatusFilter] = useState<string[]>([]);
   const [disciplineFilterIds, setDisciplineFilterIds] = useState<string[]>([]);
   const [classScheduleFilters, setClassScheduleFilters] = useState<ClassScheduleCalendarFilters>(
     emptyClassScheduleCalendarFilters,
@@ -3328,27 +3373,37 @@ export default function AdminTimeBlockingPage({
     navigate,
   ]);
 
-  const blockPanelSlotReqs = classScheduleBlockPanelId
-    ? scheduleReqs.filter((req) => {
-        const row = portalRequests.find((r) => r.id === req.id);
-        return (
-          row != null
-          && row.request_type === 'slot_request'
-          && portalRequestMatchesClassId(row, classScheduleBlockPanelId)
-        );
-      })
-    : [];
-  const blockPanelCancelReqs = classScheduleBlockPanelId
-    ? cancelReqs.filter((req) => {
-        const row = portalRequests.find((r) => r.id === req.id);
-        return (
-          row != null
-          && (row.request_type === 'cancellation_request'
-            || row.request_type === 'member_enrollment_cancellation')
-          && portalRequestMatchesClassId(row, classScheduleBlockPanelId)
-        );
-      })
-    : [];
+  const blockPanelSlotReqs = sortChronologically(
+    (classScheduleBlockPanelId
+      ? scheduleReqs.filter((req) => {
+          const row = portalRequests.find((r) => r.id === req.id);
+          return (
+            row != null
+            && row.request_type === 'slot_request'
+            && portalRequestMatchesClassId(row, classScheduleBlockPanelId)
+          );
+        })
+      : []
+    ).filter((req) => matchesAnySelected(reqStatusFilter, req.status)),
+    (req) => req.sortAt,
+    requestChronoOrder,
+  );
+  const blockPanelCancelReqs = sortChronologically(
+    (classScheduleBlockPanelId
+      ? cancelReqs.filter((req) => {
+          const row = portalRequests.find((r) => r.id === req.id);
+          return (
+            row != null
+            && (row.request_type === 'cancellation_request'
+              || row.request_type === 'member_enrollment_cancellation')
+            && portalRequestMatchesClassId(row, classScheduleBlockPanelId)
+          );
+        })
+      : []
+    ).filter((req) => matchesAnySelected(cancelStatusFilter, req.status)),
+    (req) => req.sortAt,
+    requestChronoOrder,
+  );
   const blockPanelPendingSlotCount = blockPanelSlotReqs.filter((r) => r.status === 'pending').length;
   const blockPanelPendingCancelCount = blockPanelCancelReqs.filter((r) => r.status === 'pending').length;
 
@@ -3531,12 +3586,8 @@ export default function AdminTimeBlockingPage({
   const approvedC = cancelReqs.filter(r => r.status === 'approved').length;
   const rejectedC = cancelReqs.filter(r => r.status === 'rejected').length;
   const cancelledC = cancelReqs.filter(r => r.status === 'cancelled').length;
-  const filteredScheduleReqs = reqStatusFilter === 'all'
-    ? scheduleReqs
-    : scheduleReqs.filter(r => r.status === reqStatusFilter);
-  const filteredCancelReqs = cancelStatusFilter === 'all'
-    ? cancelReqs
-    : cancelReqs.filter(r => r.status === cancelStatusFilter);
+  const filteredScheduleReqs = scheduleReqs.filter((r) => matchesAnySelected(reqStatusFilter, r.status));
+  const filteredCancelReqs = cancelReqs.filter((r) => matchesAnySelected(cancelStatusFilter, r.status));
 
   const [coachTablePage, setCoachTablePage] = useState(1);
   const { containerRef: coachTableContainerRef, pageSize: coachTablePageSize } = useFitPageSize({
@@ -3546,14 +3597,15 @@ export default function AdminTimeBlockingPage({
 
   useEffect(() => {
     setCoachTablePage(1);
-  }, [coachRequestTab, reqStatusFilter, cancelStatusFilter]);
+  }, [coachRequestTab, reqStatusFilter, cancelStatusFilter, requestChronoOrder]);
 
   const bookingTotalPages = Math.max(1, Math.ceil(filteredScheduleReqs.length / coachTablePageSize));
   const bookingCurrentPage = Math.min(coachTablePage, bookingTotalPages);
   const pagedScheduleReqs = useMemo(() => {
     const start = (bookingCurrentPage - 1) * coachTablePageSize;
-    return filteredScheduleReqs.slice(start, start + coachTablePageSize);
-  }, [filteredScheduleReqs, bookingCurrentPage, coachTablePageSize]);
+    return sortChronologically(filteredScheduleReqs, (req) => req.sortAt, requestChronoOrder)
+      .slice(start, start + coachTablePageSize);
+  }, [filteredScheduleReqs, bookingCurrentPage, coachTablePageSize, requestChronoOrder]);
   const bookingRangeStart =
     filteredScheduleReqs.length === 0 ? 0 : (bookingCurrentPage - 1) * coachTablePageSize + 1;
   const bookingRangeEnd = Math.min(bookingCurrentPage * coachTablePageSize, filteredScheduleReqs.length);
@@ -3562,8 +3614,9 @@ export default function AdminTimeBlockingPage({
   const cancelCurrentPage = Math.min(coachTablePage, cancelTotalPages);
   const pagedCancelReqs = useMemo(() => {
     const start = (cancelCurrentPage - 1) * coachTablePageSize;
-    return filteredCancelReqs.slice(start, start + coachTablePageSize);
-  }, [filteredCancelReqs, cancelCurrentPage, coachTablePageSize]);
+    return sortChronologically(filteredCancelReqs, (req) => req.sortAt, requestChronoOrder)
+      .slice(start, start + coachTablePageSize);
+  }, [filteredCancelReqs, cancelCurrentPage, coachTablePageSize, requestChronoOrder]);
   const cancelRangeStart =
     filteredCancelReqs.length === 0 ? 0 : (cancelCurrentPage - 1) * coachTablePageSize + 1;
   const cancelRangeEnd = Math.min(cancelCurrentPage * coachTablePageSize, filteredCancelReqs.length);
@@ -3681,22 +3734,24 @@ export default function AdminTimeBlockingPage({
 
   return (
     <>
-      {showPageLoading && <PageLoadingScreen />}
       <div
         className={
           isCoachRequests
-            ? 'h-full min-h-0 overflow-hidden flex flex-col'
+            ? 'relative h-full min-h-0 overflow-hidden flex flex-col'
             : weeklyViewportFit
-              ? `max-w-7xl mx-auto px-6 w-full flex flex-col min-h-0 h-full overflow-hidden ${
+              ? `relative max-w-8xl mx-auto px-6 w-full flex flex-col min-h-0 h-full overflow-hidden ${
                   isPublicClassSchedule ? 'py-2' : 'py-4'
                 }`
-              : 'max-w-7xl mx-auto px-6 w-full flex flex-col min-h-0 py-8'
+              : 'relative max-w-8xl mx-auto px-6 w-full flex flex-col min-h-0 py-8'
         }
       >
+      {showPageLoading && (
+        <PageLoadingScreen overlay variant="calendar" message="Loading schedule" />
+      )}
       <div
         className={
           isCoachRequests
-            ? 'max-w-7xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col py-8'
+            ? 'max-w-8xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col py-8'
             : 'contents'
         }
       >
@@ -3811,7 +3866,7 @@ export default function AdminTimeBlockingPage({
                   </button>
                   <span
                     className="text-[#1E2A35] text-center min-w-[11rem]"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
                   >
                     {isMultiDayTimeline ? rangeLabel : monthLabel}
                   </span>
@@ -3903,7 +3958,9 @@ export default function AdminTimeBlockingPage({
                     </div>
                     {visibleDates.map((date) => {
                       const dateKey = toDateKey(date);
-                      const day = DAY_LABELS_FULL[date.getDay()];
+                      const day = isMobileCalendar
+                        ? DAY_LABELS_SHORT[date.getDay()]
+                        : DAY_LABELS_FULL[date.getDay()];
                       const isTodayCol = dateKey === todayKey;
                       const isWeekendCol = isWeekendDate(date);
                       const headerBg = isWeekendCol ? WEEKEND_COLUMN_BG : 'bg-[#F5F1E8]';
@@ -4092,7 +4149,7 @@ export default function AdminTimeBlockingPage({
                 todayKey={todayKey}
                 selectedDateKey={selectedMonthKey}
                 onSelectDate={openMonthDayPanel}
-                weekdayLabels={DAY_LABELS_FULL}
+                weekdayLabels={isMobileCalendar ? DAY_LABELS_SHORT : DAY_LABELS_FULL}
                   fillHeight={weeklyViewportFit}
                   className="rounded-none border-0 shadow-none h-full min-h-0"
               />
@@ -4116,36 +4173,59 @@ export default function AdminTimeBlockingPage({
 
         {/* ══ BOOKING REQUESTS TAB ══ */}
         {showCoachRequestTables && coachRequestTab === 'requests' && (
+          <>
+          {isAdminCoachSlots && (
+            <PortalTitleToolbar>
+              <CategorizedAddFilter
+                size="toolbar"
+                groups={[{
+                  ...PORTAL_REQUEST_STATUS_FILTER_GROUP,
+                  options: PORTAL_REQUEST_STATUS_FILTER_GROUP.options.map((option) => ({
+                    ...option,
+                    count: {
+                      pending: pendingB,
+                      approved: approvedB,
+                      rejected: rejectedB,
+                      cancelled: cancelledB,
+                    }[option.value],
+                  })),
+                }]}
+                selected={{ status: reqStatusFilter }}
+                onChange={(next) => setReqStatusFilter(next.status ?? [])}
+              />
+              <ChronologicalSortSelect size="toolbar" value={requestChronoOrder} onChange={setRequestChronoOrder} />
+            </PortalTitleToolbar>
+          )}
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+            {!isAdminCoachSlots && (
             <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-[#F8F3E8]/60 shrink-0">
               <div>
-                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Slot Requests</h2>
+                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>
+                  Slot Requests
+                </h2>
                 <p className="text-[#8A7E6E] text-xs mt-0.5">Class schedule requests submitted by staff · click a row to review</p>
               </div>
-              <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-xl p-1 w-fit">
-                {([
-                  ['all', 'All', scheduleReqs.length],
-                  ['pending', 'Pending', pendingB],
-                  ['approved', 'Approved', approvedB],
-                  ['rejected', 'Rejected', rejectedB],
-                  ['cancelled', 'Cancelled', cancelledB],
-                ] as const).map(([id, label, count]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setReqStatusFilter(id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      reqStatusFilter === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                    }`}
-                  >
-                    {label}
-                    <span className={requestStatusFilterCountBadgeClass(id, count, reqStatusFilter === id)}>
-                      {count}
-                    </span>
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <CategorizedAddFilter
+                  groups={[{
+                    ...PORTAL_REQUEST_STATUS_FILTER_GROUP,
+                    options: PORTAL_REQUEST_STATUS_FILTER_GROUP.options.map((option) => ({
+                      ...option,
+                      count: {
+                        pending: pendingB,
+                        approved: approvedB,
+                        rejected: rejectedB,
+                        cancelled: cancelledB,
+                      }[option.value],
+                    })),
+                  }]}
+                  selected={{ status: reqStatusFilter }}
+                  onChange={(next) => setReqStatusFilter(next.status ?? [])}
+                />
+                <ChronologicalSortSelect value={requestChronoOrder} onChange={setRequestChronoOrder} />
               </div>
             </div>
+            )}
             <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40 shrink-0">
                   {['Class Name', 'Discipline', 'Start Time', 'End Time', 'Class Limit', 'Status'].map(h => (
                     <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
@@ -4153,11 +4233,11 @@ export default function AdminTimeBlockingPage({
                 </div>
                 {filteredScheduleReqs.length === 0 ? (
               <div ref={coachTableContainerRef} className="flex-1 min-h-0 px-6 py-14 text-center">
-                    <p className="text-[#1E2A35] text-sm font-semibold">No {reqStatusFilter === 'all' ? '' : `${reqStatusFilter} `}requests</p>
+                    <p className="text-[#1E2A35] text-sm font-semibold">No {reqStatusFilter.length === 0 ? '' : 'matching '}requests</p>
                     <p className="text-[#B0A898] text-xs mt-1">
-                      {reqStatusFilter === 'all'
+                      {reqStatusFilter.length === 0
                         ? 'Staff class schedule requests will appear here.'
-                        : `Switch filters to see requests that are not ${reqStatusFilter}.`}
+                        : 'Clear a filter chip or try another combination.'}
                     </p>
                   </div>
                 ) : (
@@ -4200,40 +4280,68 @@ export default function AdminTimeBlockingPage({
               />
             </div>
           </div>
+          </>
         )}
 
         {/* ══ CANCELLATION REQUESTS TAB ══ */}
         {showCoachRequestTables && coachRequestTab === 'cancellations' && (
+          <>
+          {isAdminCoachCancellations && (
+            <PortalTitleToolbar>
+              <CategorizedAddFilter
+                size="toolbar"
+                groups={[{
+                  ...PORTAL_REQUEST_STATUS_FILTER_GROUP,
+                  options: PORTAL_REQUEST_STATUS_FILTER_GROUP.options.map((option) => ({
+                    ...option,
+                    count: {
+                      pending: pendingC,
+                      approved: approvedC,
+                      rejected: rejectedC,
+                      cancelled: cancelledC,
+                    }[option.value],
+                  })),
+                }]}
+                selected={{ status: cancelStatusFilter }}
+                onChange={(next) => setCancelStatusFilter(next.status ?? [])}
+              />
+              <ChronologicalSortSelect size="toolbar" value={requestChronoOrder} onChange={setRequestChronoOrder} />
+            </PortalTitleToolbar>
+          )}
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+            {!isAdminCoachCancellations && (
             <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-[#F8F3E8]/60 shrink-0">
               <div>
-                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>Cancellation Requests</h2>
-                <p className="text-[#8A7E6E] text-xs mt-0.5">Coaches requesting to cancel their scheduled classes · click a row to review</p>
+                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}>
+                  Cancellation Requests
+                </h2>
+                <p className="text-[#8A7E6E] text-xs mt-0.5">
+                  {isFrontdeskCancellations
+                    ? 'Notify enrolled students, then admin confirms replace or cancel'
+                    : 'Coaches requesting to cancel their scheduled classes · click a row to review'}
+                </p>
               </div>
-              <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-xl p-1 w-fit">
-                {([
-                  ['all', 'All', cancelReqs.length],
-                  ['pending', 'Pending', pendingC],
-                  ['approved', 'Approved', approvedC],
-                  ['rejected', 'Rejected', rejectedC],
-                  ['cancelled', 'Cancelled', cancelledC],
-                ] as const).map(([id, label, count]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setCancelStatusFilter(id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      cancelStatusFilter === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                    }`}
-                  >
-                    {label}
-                    <span className={requestStatusFilterCountBadgeClass(id, count, cancelStatusFilter === id)}>
-                      {count}
-                    </span>
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <CategorizedAddFilter
+                  groups={[{
+                    ...PORTAL_REQUEST_STATUS_FILTER_GROUP,
+                    options: PORTAL_REQUEST_STATUS_FILTER_GROUP.options.map((option) => ({
+                      ...option,
+                      count: {
+                        pending: pendingC,
+                        approved: approvedC,
+                        rejected: rejectedC,
+                        cancelled: cancelledC,
+                      }[option.value],
+                    })),
+                  }]}
+                  selected={{ status: cancelStatusFilter }}
+                  onChange={(next) => setCancelStatusFilter(next.status ?? [])}
+                />
+                <ChronologicalSortSelect value={requestChronoOrder} onChange={setRequestChronoOrder} />
+              </div>
             </div>
-            </div>
+            )}
             <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40 shrink-0">
                   {['Coach', 'Class / Date', 'Notice', 'Status'].map(h => (
                     <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
@@ -4242,7 +4350,7 @@ export default function AdminTimeBlockingPage({
             {filteredCancelReqs.length === 0 ? (
               <div ref={coachTableContainerRef} className="flex-1 min-h-0 px-6 py-14 text-center">
                 <p className="text-[#1E2A35] text-sm font-semibold">
-                  No {cancelStatusFilter === 'all' ? '' : `${cancelStatusFilter} `}cancellation requests
+                  No {cancelStatusFilter.length === 0 ? '' : 'matching '}cancellation requests
                 </p>
                 <p className="text-[#B0A898] text-xs mt-1">
                   {cancelReqs.length === 0
@@ -4288,6 +4396,7 @@ export default function AdminTimeBlockingPage({
               />
             </div>
           </div>
+          </>
         )}
       </div>
       </div>
@@ -4308,7 +4417,7 @@ export default function AdminTimeBlockingPage({
             <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-1">Class schedule request</p>
-                <h3 className="text-[#1E2A35] leading-tight truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+                <h3 className="text-[#1E2A35] leading-tight truncate" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>
                   {selectedReq.className}
                 </h3>
               </div>
@@ -4455,7 +4564,7 @@ export default function AdminTimeBlockingPage({
                 <h3
                   id="cancellation-review-title"
                   className="text-[#1E2A35] leading-tight truncate"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.05em' }}
                 >
                   {selectedCancel.className}
                 </h3>
@@ -4513,7 +4622,7 @@ export default function AdminTimeBlockingPage({
                   </p>
                 </div>
               )}
-              {!selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && selectedCancelShortNotice && (
+              {!selectedCancel.isMemberEnrollmentCancel && !isFrontdeskCancellations && selectedCancel.status === 'pending' && selectedCancelShortNotice && (
                 <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                   <Clock size={14} className="text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-amber-800 text-[11px] leading-snug">
@@ -4521,7 +4630,7 @@ export default function AdminTimeBlockingPage({
                   </p>
                 </div>
               )}
-              {!selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && !selectedCancelShortNotice && (
+              {!selectedCancel.isMemberEnrollmentCancel && !isFrontdeskCancellations && selectedCancel.status === 'pending' && !selectedCancelShortNotice && (
                 <div className="flex items-start gap-1.5 bg-[#F8F3E8] border border-[#D4CDB5]/70 rounded-xl px-3 py-2">
                   <Clock size={14} className="text-[#9A8E7E] shrink-0 mt-0.5" />
                   <p className="text-[#5A5048] text-[11px] leading-snug">
@@ -4568,7 +4677,7 @@ export default function AdminTimeBlockingPage({
                   </div>
                 </div>
 
-                {!selectedCancel.isMemberEnrollmentCancel && selectedCancel.status === 'pending' && selectedCancelShortNotice && (
+                {!selectedCancel.isMemberEnrollmentCancel && !isFrontdeskCancellations && selectedCancel.status === 'pending' && selectedCancelShortNotice && (
                   <div className="rounded-xl border border-[#D4CDB5]/60 bg-white p-2.5 flex flex-col gap-2 min-w-0">
                     <p className="text-[#1E2A35] text-xs font-semibold">Approve as</p>
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -4608,18 +4717,42 @@ export default function AdminTimeBlockingPage({
                   </div>
                 )}
               </div>
+
+              {!selectedCancel.isMemberEnrollmentCancel ? (
+                <CancellationHoldingRoster
+                  requestId={selectedCancel.id}
+                  canNotify={selectedCancel.status === 'pending'}
+                  canRefund={!isFrontdeskCancellations}
+                  compact
+                />
+              ) : null}
             </div>
 
             <div className="shrink-0 border-t border-[#D4CDB5]/40 bg-[#FBF9F3]/80">
-              <ReviewActions
-                status={selectedCancel.status}
-                onApprove={() => submitCancellationReview(selectedCancel.id, 'approved')}
-                onReject={() => submitCancellationReview(selectedCancel.id, 'rejected')}
-                onUndo={() => submitCancellationReview(selectedCancel.id, 'pending')}
-                onClose={closePortalReviewModal}
-                approveDisabled={!canApproveCancellation}
-                compact
-              />
+              {isFrontdeskCancellations && !selectedCancel.isMemberEnrollmentCancel ? (
+                <div className="px-5 pb-4 pt-3">
+                  <p className="mb-3 text-center text-[11px] leading-relaxed text-[#5A5048]">
+                    Front desk prepares this roster. Admin confirms a replacement coach or cancels the class.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={closePortalReviewModal}
+                    className="w-full rounded-2xl bg-[#1E2A35] py-2.5 text-xs font-semibold text-white hover:bg-[#2A3A48] transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <ReviewActions
+                  status={selectedCancel.status}
+                  onApprove={() => submitCancellationReview(selectedCancel.id, 'approved')}
+                  onReject={() => submitCancellationReview(selectedCancel.id, 'rejected')}
+                  onUndo={() => submitCancellationReview(selectedCancel.id, 'pending')}
+                  onClose={closePortalReviewModal}
+                  approveDisabled={!canApproveCancellation}
+                  compact
+                />
+              )}
             </div>
           </div>
         </div>,
@@ -4749,7 +4882,7 @@ export default function AdminTimeBlockingPage({
                   <div className="flex items-center justify-between gap-3 min-w-0">
                     <SheetTitle
                       className="text-[#1E2A35] leading-tight truncate min-w-0 flex-1 text-left"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
                     >
                       {classSchedulePanelBlock.title?.trim() || 'Schedule block'}
                     </SheetTitle>
@@ -4942,11 +5075,21 @@ export default function AdminTimeBlockingPage({
 
                 {classScheduleBlockTab === 'slot-requests' && (
                   <div className="bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-                    <div className="px-4 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-                      <p className="text-[#1E2A35] text-sm font-semibold">Slot Requests</p>
-                      <p className="text-[#8A7E6E] text-xs mt-0.5">
-                        Staff booking requests for this block · tap to review
-                      </p>
+                    <div className="px-4 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-[#1E2A35] text-sm font-semibold">Slot Requests</p>
+                        <p className="text-[#8A7E6E] text-xs mt-0.5">
+                          Staff booking requests for this block · tap to review
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <CategorizedAddFilter
+                          groups={[PORTAL_REQUEST_STATUS_FILTER_GROUP]}
+                          selected={{ status: reqStatusFilter }}
+                          onChange={(next) => setReqStatusFilter(next.status ?? [])}
+                        />
+                        <ChronologicalSortSelect value={requestChronoOrder} onChange={setRequestChronoOrder} />
+                      </div>
                     </div>
                     {blockPanelSlotReqs.length === 0 ? (
                       <div className="px-4 py-10 text-center">
@@ -4995,11 +5138,21 @@ export default function AdminTimeBlockingPage({
 
                 {classScheduleBlockTab === 'cancellations' && (
                   <div className="bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-                    <div className="px-4 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
-                      <p className="text-[#1E2A35] text-sm font-semibold">Cancellation Requests</p>
-                      <p className="text-[#8A7E6E] text-xs mt-0.5">
-                        Coach cancellation requests for this class · tap to review
-                      </p>
+                    <div className="px-4 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-[#1E2A35] text-sm font-semibold">Cancellation Requests</p>
+                        <p className="text-[#8A7E6E] text-xs mt-0.5">
+                          Coach cancellation requests for this class · tap to review
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <CategorizedAddFilter
+                          groups={[PORTAL_REQUEST_STATUS_FILTER_GROUP]}
+                          selected={{ status: cancelStatusFilter }}
+                          onChange={(next) => setCancelStatusFilter(next.status ?? [])}
+                        />
+                        <ChronologicalSortSelect value={requestChronoOrder} onChange={setRequestChronoOrder} />
+                      </div>
                     </div>
                     {blockPanelCancelReqs.length === 0 ? (
                       <div className="px-4 py-10 text-center">
@@ -5106,7 +5259,7 @@ export default function AdminTimeBlockingPage({
               <div className="min-w-0 flex-1">
               <SheetTitle
                 className="text-[#1E2A35] leading-tight"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 {selectedMonthKey ? formatDateLongFromKey(selectedMonthKey) : 'Day schedule'}
               </SheetTitle>
@@ -5463,11 +5616,8 @@ export default function AdminTimeBlockingPage({
                     <h2
                       id="schedule-block-modal-title"
                       className="text-white leading-none mt-2"
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '1.5rem',
-                        letterSpacing: '0.05em',
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem',
+                        letterSpacing: '0.04em' }}
                     >
                       Vacant slot
                     </h2>
@@ -5480,11 +5630,8 @@ export default function AdminTimeBlockingPage({
                     <h2
                       id="schedule-block-modal-title"
               className="text-[#1E2A35] leading-none"
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '1.5rem',
-                        letterSpacing: '0.05em',
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem',
+                        letterSpacing: '0.04em' }}
                     >
                       {isStaffTimeSlots
                         ? 'Vacant slot'

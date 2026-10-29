@@ -5,10 +5,11 @@ import {
   Bookmark,
   CalendarRange,
   Clock,
+  Coins,
   CreditCard,
-  Loader2,
   User,
 } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { useAuth } from '../context/AuthContext';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
@@ -24,6 +25,11 @@ import {
   type MemberEnrolledClassItem,
 } from '../../lib/class-service';
 import { fetchClassPaymentsForMember } from '../../lib/class-payment-service';
+import { fetchMemberCreditWalletBalance } from '../../lib/member-credits-service';
+import {
+  DashboardWeekdayChart,
+  weekdayCountsFromIsoDates,
+} from '../components/dashboard/DashboardWeekdayChart';
 
 const PH_TZ = 'Asia/Manila';
 
@@ -166,6 +172,12 @@ function DashboardQuickLinks({ onNavigate }: { onNavigate: (path: string) => voi
           onClick={() => onNavigate('/class-schedule')}
         />
         <QuickLink
+          label="Credits & pass"
+          description="Wallet balance and packs"
+          icon={<Coins size={18} />}
+          onClick={() => onNavigate('/credits')}
+        />
+        <QuickLink
           label="Payment history"
           description="Receipts and payment status"
           icon={<CreditCard size={18} />}
@@ -187,6 +199,7 @@ export default function MemberDashboardPage() {
   const { user, profileComplete } = useAuth();
   const [classes, setClasses] = useState<MemberEnrolledClassItem[]>([]);
   const [pendingPayments, setPendingPayments] = useState(0);
+  const [creditBalance, setCreditBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [now] = useState(() => new Date());
@@ -205,11 +218,14 @@ export default function MemberDashboardPage() {
     setLoadError(null);
 
     void (async () => {
-      const [classesResult, paymentsResult] = await Promise.all([
+      const [classesResult, paymentsResult, creditsResult] = await Promise.all([
         fetchMemberEnrolledClasses(),
         profileComplete
           ? fetchClassPaymentsForMember()
           : Promise.resolve({ data: [], error: null }),
+        profileComplete
+          ? fetchMemberCreditWalletBalance()
+          : Promise.resolve({ balance: 0, error: null }),
       ]);
 
       if (cancelled) return;
@@ -225,6 +241,10 @@ export default function MemberDashboardPage() {
         setPendingPayments(
           paymentsResult.data.filter((row) => row.status === 'pending').length,
         );
+      }
+
+      if (!creditsResult.error) {
+        setCreditBalance(creditsResult.balance);
       }
 
       setLoading(false);
@@ -251,7 +271,7 @@ export default function MemberDashboardPage() {
 
   return (
     <MemberPageShell searchPlaceholder="Search classes…">
-      <div className="pt-6 pb-10 flex flex-col gap-6 w-full min-w-0">
+      <div className="flex w-full min-w-0 flex-col gap-3 pt-3 pb-5 md:gap-6 md:pt-6 md:pb-10">
         {!profileComplete ? (
           <ProfileIncompleteState description="Finish your profile to book classes and view payments." />
         ) : null}
@@ -280,14 +300,13 @@ export default function MemberDashboardPage() {
         ) : null}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-[#8A7E6E]">
-            <Loader2 size={26} className="mb-2 animate-spin text-[#c49a3c]" />
-            <p className="text-sm">Loading your dashboard…</p>
+          <div role="status" aria-live="polite" aria-label="Loading your dashboard">
+            <ContentSkeleton />
           </div>
         ) : (
           <div className="flex w-full min-w-0 flex-col gap-6 lg:flex-row lg:items-start">
             <div className="flex min-w-0 w-full flex-1 flex-col gap-6">
-              <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                 <StatTile
                   label="Next session"
                   value={nextClass ? formatSessionWhen(nextClass.startsAt, now).split(' · ')[0] : '—'}
@@ -297,12 +316,24 @@ export default function MemberDashboardPage() {
                 <StatTile label="Upcoming" value={upcoming.length} hint="Scheduled ahead" />
                 <StatTile label="Enrolled" value={confirmedCount} hint="Active registrations" />
                 <StatTile
+                  label="Credits"
+                  value={creditBalance}
+                  hint="Wallet balance"
+                  accent={creditBalance > 0 ? 'gold' : 'default'}
+                />
+                <StatTile
                   label="Pending"
                   value={needsAttention + pendingPayments}
                   hint="Waitlist or payments"
                   accent={needsAttention + pendingPayments > 0 ? 'gold' : 'default'}
                 />
               </div>
+
+              <DashboardWeekdayChart
+                data={weekdayCountsFromIsoDates(upcoming.map((item) => item.startsAt))}
+                title="Your week"
+                hint="Upcoming sessions by weekday"
+              />
 
               <section className="w-full min-w-0 rounded-2xl border border-[#D4CDB5]/60 bg-white shadow-sm overflow-hidden">
               <div className="flex items-center justify-between gap-3 border-b border-[#D4CDB5]/50 px-4 py-3">

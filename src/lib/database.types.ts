@@ -129,6 +129,15 @@ export interface Database {
         } & Partial<Omit<ClassStudentRow, 'class_id' | 'account_id' | 'enrolled_at'>>;
         Update: Partial<ClassStudentRow>;
       };
+      class_cancel_holdings: {
+        Row: ClassCancelHoldingTableRow;
+        Insert: Partial<ClassCancelHoldingTableRow> & {
+          portal_request_id: string;
+          class_id: string;
+          account_id: string;
+        };
+        Update: Partial<ClassCancelHoldingTableRow>;
+      };
       coach_disciplines: {
         Row: CoachDisciplineRow;
         Insert: {
@@ -212,6 +221,66 @@ export interface Database {
           media_kind: GalleryMediaKind;
         } & Partial<Omit<GalleryPostMediaRow, 'id' | 'post_id' | 'sort_order' | 'storage_path' | 'media_kind' | 'created_at'>>;
         Update: Partial<Omit<GalleryPostMediaRow, 'id' | 'post_id' | 'created_at'>>;
+      };
+      pricing_offerings: {
+        Row: {
+          id: string;
+          slug: string;
+          kind: 'featured_pass' | 'membership' | 'service';
+          title: string;
+          tagline: string;
+          description: string;
+          badge: string | null;
+          highlight: boolean;
+          hero_price_label: string;
+          hero_price_unit: string;
+          inclusions: string[];
+          tiers: unknown;
+          chips: string[];
+          cta_label: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      feedback_comments: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          account_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: { ticket_id: string; account_id: string; body: string };
+        Update: never;
+      };
+      feedback_ticket_participants: {
+        Row: {
+          ticket_id: string;
+          account_id: string;
+          joined_at: string;
+          last_read_at: string | null;
+        };
+        Insert: { ticket_id: string; account_id: string };
+        Update: { last_read_at?: string | null };
+      };
+      account_notifications: {
+        Row: {
+          id: string;
+          account_id: string;
+          kind: string;
+          title: string;
+          body: string;
+          href: string;
+          ticket_id: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: { read_at?: string | null };
       };
     };
     Functions: {
@@ -306,6 +375,30 @@ export interface Database {
           p_cancel_entire_class?: boolean;
         };
         Returns: PortalRequestRow;
+      };
+      list_class_cancel_holdings: {
+        Args: { p_request_id: string };
+        Returns: ClassCancelHoldingRow[];
+      };
+      mark_class_cancel_holding_notified: {
+        Args: { p_holding_id: string; p_notified?: boolean; p_notify_note?: string };
+        Returns: ClassCancelHoldingRow;
+      };
+      mark_class_cancel_holdings_notified_all: {
+        Args: { p_request_id: string; p_notify_note?: string };
+        Returns: number;
+      };
+      mark_class_cancel_holding_refunded: {
+        Args: { p_holding_id: string };
+        Returns: ClassCancelHoldingRow;
+      };
+      count_class_cancel_requests_needing_notify: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      count_class_cancel_holdings_pending_refund: {
+        Args: Record<string, never>;
+        Returns: number;
       };
       coach_directory_images: {
         Args: Record<string, never>;
@@ -634,6 +727,47 @@ export interface PortalRequestRow {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ClassCancelHoldingOutcome =
+  | 'pending_review'
+  | 'coach_replaced'
+  | 'class_cancelled'
+  | 'request_rejected'
+  | 'request_withdrawn';
+export type ClassCancelHoldingRefundStatus = 'not_applicable' | 'pending' | 'completed' | 'skipped';
+export type ClassCancelHoldingRefundKind = 'none' | 'credit' | 'cash';
+
+export interface ClassCancelHoldingTableRow {
+  id: string;
+  portal_request_id: string;
+  class_id: string;
+  account_id: string;
+  notified_at: string | null;
+  notified_by: string | null;
+  notify_note: string;
+  outcome: ClassCancelHoldingOutcome;
+  refund_status: ClassCancelHoldingRefundStatus;
+  refund_kind: ClassCancelHoldingRefundKind;
+  refunded_at: string | null;
+  refunded_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClassCancelHoldingRow {
+  id: string;
+  portal_request_id: string;
+  class_id: string;
+  account_id: string;
+  member_name?: string;
+  member_email?: string;
+  notified_at: string | null;
+  notify_note?: string;
+  outcome: ClassCancelHoldingOutcome;
+  refund_status: ClassCancelHoldingRefundStatus;
+  refund_kind: ClassCancelHoldingRefundKind;
+  refunded_at: string | null;
 }
 
 export interface StudioAmenitiesConfigRow {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, Loader2, LogIn } from 'lucide-react';
+import { AlertCircle, LogIn } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { useAuth } from '../context/AuthContext';
 import {
   AdminDisciplineCardsGrid,
@@ -9,6 +10,12 @@ import {
 } from '../components/disciplines/AdminDisciplineCardsGrid';
 import { AdminDisciplineModal } from '../components/disciplines/AdminDisciplineModal';
 import { AdminTablePagination } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
+import { PAGE_HEADING_TOOLBAR_ROW_CLASS } from '../components/layout/PortalAppHeader';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 import {
   fetchDisciplinesForPublic,
@@ -31,6 +38,7 @@ export default function DisciplinesPage() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [density, setDensity] = useState<DisciplineCardDensity>('large');
   const [page, setPage] = useState(1);
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
 
   useEffect(() => {
     let cancelled = false;
@@ -49,17 +57,22 @@ export default function DisciplinesPage() {
     };
   }, []);
 
+  const orderedDisciplines = useMemo(
+    () => sortAlphabetically(disciplines, (item) => item.name ?? '', alphaOrder),
+    [disciplines, alphaOrder],
+  );
+
   const pageSize = PAGE_SIZE[density];
-  const totalPages = Math.max(1, Math.ceil(disciplines.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(orderedDisciplines.length / pageSize));
   const currentPage = Math.min(page, totalPages);
 
   const pageDisciplines = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return disciplines.slice(start, start + pageSize);
-  }, [disciplines, currentPage, pageSize]);
+    return orderedDisciplines.slice(start, start + pageSize);
+  }, [orderedDisciplines, currentPage, pageSize]);
 
-  const rangeStart = disciplines.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(currentPage * pageSize, disciplines.length);
+  const rangeStart = orderedDisciplines.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, orderedDisciplines.length);
 
   const handleDensityChange = (next: DisciplineCardDensity) => {
     setDensity(next);
@@ -100,7 +113,7 @@ export default function DisciplinesPage() {
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-2"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.04em' }}
             >
               Sign in required
             </h2>
@@ -133,34 +146,37 @@ export default function DisciplinesPage() {
       <div className="shrink-0 border-b border-[#D4CDB5]/60">
         <div className="max-w-6xl mx-auto px-4 md:px-8 pt-4 pb-3 md:pt-5 md:pb-4">
           <PublicBreadcrumb parent="Our Classes" current="Disciplines" parentTo="/classes" />
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div className="min-w-0">
-              <h1
-                className="text-[#1E2A35] leading-none"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: 'clamp(1.7rem, 3.5vw, 2.4rem)',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                Disciplines
-              </h1>
-              <p className="text-[#8A7E6E] text-xs md:text-sm mt-1.5">
-                Explore the movement practices we offer at BALANSÉ.
-              </p>
-            </div>
+          <div className={PAGE_HEADING_TOOLBAR_ROW_CLASS}>
+            <h1
+              className="text-[#1E2A35] leading-none min-w-0 shrink-0"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.4rem)',
+                letterSpacing: '0.04em' }}
+            >
+              Disciplines
+            </h1>
             {!disciplinesLoading && disciplines.length > 0 && (
-              <DisciplineDensityToggle density={density} onChange={handleDensityChange} />
+              <>
+                <AlphabeticalSortSelect
+                  value={alphaOrder}
+                  onChange={(order) => {
+                    setAlphaOrder(order);
+                    setPage(1);
+                  }}
+                />
+                <DisciplineDensityToggle density={density} onChange={handleDensityChange} />
+              </>
             )}
           </div>
+          <p className="text-[#8A7E6E] text-xs md:text-sm mt-1.5">
+            Explore the movement practices we offer at BALANSÉ.
+          </p>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto w-full px-4 md:px-8 py-3 md:py-4 flex flex-col pb-10">
         {disciplinesLoading && (
-          <div className="flex items-center justify-center gap-2 py-16 text-[#8A7E6E]">
-            <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-            <span className="text-sm">Loading disciplines…</span>
+          <div role="status" aria-live="polite" aria-label="Loading disciplines">
+            <ContentSkeleton variant="cards" />
           </div>
         )}
 
@@ -185,7 +201,7 @@ export default function DisciplinesPage() {
           <>
             <div className="flex items-center justify-between gap-3 mb-3">
               <p className="text-[#8A7E6E] text-xs">
-                {disciplines.length} discipline{disciplines.length === 1 ? '' : 's'} available
+                {orderedDisciplines.length} discipline{orderedDisciplines.length === 1 ? '' : 's'} available
               </p>
             </div>
 
@@ -202,7 +218,7 @@ export default function DisciplinesPage() {
               totalPages={totalPages}
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
-              total={disciplines.length}
+              total={orderedDisciplines.length}
               noun="disciplines"
               onPageChange={setPage}
             />

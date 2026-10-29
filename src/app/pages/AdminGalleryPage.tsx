@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronDown, Images, Pencil, Trash2, X, Check, Upload, Star, Home, Sparkles } from 'lucide-react';
+import { Images, Pencil, Trash2, X, Check, Upload, Star, Home, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
+import { PageLoadingScreen } from '../components/layout/PageLoadingScreen';
 import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
+import { CategorizedAddFilter } from '../components/filters/CategorizedAddFilter';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { IMAGE_HOVER_ZOOM } from '../../lib/motion-classes';
 import { GalleryLightbox } from '../components/gallery/GalleryLightbox';
 import { GalleryPostFormModal } from '../components/gallery/GalleryPostFormModal';
@@ -27,112 +35,6 @@ const FEATURE_FILTER_LABELS: Record<FeatureFilterOption, string> = {
   home: 'Balance in Motion',
   amenities: 'Amenities',
 };
-
-function toggleValue<T>(list: T[], value: T): T[] {
-  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-}
-
-function FilterDropdown<T extends string>({
-  label,
-  options,
-  selected,
-  onChange,
-  getLabel = (value) => value,
-  emptySummary,
-  resetLabel,
-}: {
-  label: string;
-  options: readonly T[];
-  selected: T[];
-  onChange: (next: T[]) => void;
-  getLabel?: (value: T) => string;
-  emptySummary?: string;
-  resetLabel?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [open]);
-
-  const summary =
-    selected.length === 0
-      ? (emptySummary ?? `All ${label.toLowerCase()}`)
-      : selected.length === 1
-        ? getLabel(selected[0])
-        : `${selected.length} selected`;
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((current) => !current)}
-        className={`flex h-9 min-w-[9.5rem] items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all ${
-          selected.length > 0
-            ? 'border-[#c49a3c]/45 bg-[#c49a3c]/10 text-[#a67f2e]'
-            : 'border-[#D4CDB5]/60 bg-white text-[#5A5048] hover:border-[#c49a3c]/35'
-        }`}
-      >
-        <span className="text-[10px] uppercase tracking-widest text-[#B0A898]">{label}</span>
-        <span className="min-w-0 flex-1 truncate text-left">{summary}</span>
-        {selected.length > 0 && (
-          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c49a3c] px-1 text-[9px] text-white">
-            {selected.length}
-          </span>
-        )}
-        <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          aria-multiselectable="true"
-          className="absolute right-0 top-full z-30 mt-1.5 w-56 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1.5 shadow-[0_8px_28px_rgba(30,42,53,0.16)]"
-        >
-          <button
-            type="button"
-            onClick={() => onChange([])}
-            className="mb-0.5 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold text-[#c49a3c] transition-colors hover:bg-[#F5F2E8]"
-          >
-            {resetLabel ?? `All ${label.toLowerCase()}`}
-          </button>
-          {options.map((option) => {
-            const isSelected = selected.includes(option);
-            return (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => onChange(toggleValue(selected, option))}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
-                  isSelected ? 'bg-[#c49a3c]/12 text-[#1E2A35]' : 'text-[#5A5048] hover:bg-[#F5F2E8]'
-                }`}
-              >
-                <span
-                  className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${
-                    isSelected ? 'border-[#c49a3c] bg-[#c49a3c] text-white' : 'border-[#D4CDB5]'
-                  }`}
-                >
-                  {isSelected && <span className="block h-1.5 w-1.5 rounded-[1px] bg-white" />}
-                </span>
-                {getLabel(option)}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function PhotoCard({
   post,
@@ -270,6 +172,7 @@ export default function AdminGalleryPage() {
   const [selectedTags, setSelectedTags] = useState<GalleryTag[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<FeatureFilterOption[]>([]);
   const [tablePage, setTablePage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [showModal, setShowModal] = useState(false);
   const [editingPost, setEditingPost] = useState<GalleryPost | null>(null);
   const [viewingPost, setViewingPost] = useState<GalleryPost | null>(null);
@@ -302,11 +205,11 @@ export default function AdminGalleryPage() {
 
   useEffect(() => {
     setTablePage(1);
-  }, [selectedTags, selectedFeatures, urlSearchQuery]);
+  }, [selectedTags, selectedFeatures, urlSearchQuery, chronoOrder]);
 
   const filtered = useMemo(() => {
     const q = urlSearchQuery.trim().toLowerCase();
-    return posts.filter((p) => {
+    const matched = posts.filter((p) => {
       const matchTag = selectedTags.length === 0 || selectedTags.includes(p.tag);
       const matchFeature =
         selectedFeatures.length === 0
@@ -319,7 +222,8 @@ export default function AdminGalleryPage() {
         || p.tag.toLowerCase().includes(q);
       return matchTag && matchFeature && matchQuery;
     });
-  }, [posts, selectedTags, selectedFeatures, urlSearchQuery]);
+    return sortChronologically(matched, (post) => post.createdAt, chronoOrder);
+  }, [posts, selectedTags, selectedFeatures, urlSearchQuery, chronoOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(tablePage, totalPages);
@@ -410,62 +314,46 @@ export default function AdminGalleryPage() {
       {viewingPost && <GalleryLightbox post={viewingPost} onClose={() => setViewingPost(null)} />}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col py-4">
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
-            <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-[#F8F3E8]/60 shrink-0">
-              <div className="min-w-0">
-                <h2
-                  className="text-[#1E2A35]"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
-                >
-                  Gallery Posts
-                </h2>
-                <p className="text-[#8A7E6E] text-xs mt-0.5">
-                  Photos and videos for the public studio gallery and home page · click a card to preview
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:justify-end">
-                <FilterDropdown
-                  label="Tags"
-                  options={GALLERY_TAGS}
-                  selected={selectedTags}
-                  onChange={setSelectedTags}
+        <div className="max-w-8xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col pb-4 pt-1">
+          <PortalTitleToolbar>
+                <CategorizedAddFilter
+                  groups={[
+                    {
+                      id: 'tag',
+                      label: 'Tags',
+                      options: GALLERY_TAGS.map((tag) => ({ value: tag, label: tag })),
+                    },
+                    {
+                      id: 'feature',
+                      label: 'Featured in',
+                      options: FEATURE_FILTER_OPTIONS.map((value) => ({
+                        value,
+                        label: FEATURE_FILTER_LABELS[value],
+                      })),
+                    },
+                  ]}
+                  selected={{ tag: selectedTags, feature: selectedFeatures }}
+                  onChange={(next) => {
+                    setSelectedTags((next.tag ?? []) as GalleryTag[]);
+                    setSelectedFeatures((next.feature ?? []) as FeatureFilterOption[]);
+                  }}
                 />
-                <FilterDropdown
-                  label="Featured in"
-                  options={FEATURE_FILTER_OPTIONS}
-                  selected={selectedFeatures}
-                  onChange={setSelectedFeatures}
-                  getLabel={(value) => FEATURE_FILTER_LABELS[value]}
-                  emptySummary="All posts"
-                  resetLabel="All posts"
-                />
+                <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
                 <button
                   type="button"
                   onClick={openUpload}
-                  className="action-button flex items-center justify-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
+                  className="action-button ml-auto flex items-center justify-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
                 >
                   <Upload size={15} /> Add Media
                 </button>
-              </div>
-            </div>
-
+          </PortalTitleToolbar>
+          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
             <div
               ref={containerRef}
               className="relative flex-1 min-h-0 overflow-hidden"
             >
               {loading && (
-                <div
-                  className="absolute inset-0 z-30 flex items-center justify-center bg-[#F8F3E8]/55 backdrop-blur-[2px]"
-                  role="status"
-                  aria-live="polite"
-                  aria-label="Loading gallery"
-                >
-                  <span
-                    className="h-9 w-9 rounded-full border-[3px] border-[#c49a3c]/25 border-t-[#c49a3c] animate-spin"
-                    aria-hidden
-                  />
-                </div>
+                <PageLoadingScreen overlay variant="cards" message="Loading gallery" />
               )}
 
               {!loading && filtered.length === 0 ? (

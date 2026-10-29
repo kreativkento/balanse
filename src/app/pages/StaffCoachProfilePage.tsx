@@ -7,11 +7,9 @@ import {
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { toastOperationFailed, toastSaved } from '../../lib/operation-toast';
 import { ProfileImageHero } from '../components/ProfileImages';
-import { CountryFlag, CountrySelect } from '../components/CountrySelect';
 import { ClearableInput, ClearableTextarea } from '../components/FieldClearButton';
 import { STAFF_PAGE_CONTAINER_PADDED } from '../lib/staff-page-meta';
 import { profileScoreBarClasses } from '../../lib/profile-completion';
-import { toCountryName } from '../data/nationalities';
 import {
   ACCOUNT_TAB,
   CARD,
@@ -54,7 +52,6 @@ export default function StaffCoachProfilePage() {
   const [cardSaved, setCardSaved] = useState<EditableCardId | null>(null);
 
   const [displayName, setDisplayName] = useState('');
-  const [nationality, setNationality] = useState('');
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [experience, setExperience] = useState('');
@@ -66,7 +63,7 @@ export default function StaffCoachProfilePage() {
   const [disciplineSaveError, setDisciplineSaveError] = useState('');
   const [savingDisciplines, setSavingDisciplines] = useState(false);
 
-  const [basicErrors, setBasicErrors] = useState<{ displayName?: string; nationality?: string }>({});
+  const [basicErrors, setBasicErrors] = useState<{ displayName?: string }>({});
   const [contactErrors, setContactErrors] = useState<{ phone?: string }>({});
 
   const [curPw, setCurPw] = useState('');
@@ -123,7 +120,6 @@ export default function StaffCoachProfilePage() {
   const hydrateFromProfile = () => {
     if (!staffProfile) return;
     setDisplayName(staffProfile.displayName || staffUser?.name || '');
-    setNationality(toCountryName(staffProfile.nationality));
     setPhone(staffProfile.phone || '');
     setBio(staffProfile.bio || '');
     setExperience(staffProfile.experience || '');
@@ -181,7 +177,6 @@ export default function StaffCoachProfilePage() {
     if (card === 'basic') {
       setBasicErrors(requiredErrors({
         displayName: !isFilled(staffProfile.displayName),
-        nationality: !isFilled(staffProfile.nationality),
       }));
     }
     if (card === 'contact') {
@@ -195,7 +190,6 @@ export default function StaffCoachProfilePage() {
   const saveBasic = () => {
     const nextErrors = requiredErrors({
       displayName: !displayName.trim(),
-      nationality: !nationality.trim(),
     });
     if (Object.keys(nextErrors).length > 0) {
       setBasicErrors(nextErrors);
@@ -204,7 +198,6 @@ export default function StaffCoachProfilePage() {
     setBasicErrors({});
     updateStaffProfile({
       displayName: displayName.trim(),
-      nationality: nationality.trim(),
     });
     toastSaved('Profile');
     markSaved('basic');
@@ -300,7 +293,7 @@ export default function StaffCoachProfilePage() {
                   <p className="text-xs text-[#5A5048]">Profile Completion</p>
                   <span
                     className={`font-semibold ${profileScoreBar.text}`}
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.04em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
                   >
                     {profileScore}%
                   </span>
@@ -335,17 +328,6 @@ export default function StaffCoachProfilePage() {
                       <div className="grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-2">
                         <DisplayField label="Display Name" value={displayText(staffProfile.displayName)} />
                         <DisplayField label="Email Address" value={displayText(staffUser.email)} />
-                        <div className="sm:col-span-2">
-                          <DisplayField
-                            label="Nationality"
-                            value={displayText(toCountryName(staffProfile.nationality))}
-                            leading={
-                              staffProfile.nationality
-                                ? <CountryFlag country={toCountryName(staffProfile.nationality)} />
-                                : undefined
-                            }
-                          />
-                        </div>
                       </div>
                     }
                   >
@@ -375,22 +357,6 @@ export default function StaffCoachProfilePage() {
                           readOnly
                           onChange={() => {}}
                           onClear={() => {}}
-                        />
-                      </Field>
-                      <Field label="Nationality" error={basicErrors.nationality}>
-                        <CountrySelect
-                          value={nationality}
-                          invalid={Boolean(basicErrors.nationality)}
-                          onChange={(next) => {
-                            setNationality(next);
-                            if (basicErrors.nationality) {
-                              setBasicErrors((current) => {
-                                const nextErrors = { ...current };
-                                delete nextErrors.nationality;
-                                return nextErrors;
-                              });
-                            }
-                          }}
                         />
                       </Field>
                     </div>

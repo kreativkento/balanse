@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
-import { AlertCircle, Check, Clock, Loader2, X } from 'lucide-react';
+import { AlertCircle, Check, Clock, X } from 'lucide-react';
+import { PageLoadingScreen } from '../components/layout/PageLoadingScreen';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   AdminTablePagination,
   useFitPageSize,
 } from '../components/layout/AdminTablePagination';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { PORTAL_REQUEST_STATUS_FILTER_GROUP } from '../components/filters/status-filter-groups';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { fetchClassesForStaffSchedule, type ClassDisplay } from '../../lib/class-service';
 import { fetchDisciplinesForPublic } from '../../lib/discipline-service';
 import { PendingPortalRequestWithdrawActions } from '../components/portal/PendingPortalRequestWithdrawActions';
@@ -19,9 +27,14 @@ import {
   type PortalRequestRow,
   type PortalRequestStatus,
 } from '../../lib/portal-request-service';
+import { CancellationHoldingRoster } from '../components/classes/CancellationHoldingRoster';
+import {
+  coachCancelHoldingStatusLabel,
+  fetchClassCancelHoldings,
+  type ClassCancelHoldingListItem,
+} from '../../lib/class-cancel-holding-service';
 
 type ReqStatus = PortalRequestStatus;
-type StatusFilter = 'all' | ReqStatus;
 type RequestTab = 'requests' | 'cancellations';
 
 const CLASS_COLORS: Record<string, string> = {
@@ -79,6 +92,7 @@ interface SlotRequestRow {
   durationLabel: string;
   classLimit: number;
   submittedAt: string;
+  sortAt: string;
   status: ReqStatus;
 }
 
@@ -109,6 +123,7 @@ interface CancelRequestRow {
   time: string;
   enrolled: number;
   requestedAt: string;
+  sortAt: string;
   hoursUntilClass: number;
   status: ReqStatus;
 }
@@ -150,6 +165,7 @@ function mapSlotRequest(
     durationLabel,
     classLimit: payload.class_limit ?? classRow?.classLimit ?? 12,
     submittedAt: formatRelativeSubmitted(req.created_at),
+    sortAt: req.created_at,
     status: req.status,
   };
 }
@@ -177,6 +193,7 @@ function mapCancelRequest(
     time: timeStr,
     enrolled: classRow?.enrolledCount ?? 0,
     requestedAt: formatRelativeSubmitted(req.created_at),
+    sortAt: req.created_at,
     hoursUntilClass: hoursUntil,
     status: req.status,
   };
@@ -197,8 +214,9 @@ export default function StaffRequestsPage() {
   const accountId = staffUser?.accountId ?? '';
 
   const [tab, setTab] = useState<RequestTab>('requests');
-  const [reqStatusFilter, setReqStatusFilter] = useState<StatusFilter>('all');
-  const [cancelStatusFilter, setCancelStatusFilter] = useState<StatusFilter>('all');
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [reqStatusFilter, setReqStatusFilter] = useState<string[]>([]);
+  const [cancelStatusFilter, setCancelStatusFilter] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [portalRequests, setPortalRequests] = useState<PortalRequestRow[]>([]);
@@ -209,6 +227,7 @@ export default function StaffRequestsPage() {
   const [confirmWithdrawId, setConfirmWithdrawId] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [cancelHoldings, setCancelHoldings] = useState<ClassCancelHoldingListItem[]>([]);
 
   const loadData = useCallback(async () => {
     if (!accountId) {
@@ -287,14 +306,8 @@ export default function StaffRequestsPage() {
   const rejectedC = cancelReqs.filter((r) => r.status === 'rejected').length;
   const cancelledC = cancelReqs.filter((r) => r.status === 'cancelled').length;
 
-  const filteredScheduleReqs =
-    reqStatusFilter === 'all'
-      ? scheduleReqs
-      : scheduleReqs.filter((r) => r.status === reqStatusFilter);
-  const filteredCancelReqs =
-    cancelStatusFilter === 'all'
-      ? cancelReqs
-      : cancelReqs.filter((r) => r.status === cancelStatusFilter);
+  const filteredScheduleReqs = scheduleReqs.filter((r) => matchesAnySelected(reqStatusFilter, r.status));
+  const filteredCancelReqs = cancelReqs.filter((r) => matchesAnySelected(cancelStatusFilter, r.status));
 
   const [tablePage, setTablePage] = useState(1);
   const { containerRef: tableContainerRef, pageSize: tablePageSize } = useFitPageSize({
@@ -304,7 +317,7 @@ export default function StaffRequestsPage() {
 
   useEffect(() => {
     setTablePage(1);
-  }, [tab, reqStatusFilter, cancelStatusFilter]);
+  }, [tab, reqStatusFilter, cancelStatusFilter, chronoOrder]);
 
   const activeFiltered = tab === 'requests' ? filteredScheduleReqs : filteredCancelReqs;
   const totalPages = Math.max(1, Math.ceil(activeFiltered.length / tablePageSize));
@@ -314,16 +327,34 @@ export default function StaffRequestsPage() {
 
   const pagedScheduleReqs = useMemo(() => {
     const start = (currentPage - 1) * tablePageSize;
-    return filteredScheduleReqs.slice(start, start + tablePageSize);
-  }, [filteredScheduleReqs, currentPage, tablePageSize]);
+    return sortChronologically(filteredScheduleReqs, (req) => req.sortAt, chronoOrder)
+      .slice(start, start + tablePageSize);
+  }, [filteredScheduleReqs, currentPage, tablePageSize, chronoOrder]);
 
   const pagedCancelReqs = useMemo(() => {
     const start = (currentPage - 1) * tablePageSize;
-    return filteredCancelReqs.slice(start, start + tablePageSize);
-  }, [filteredCancelReqs, currentPage, tablePageSize]);
+    return sortChronologically(filteredCancelReqs, (req) => req.sortAt, chronoOrder)
+      .slice(start, start + tablePageSize);
+  }, [filteredCancelReqs, currentPage, tablePageSize, chronoOrder]);
 
   const selectedSlot = scheduleReqs.find((r) => r.id === selectedSlotId) ?? null;
   const selectedCancel = cancelReqs.find((r) => r.id === selectedCancelId) ?? null;
+
+  useEffect(() => {
+    if (!selectedCancelId) {
+      setCancelHoldings([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchClassCancelHoldings(selectedCancelId).then(({ data }) => {
+      if (!cancelled) setCancelHoldings(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCancelId]);
+
+  const holdingStatusLabel = coachCancelHoldingStatusLabel(cancelHoldings);
   const selectedSlotRaw = selectedSlotId ? requestsById.get(selectedSlotId) : undefined;
   const selectedCancelRaw = selectedCancelId ? requestsById.get(selectedCancelId) : undefined;
 
@@ -370,7 +401,7 @@ export default function StaffRequestsPage() {
   return (
     <>
       <div className="h-full min-h-0 overflow-hidden flex flex-col">
-        <div className="max-w-7xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col py-8">
+        <div className="max-w-8xl mx-auto px-6 w-full flex-1 min-h-0 flex flex-col py-8">
           <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit shrink-0">
             {(
               [
@@ -401,23 +432,14 @@ export default function StaffRequestsPage() {
           {tab === 'requests' && (
             <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col relative">
               {loading && (
-                <div
-                  className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]"
-                  role="status"
-                  aria-label="Loading requests"
-                >
-                  <Loader2 className="h-8 w-8 animate-spin text-[#c49a3c]" aria-hidden />
-          </div>
+                <PageLoadingScreen overlay variant="list" message="Loading requests" />
               )}
               <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-[#F8F3E8]/60 shrink-0">
                 <div>
                   <h2
                     className="text-[#1E2A35]"
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '1.15rem',
-                      letterSpacing: '0.05em',
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem',
+                      letterSpacing: '0.05em' }}
                   >
                     Slot Requests
                   </h2>
@@ -425,39 +447,25 @@ export default function StaffRequestsPage() {
                     Your class schedule slot requests · click a row for details
                   </p>
                 </div>
-                <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-xl p-1 w-fit">
-                  {(
-                    [
-                      ['all', 'All', scheduleReqs.length],
-                      ['pending', 'Pending', pendingB],
-                      ['approved', 'Approved', approvedB],
-                      ['rejected', 'Rejected', rejectedB],
-                      ['cancelled', 'Cancelled', cancelledB],
-                    ] as const
-                  ).map(([id, label, count]) => (
-            <button
-              key={id}
-                      type="button"
-                      onClick={() => setReqStatusFilter(id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        reqStatusFilter === id
-                          ? 'bg-[#1E2A35] text-white shadow-sm'
-                          : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                      }`}
-            >
-              {label}
-                      <span
-                        className={requestStatusFilterCountBadgeClass(
-                          id,
-                          count,
-                          reqStatusFilter === id,
-                        )}
-                      >
-                        {count}
-                      </span>
-            </button>
-          ))}
-        </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                <CategorizedAddFilter
+                  groups={[{
+                    ...PORTAL_REQUEST_STATUS_FILTER_GROUP,
+                    options: PORTAL_REQUEST_STATUS_FILTER_GROUP.options.map((option) => ({
+                      ...option,
+                      count: {
+                        pending: pendingB,
+                        approved: approvedB,
+                        rejected: rejectedB,
+                        cancelled: cancelledB,
+                      }[option.value],
+                    })),
+                  }]}
+                  selected={{ status: reqStatusFilter }}
+                  onChange={(next) => setReqStatusFilter(next.status ?? [])}
+                />
+                <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+                </div>
             </div>
               <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40 shrink-0">
                 {['Class Name', 'Discipline', 'Start Time', 'End Time', 'Class Limit', 'Status'].map(
@@ -474,7 +482,7 @@ export default function StaffRequestsPage() {
               {filteredScheduleReqs.length === 0 ? (
                 <div ref={tableContainerRef} className="flex-1 min-h-0 px-6 py-14 text-center">
                   <p className="text-[#1E2A35] text-sm font-semibold">
-                    No {reqStatusFilter === 'all' ? '' : `${reqStatusFilter} `}slot requests
+                    No {reqStatusFilter.length === 0 ? '' : 'matching '}slot requests
                   </p>
                   <p className="text-[#B0A898] text-xs mt-1">
                     {scheduleReqs.length === 0 ? (
@@ -547,23 +555,14 @@ export default function StaffRequestsPage() {
           {tab === 'cancellations' && (
             <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col relative">
               {loading && (
-                <div
-                  className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]"
-                  role="status"
-                  aria-label="Loading requests"
-                >
-                  <Loader2 className="h-8 w-8 animate-spin text-[#c49a3c]" aria-hidden />
-                        </div>
+                <PageLoadingScreen overlay variant="list" message="Loading requests" />
               )}
               <div className="px-6 py-4 border-b border-[#D4CDB5]/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-[#F8F3E8]/60 shrink-0">
                 <div>
                   <h2
                     className="text-[#1E2A35]"
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '1.15rem',
-                      letterSpacing: '0.05em',
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem',
+                      letterSpacing: '0.05em' }}
                   >
                     Cancellation Requests
                   </h2>
@@ -571,39 +570,25 @@ export default function StaffRequestsPage() {
                     Your requests to cancel scheduled classes · click a row for details
                   </p>
                       </div>
-                <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-xl p-1 w-fit">
-                  {(
-                    [
-                      ['all', 'All', cancelReqs.length],
-                      ['pending', 'Pending', pendingC],
-                      ['approved', 'Approved', approvedC],
-                      ['rejected', 'Rejected', rejectedC],
-                      ['cancelled', 'Cancelled', cancelledC],
-                    ] as const
-                  ).map(([id, label, count]) => (
-                      <button
-                      key={id}
-                      type="button"
-                      onClick={() => setCancelStatusFilter(id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        cancelStatusFilter === id
-                          ? 'bg-[#1E2A35] text-white shadow-sm'
-                          : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                      }`}
-                    >
-                      {label}
-                      <span
-                        className={requestStatusFilterCountBadgeClass(
-                          id,
-                          count,
-                          cancelStatusFilter === id,
-                        )}
-                      >
-                        {count}
-                      </span>
-                        </button>
-                  ))}
-                    </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <CategorizedAddFilter
+                    groups={[{
+                      ...PORTAL_REQUEST_STATUS_FILTER_GROUP,
+                      options: PORTAL_REQUEST_STATUS_FILTER_GROUP.options.map((option) => ({
+                        ...option,
+                        count: {
+                          pending: pendingC,
+                          approved: approvedC,
+                          rejected: rejectedC,
+                          cancelled: cancelledC,
+                        }[option.value],
+                      })),
+                    }]}
+                    selected={{ status: cancelStatusFilter }}
+                    onChange={(next) => setCancelStatusFilter(next.status ?? [])}
+                  />
+                  <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+                </div>
                   </div>
               <div className="grid grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40 shrink-0">
                 {['Class / Date', 'Notice', 'Status'].map((h) => (
@@ -618,7 +603,7 @@ export default function StaffRequestsPage() {
               {filteredCancelReqs.length === 0 ? (
                 <div ref={tableContainerRef} className="flex-1 min-h-0 px-6 py-14 text-center">
                   <p className="text-[#1E2A35] text-sm font-semibold">
-                    No {cancelStatusFilter === 'all' ? '' : `${cancelStatusFilter} `}cancellation
+                    No {cancelStatusFilter.length === 0 ? '' : 'matching '}cancellation
                     requests
                   </p>
                   <p className="text-[#B0A898] text-xs mt-1">
@@ -744,11 +729,8 @@ export default function StaffRequestsPage() {
                       className={`leading-tight break-words ${
                         headerOnDark ? 'text-white' : 'text-[#1E2A35]'
                       }`}
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '1.5rem',
-                        letterSpacing: '0.05em',
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem',
+                        letterSpacing: '0.04em' }}
                     >
                       {selectedSlot.className}
                     </h3>
@@ -959,11 +941,8 @@ export default function StaffRequestsPage() {
                   </p>
                   <h3
                     className="text-[#1E2A35] leading-tight"
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '1.5rem',
-                      letterSpacing: '0.05em',
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem',
+                      letterSpacing: '0.04em' }}
                   >
                     {selectedCancel.className}
                   </h3>
@@ -1009,11 +988,22 @@ export default function StaffRequestsPage() {
                   <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
                     <Clock size={15} className="text-amber-600 shrink-0 mt-0.5" />
                     <p className="text-amber-700 text-xs leading-relaxed">
-                      Waiting for admin review. You can cancel this request below if you no longer
-                      need it.
+                      {holdingStatusLabel
+                        ?? 'Waiting for front desk to notify students, then admin review. You can withdraw this request below if you no longer need it.'}
                     </p>
                         </div>
                 )}
+                {selectedCancel.status === 'approved' && holdingStatusLabel ? (
+                  <p className="text-[11px] font-semibold text-[#5A5048]">{holdingStatusLabel}</p>
+                ) : null}
+                {selectedCancelId ? (
+                  <CancellationHoldingRoster
+                    requestId={selectedCancelId}
+                    canNotify={false}
+                    canRefund={false}
+                    compact
+                  />
+                ) : null}
                 {selectedCancel.status === 'cancelled' && (
                   <div className="flex items-start gap-2 bg-[#F8F3E8] border border-[#D4CDB5]/70 rounded-2xl px-4 py-3">
                     <X size={15} className="text-[#8A7E6E] shrink-0 mt-0.5" />

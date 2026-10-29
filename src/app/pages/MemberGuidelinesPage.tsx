@@ -97,11 +97,8 @@ export default function MemberGuidelinesPage() {
                 </div>
                 <h3
                   className="min-w-0 text-[#1E2A35] leading-none"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.25rem',
-                    letterSpacing: '0.05em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem',
+                    letterSpacing: '0.05em' }}
                 >
                   {title}
                 </h3>

@@ -2,7 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, X, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProfileAvatar } from '../ProfileImages';
+import { CategorizedAddFilter, matchesAnySelected } from '../filters/CategorizedAddFilter';
 import { AdminTablePagination, useFitPageSize } from '../layout/AdminTablePagination';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../layout/ChronologicalSortSelect';
 import {
   adminReviewSubscriptionPackagePayment,
   fetchSubscriptionPackagePaymentsForAdmin,
@@ -95,7 +101,7 @@ export function PendingCreditPackModal({
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Credit pack payment</p>
             <h3
               className="text-[#1E2A35]"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
             >
               {payment.uid}
             </h3>
@@ -332,7 +338,8 @@ export function AdminCreditPackPaymentsSection({
   const [loading, setLoading] = useState(true);
   const [selectedPending, setSelectedPending] = useState<SubscriptionPackagePaymentDisplay | null>(null);
   const [page, setPage] = useState(1);
-  const { containerRef, pageSize } = useFitPageSize({ fallback: 6, layout: 'table' });
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
 
   const reload = useCallback(async () => {
     const { data, error } = await fetchSubscriptionPackagePaymentsForAdmin();
@@ -361,25 +368,40 @@ export function AdminCreditPackPaymentsSection({
     () =>
       payments.filter(
         (p) =>
-          p.buyerName.toLowerCase().includes(q)
-          || p.buyerEmail.toLowerCase().includes(q)
-          || p.packageName.toLowerCase().includes(q)
-          || p.uid.toLowerCase().includes(q)
-          || p.paymentReference.toLowerCase().includes(q)
-          || p.paymentMethodLabel.toLowerCase().includes(q),
+          (p.buyerName.toLowerCase().includes(q)
+            || p.buyerEmail.toLowerCase().includes(q)
+            || p.packageName.toLowerCase().includes(q)
+            || p.uid.toLowerCase().includes(q)
+            || p.paymentReference.toLowerCase().includes(q)
+            || p.paymentMethodLabel.toLowerCase().includes(q))
+          && matchesAnySelected(statusFilters, p.status),
       ),
-    [payments, q],
+    [payments, q, statusFilters],
   );
 
   const tableRows = useMemo(() => {
-    const pending = filtered.filter((p) => p.status === 'pending');
-    const rest = filtered.filter((p) => p.status !== 'pending');
-    rest.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return [...pending, ...rest];
-  }, [filtered]);
-
-  const pending = filtered.filter((p) => p.status === 'pending');
-  const history = filtered.filter((p) => p.status !== 'pending');
+    const pendingRows = sortChronologically(
+      filtered.filter((p) => p.status === 'pending'),
+      (row) => row.createdAt,
+      chronoOrder,
+    );
+    const rest = sortChronologically(
+      filtered.filter((p) => p.status !== 'pending'),
+      (row) => row.createdAt,
+      chronoOrder,
+    );
+    return [...pendingRows, ...rest];
+  }, [filtered, chronoOrder]);
+  const pending = sortChronologically(
+    filtered.filter((p) => p.status === 'pending'),
+    (row) => row.createdAt,
+    chronoOrder,
+  );
+  const history = sortChronologically(
+    filtered.filter((p) => p.status !== 'pending'),
+    (row) => row.createdAt,
+    chronoOrder,
+  );
 
   const totalPages = Math.max(1, Math.ceil(tableRows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -392,7 +414,7 @@ export function AdminCreditPackPaymentsSection({
 
   useEffect(() => {
     setPage(1);
-  }, [search, refreshSignal, payments.length]);
+  }, [search, refreshSignal, payments.length, chronoOrder]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -450,6 +472,22 @@ export function AdminCreditPackPaymentsSection({
         ) : null}
 
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40 shrink-0 flex flex-wrap items-center justify-end gap-2">
+            <CategorizedAddFilter
+              groups={[{
+                id: 'status',
+                label: 'Status',
+                options: [
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'rejected', label: 'Rejected' },
+                ],
+              }]}
+              selected={{ status: statusFilters }}
+              onChange={(next) => setStatusFilters(next.status ?? [])}
+            />
+            <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+          </div>
           <div
             className={`grid ${REQUESTS_GRID_COLS} gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0`}
           >
@@ -514,12 +552,12 @@ export function AdminCreditPackPaymentsSection({
         />
       ) : null}
 
-      <div className="mb-4 flex items-center gap-2 text-[#8A7E6E] text-sm">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-[#8A7E6E] text-sm">
         <span>
           {loading ? 'Loading…' : `${pending.length} pending · ${history.length} reviewed`}
         </span>
+        <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
       </div>
-
       {loading ? (
         <p className="text-[#8A7E6E] text-sm py-8 text-center">Loading credit pack payments…</p>
       ) : pending.length === 0 ? (

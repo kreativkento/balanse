@@ -34,7 +34,6 @@ export function computeProfileScore(profile?: UserProfile): number {
     profile?.lastName,
     profile?.birthday,
     profile?.sex,
-    profile?.nationality,
     profile?.weight,
     profile?.height,
   ].every(isFilled);
@@ -42,6 +41,7 @@ export function computeProfileScore(profile?: UserProfile): number {
     profile?.phone,
     profile?.province,
     profile?.city,
+    profile?.barangay,
   ].every(isFilled);
   const emergencyComplete = [
     profile?.emergencyContactName,
@@ -101,7 +101,6 @@ export function isProfileComplete(profile?: Pick<
   | 'birthday'
   | 'sex'
   | 'phone'
-  | 'nationality'
   | 'termsAccepted'
   | 'termsDocumentPath'
   | 'termsAcceptedVersion'
@@ -113,7 +112,6 @@ export function isProfileComplete(profile?: Pick<
     profile?.birthday,
     profile?.sex,
     profile?.phone,
-    profile?.nationality,
   ].every(isFilled)
     && (!!profile?.termsAccepted || !!profile?.termsDocumentPath || !!profile?.termsAcceptedVersion)
     && isHealthDeclarationAcknowledged(profile?.healthDeclaration);

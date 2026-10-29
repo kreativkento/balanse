@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import {
-  Plus, Search, X, ChevronDown, ChevronRight, Mail, Phone, Award, Globe, Check, Pencil, Trash2,
-  Clock, AlertOctagon, Users, LayoutGrid, List, Eye, EyeOff,
+  Plus, Search, X, ChevronDown, ChevronRight, Mail, Phone, Award, Check, Pencil, Trash2,
+  AlertOctagon, LayoutGrid, List, Eye, EyeOff,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { toastCreated, toastDeleted, toastOperationFailed, toastUpdated } from '../../lib/operation-toast';
-import { NATIONALITIES } from '../data/nationalities';
 import {
   createStaffAccount,
   deleteManagedAccount,
@@ -18,13 +19,15 @@ import {
   withBucketProfileImages,
 } from '../../lib/admin-service';
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
-import { AdminCoachAvailabilityPanel } from './AdminCoachAvailabilityPage';
-import { AdminAbsenceTrackerPanel } from './AdminAbsenceTrackerPage';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { ACCOUNT_STATUS_FILTER_GROUP } from '../components/filters/status-filter-groups';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { CoachCardMedia } from '../components/coaches/CoachCardMedia';
-
-/** Set true when Absence Tracker is ready to ship. */
-const ABSENCE_TRACKER_TAB_ENABLED = false;
 
 interface CoachMember {
   id: string;
@@ -49,7 +52,6 @@ const EMPTY_FORM = {
   lastName: '',
   middleInitial: '',
   email: '',
-  nationality: '',
   disciplineIds: [] as string[],
   status: 'active' as 'active' | 'inactive',
   password: '',
@@ -222,7 +224,7 @@ function CoachPhotoModal({ coach, onClose }: { coach: CoachMember; onClose: () =
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center" style={{ backgroundColor: `${ACCENT}18` }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '4rem', letterSpacing: '0.08em', color: ACCENT }}>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '4rem', letterSpacing: '0.04em', color: ACCENT }}>
                 {coachInitials(coach.name)}
               </span>
             </div>
@@ -294,7 +296,7 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center" style={{ backgroundColor: `${ACCENT}18` }}>
-                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.08em', color: ACCENT }}>
+                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.04em', color: ACCENT }}>
                     {initials}
                   </span>
                 </div>
@@ -316,12 +318,6 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
                   {coach.experience.trim() && (
                     <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: `${ACCENT}18`, color: ACCENT }}>
                       {coach.experience}
-                    </span>
-                  )}
-                  {coach.nationality.trim() && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
-                      <Globe size={11} className="text-[#c49a3c]" />
-                      {coach.nationality}
                     </span>
                   )}
                   <span
@@ -365,10 +361,6 @@ function CoachSummaryModal({ coach, onClose }: { coach: CoachMember; onClose: ()
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
                     <Phone size={13} className="text-[#c49a3c] shrink-0" />
                     <span>{coach.phone.trim() || 'No phone on file'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Globe size={13} className="text-[#c49a3c] shrink-0" />
-                    <span>{coach.nationality.trim() || 'No nationality on file'}</span>
                   </div>
                 </div>
               </div>
@@ -425,24 +417,16 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
   const { adminUser } = useAdminAuth();
 
   const tabParam = searchParams.get('tab');
-  const pageTab: 'coaches' | 'availability' | 'absence' =
-    tabParam === 'availability'
-      ? 'availability'
-      : tabParam === 'absence' && ABSENCE_TRACKER_TAB_ENABLED
-        ? 'absence'
-        : 'coaches';
-
-  const setPageTab = (tab: 'coaches' | 'availability' | 'absence') => {
-    if (tab === 'absence' && !ABSENCE_TRACKER_TAB_ENABLED) return;
-    if (tab === 'coaches') setSearchParams({}, { replace: true });
-    else setSearchParams({ tab }, { replace: true });
-  };
 
   useEffect(() => {
-    if (!ABSENCE_TRACKER_TAB_ENABLED && tabParam === 'absence') {
+    if (tabParam === 'availability') {
+      navigate('/admin-coach-availability', { replace: true });
+      return;
+    }
+    if (tabParam === 'absence') {
       setSearchParams({}, { replace: true });
     }
-  }, [tabParam, setSearchParams]);
+  }, [tabParam, navigate, setSearchParams]);
 
   const [coaches, setCoaches] = useState<CoachMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -458,6 +442,8 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
   const [disciplines, setDisciplines] = useState<DisciplineDisplay[]>([]);
   const [selectedCoach, setSelectedCoach] = useState<CoachMember | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
   const [page, setPage] = useState(1);
   const { containerRef, pageSize } = useFitPageSize({ layout: 'table', fallback: 8 });
 
@@ -515,12 +501,17 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
     if (adminUser) void loadCoaches();
   }, [adminUser, loadCoaches]);
 
-  const filtered = coaches.filter(
-    (coach) =>
-      coach.name.toLowerCase().includes(search.toLowerCase()) ||
-      coach.email.toLowerCase().includes(search.toLowerCase()) ||
-      coach.specialty.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const matched = coaches.filter(
+      (coach) =>
+        (coach.name.toLowerCase().includes(q)
+          || coach.email.toLowerCase().includes(q)
+          || coach.specialty.toLowerCase().includes(q))
+        && matchesAnySelected(statusFilters, coach.status),
+    );
+    return sortAlphabetically(matched, (coach) => coach.name, alphaOrder);
+  }, [coaches, search, statusFilters, alphaOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -533,7 +524,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
 
   useEffect(() => {
     setPage(1);
-  }, [search, viewMode]);
+  }, [search, viewMode, statusFilters, alphaOrder]);
 
   if (!adminUser) return null;
 
@@ -552,7 +543,6 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
       lastName,
       middleInitial,
       email: coach.email,
-      nationality: coach.nationality,
       disciplineIds: [...coach.disciplineIds],
       status: coach.status,
       password: '',
@@ -606,7 +596,6 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
         name: fullName,
         email: form.email.trim(),
         specialty: specialtyLabel,
-        nationality: form.nationality,
         staffRole: 'coach',
         disciplineIds: form.disciplineIds,
         status: form.status,
@@ -625,7 +614,6 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
         password: form.password,
         name: fullName,
         specialty: specialtyLabel,
-        nationality: form.nationality,
         staffRole: 'coach',
         disciplineIds: form.disciplineIds,
         status: form.status,
@@ -676,54 +664,8 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
   return (
     <>
       <div className="h-full min-h-0 overflow-hidden flex flex-col">
-      <div className="max-w-7xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col">
-        {!viewOnly && (
-        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-5 w-fit shrink-0">
-          {([
-            ['coaches', 'Coaches', Users, true],
-            ['availability', 'Coach Availability', Clock, true],
-            ['absence', 'Absence Tracker', AlertOctagon, ABSENCE_TRACKER_TAB_ENABLED],
-          ] as const).map(([id, label, Icon, enabled]) => (
-            <button
-              key={id}
-              type="button"
-              disabled={!enabled}
-              onClick={() => setPageTab(id)}
-              title={enabled ? undefined : 'Not available yet'}
-              aria-disabled={!enabled}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                !enabled
-                  ? 'cursor-not-allowed text-[#C0B8A8] opacity-60'
-                  : pageTab === id
-                    ? 'bg-[#1E2A35] text-white shadow-sm'
-                    : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-              }`}
-            >
-              <Icon size={12} /> {label}
-              {!enabled && (
-                <span className="text-[9px] font-bold uppercase tracking-wide text-[#B0A898]">
-                  Soon
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {!viewOnly && pageTab === 'availability' && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <AdminCoachAvailabilityPanel />
-          </div>
-        )}
-        {!viewOnly && ABSENCE_TRACKER_TAB_ENABLED && pageTab === 'absence' && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <AdminAbsenceTrackerPanel />
-          </div>
-        )}
-
-        {(viewOnly || pageTab === 'coaches') && (
-          <>
-        <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
+      <div className="max-w-8xl mx-auto px-6 pb-8 pt-1 w-full flex-1 min-h-0 flex flex-col">
+        <PortalTitleToolbar>
           <div className="relative flex-1 max-w-sm min-w-[200px]">
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
             <input
@@ -758,6 +700,12 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
               <LayoutGrid size={13} /> Card
             </button>
           </div>
+          <CategorizedAddFilter
+            groups={[ACCOUNT_STATUS_FILTER_GROUP]}
+            selected={{ status: statusFilters }}
+            onChange={(next) => setStatusFilters(next.status ?? [])}
+          />
+          <AlphabeticalSortSelect value={alphaOrder} onChange={setAlphaOrder} />
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <span className="text-[#8A7E6E] text-sm">{filtered.length} of {coaches.length} coaches</span>
             {!viewOnly && (
@@ -770,11 +718,11 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
               </button>
             )}
           </div>
-        </div>
+        </PortalTitleToolbar>
 
         {loading ? (
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex-1 min-h-0 px-6 py-12 text-center text-[#B0A898] text-sm">
-            Loading coaches…
+          <div className="flex-1 min-h-0 overflow-auto" role="status" aria-live="polite" aria-label="Loading coaches">
+            <ContentSkeleton variant="cards" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex-1 min-h-0 px-6 py-12 text-center text-[#B0A898] text-sm">
@@ -824,13 +772,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                     >
                       {coach.name}
                     </h3>
-                    <p className="text-[#8A7E6E] text-xs font-semibold mb-1 truncate">{coach.email}</p>
-                    {coach.nationality.trim() && (
-                      <p className="text-[#B0A898] text-xs mb-3 flex items-center gap-1">
-                        <Globe size={11} className="text-[#c49a3c]" />
-                        {coach.nationality}
-                      </p>
-                    )}
+                    <p className="text-[#8A7E6E] text-xs font-semibold mb-3 truncate">{coach.email}</p>
 
                     {disciplineLabels.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5 mb-2">
@@ -983,8 +925,6 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
         />
         </div>
         )}
-          </>
-        )}
       </div>
       </div>
 
@@ -1008,7 +948,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                 <h3
                   id="delete-coach-title"
                   className="text-[#1E2A35] leading-tight"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
                 >
                   Delete Coach
                 </h3>
@@ -1061,7 +1001,7 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
             <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between shrink-0">
               <h3
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 {editingId !== null ? 'Edit Coach' : 'Add Coach'}
               </h3>
@@ -1126,25 +1066,6 @@ export default function AdminCoachesPage({ viewOnly = false }: { viewOnly?: bool
                   placeholder="coach@balanse.com"
                   className={inputClass}
                 />
-              </div>
-
-              <div>
-                <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Nationality</label>
-                <div className="relative">
-                  <select
-                    value={form.nationality}
-                    onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))}
-                    className={`${selectClass} ${!form.nationality ? 'text-[#C0B8A8]' : ''}`}
-                  >
-                    <option value="">Select nationality…</option>
-                    {NATIONALITIES.map((item) => (
-                      <option key={item} value={item} className="text-[#1E2A35]">
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B0A898] pointer-events-none" />
-                </div>
               </div>
 
               {editingId === null && (

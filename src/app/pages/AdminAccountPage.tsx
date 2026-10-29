@@ -26,7 +26,7 @@ export default function AdminAccountPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-8xl mx-auto px-4 md:px-8 py-8">
         <p className="text-[#8A7E6E] text-sm mb-6">Upload a profile photo and cover image. These are used across BALANSÉ.</p>
         <AccountImagesCard
           name={adminUser.name}

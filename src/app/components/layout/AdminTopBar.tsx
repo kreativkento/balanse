@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import {
   Crown, LogOut, LayoutDashboard, Users, UserCheck,
   CalendarDays, CreditCard, Images, ChevronDown,
-  CreditCard as SubIcon, Tag, ShieldCheck,
+  CreditCard as SubIcon, ShieldCheck,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logoImg from 'figma:asset/bbdd3c4813a82e401f4feb97932ab9a28f6161ee.png';
@@ -20,7 +20,7 @@ const NAV_LINKS = [
 
 const MANAGE_LINKS = [
   { label: 'Subscriptions', path: '/admin-subscriptions', icon: SubIcon,    desc: 'Plans & session credits' },
-  { label: 'Promos',        path: '/admin-promos',        icon: Tag,        desc: 'Discounts & eligibility' },
+  { label: 'Pricing',       path: '/admin-pricing',       icon: CreditCard, desc: 'Public rates & services' },
   { label: 'Policies',      path: '/admin-policies',      icon: ShieldCheck,desc: 'Business rules & limits' },
 ];
 
@@ -50,14 +50,14 @@ export function AdminTopBar() {
 
   return (
     <header className="bg-white border-b border-[#D4CDB5]/60 sticky top-0 z-40 shadow-[0_1px_8px_rgba(30,42,53,0.05)]">
-      <div className="max-w-7xl mx-auto px-6 h-[3.5rem] flex items-center justify-between gap-4">
+      <div className="max-w-8xl mx-auto px-6 h-[3.5rem] flex items-center justify-between gap-4">
 
         {/* ── Left: Brand ── */}
         <Link to="/admin-dashboard" className="flex items-center gap-2.5 shrink-0 group">
           <img src={logoImg} alt="BALANSÉ" className="w-7 h-7 object-contain" />
           <span
             className="text-[#1E2A35] tracking-widest uppercase"
-            style={{ fontFamily: "'Cormorant Garant', serif", fontWeight: 700, fontSize: '0.88rem', letterSpacing: '0.18em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.88rem', letterSpacing: '0.12em' }}
           >
             BALANSÉ
           </span>

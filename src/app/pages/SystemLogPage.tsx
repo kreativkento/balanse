@@ -1,9 +1,15 @@
-import { useEffect, useState, type ComponentType } from 'react';
+import { useMemo, useEffect, useState, type ComponentType } from 'react';
 import { useNavigate } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
 import { useDevAuth } from '../context/DevAuthContext';
-import { DevSidebar } from '../components/layout/DevSidebar';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { supabase } from '../../lib/supabase';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import type { LogSystemTableName } from '../../lib/database.types';
 
 export interface SystemLogPageConfig {
@@ -70,6 +76,9 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
   const navigate = useNavigate();
   const { devUser } = useDevAuth();
   const [rows, setRows] = useState<LogRow[]>([]);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [tableFilters, setTableFilters] = useState<string[]>([]);
+  const [actionFilters, setActionFilters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -102,14 +111,36 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
     return () => { mounted = false; };
   }, [devUser, config.tables.join('|')]);
 
+  const actionOptions = useMemo(() => {
+    const set = new Set(rows.map((r) => r.action).filter(Boolean));
+    return [...set].sort((a, b) => a.localeCompare(b)).map((value) => ({
+      value,
+      label: value.replace(/_/g, ' '),
+    }));
+  }, [rows]);
+
+  const filteredRows = useMemo(
+    () =>
+      rows.filter(
+        (row) =>
+          matchesAnySelected(tableFilters, row.table_name)
+          && matchesAnySelected(actionFilters, row.action),
+      ),
+    [rows, tableFilters, actionFilters],
+  );
+
+  const orderedRows = useMemo(
+    () => sortChronologically(filteredRows, (row) => row.occurred_at, chronoOrder),
+    [filteredRows, chronoOrder],
+  );
+
   if (!devUser) return null;
 
   const Icon = config.icon;
   const showTableColumn = config.tables.length > 1;
 
   return (
-    <DevSidebar>
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-8xl mx-auto px-6 py-10">
         <div className="mb-8">
           <div className="inline-flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1 mb-3">
             <Icon size={11} className="text-[#c49a3c]" />
@@ -117,11 +148,35 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
           </div>
           <h1
             className="text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 4vw, 2.8rem)', letterSpacing: '0.04em', lineHeight: 1 }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)', letterSpacing: '0.04em', lineHeight: 1 }}
           >
             {config.title}
           </h1>
-          <p className="text-[#B0A898] text-xs mt-1.5">{config.subtitle}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[#B0A898] text-xs">{config.subtitle}</p>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <CategorizedAddFilter
+                groups={[
+                  {
+                    id: 'table',
+                    label: 'Table',
+                    options: config.tables.map((t) => ({ value: t, label: t })),
+                  },
+                  {
+                    id: 'action',
+                    label: 'Action',
+                    options: actionOptions,
+                  },
+                ]}
+                selected={{ table: tableFilters, action: actionFilters }}
+                onChange={(next) => {
+                  setTableFilters(next.table ?? []);
+                  setActionFilters(next.action ?? []);
+                }}
+              />
+              <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -132,8 +187,10 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
 
         <div className="bg-white rounded-2xl border border-[#E8E2D2]/80 shadow-sm overflow-hidden">
           {loading ? (
-            <div className="px-6 py-16 text-center text-[#8A7E6E] text-sm">Loading logs…</div>
-          ) : rows.length === 0 ? (
+            <div className="px-6 py-4" role="status" aria-live="polite" aria-label="Loading logs">
+              <ContentSkeleton variant="list" />
+            </div>
+          ) : orderedRows.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <div className="w-14 h-14 rounded-2xl bg-[#EDE8D8] flex items-center justify-center mx-auto mb-4">
                 <Icon size={24} className="text-[#8A7E6E]" />
@@ -156,7 +213,7 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {orderedRows.map((row) => (
                     <tr key={row.id} className="border-b border-[#E8E2D2]/70 last:border-0 hover:bg-[#F8F3E8]/40">
                       <td className="px-4 py-3 text-xs text-[#5A5048] whitespace-nowrap align-top">{formatWhen(row.occurred_at)}</td>
                       <td className="px-4 py-3 align-top">
@@ -177,7 +234,6 @@ export function SystemLogPage({ config }: { config: SystemLogPageConfig }) {
           )}
         </div>
       </div>
-    </DevSidebar>
   );
 }
 

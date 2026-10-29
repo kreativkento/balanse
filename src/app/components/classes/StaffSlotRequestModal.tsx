@@ -377,7 +377,7 @@ export function StaffSlotRequestModal({
             <h2
               id="staff-slot-request-title"
               className="text-[#1E2A35] leading-none mt-1"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.04em' }}
             >
               Request this slot
             </h2>

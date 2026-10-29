@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { toastCreated, toastDeleted, toastUpdated } from '../../lib/operation-toast';
 import { Upload, Images, X, Check, Pencil, Trash2, Tag } from 'lucide-react';
@@ -8,6 +8,7 @@ import { CARD_HOVER_GROW, ICON_HOVER_GROW, IMAGE_HOVER_ZOOM } from '../../lib/mo
 // ── Types & Data ───────────────────────────────────────────────
 
 type Category = 'Classes' | 'Studio' | 'Events' | 'Community';
+import { PAGE_HEADING_TOOLBAR_ROW_CLASS } from '../components/layout/PortalAppHeader';
 
 interface GalleryPhoto {
   id: number;
@@ -76,7 +77,7 @@ function PhotoModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
       <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}>
+          <h3 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}>
             {isEdit ? 'Edit Post' : 'Post to Gallery'}
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-xl text-[#8A7E6E] hover:bg-[#EDE8D8] flex items-center justify-center transition-all"><X size={16} /></button>
@@ -221,7 +222,7 @@ export default function StaffGalleryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-3xl border border-red-200 shadow-2xl w-full max-w-sm p-8 text-center">
             <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-red-500" /></div>
-            <h3 className="text-[#1E2A35] mb-2" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>Delete This Photo?</h3>
+            <h3 className="text-[#1E2A35] mb-2" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.04em' }}>Delete This Photo?</h3>
             <p className="text-[#8A7E6E] text-sm mb-7 leading-relaxed">This photo will be permanently removed from the gallery.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-3 rounded-full border border-[#D4CDB5]/70 text-[#8A7E6E] text-sm hover:bg-[#EDE8D8] transition-all">Cancel</button>
@@ -231,12 +232,12 @@ export default function StaffGalleryPage() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8">
+      <div className="max-w-8xl mx-auto px-4 md:px-8">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between gap-4 border-b border-[#D4CDB5]/60 pb-5 pt-6">
           <div>
-            <h1 className="leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '0.05em' }}>
+            <h1 className="leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)', letterSpacing: '0.04em' }}>
               Studio Gallery
             </h1>
             <p className="mt-0.5 text-xs text-[#8A7E6E]">Post photos and tag enrolled students</p>
@@ -249,36 +250,30 @@ export default function StaffGalleryPage() {
             <Upload size={15} /> Post Photo
           </button>
         </div>
-
-        {/* ── Filter tabs ── */}
-        <div className="flex items-center gap-3 py-5 flex-wrap">
-          <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm">
-            {(['All', ...CATEGORIES] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${filter === tab ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}
-              >
-                {tab}
-              </button>
-            ))}
+        <div className={`${PAGE_HEADING_TOOLBAR_ROW_CLASS} border-b border-[#D4CDB5]/60 pb-5 pt-6`}>
+          <div className="min-w-0 shrink-0">
+            <h1 className="leading-none text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)', letterSpacing: '0.04em' }}>
+              Studio Gallery
+            </h1>
+            <p className="mt-0.5 text-xs text-[#8A7E6E]">Post photos and tag enrolled students</p>
           </div>
-          <span className="text-[#8A7E6E] text-sm ml-auto">{filtered.length} photo{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-
-        {/* ── Grid ── */}
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center pb-10">
-            <div className="w-16 h-16 rounded-3xl bg-white border border-[#D4CDB5]/60 flex items-center justify-center mb-4 shadow-sm"><Images size={26} className="text-[#c49a3c]/50" /></div>
-            <h3 className="text-[#1E2A35] mb-1" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', letterSpacing: '0.05em' }}>No Photos Yet</h3>
-            <p className="text-[#8A7E6E] text-sm max-w-xs">Post your first studio photo to get started.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-10">
-            {filtered.map(photo => (
-              <div key={photo.id} className={`group bg-white rounded-2xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden hover:shadow-md ${CARD_HOVER_GROW}`}>
-                {/* Image */}
-                <div className="relative overflow-hidden">
+          <CategorizedAddFilter
+            groups={[{
+              id: 'category',
+              label: 'Category',
+              options: CATEGORIES.map((category) => ({ value: category, label: category })),
+            }]}
+            selected={{ category: categoryFilters }}
+            onChange={(next) => setCategoryFilters(next.category ?? [])}
+          />
+          <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+          <span className="text-[#8A7E6E] text-sm">{filtered.length} photo{filtered.length !== 1 ? 's' : ''}</span>
+          <button
+            onClick={openUpload}
+            className="action-button ml-auto flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm shrink-0"
+          >
+            <Upload size={15} /> Post Photo
+          </button>
                   <img src={photo.url} alt={photo.caption} className={`w-full h-48 object-cover ${IMAGE_HOVER_ZOOM}`} />
                   <div className="absolute inset-0 bg-[#1E2A35]/0 group-hover:bg-[#1E2A35]/15 transition-colors" />
                   {/* Category badge */}

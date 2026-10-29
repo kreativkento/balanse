@@ -182,7 +182,7 @@ export function StaffCancellationRequestModal({
             <h2
               id="staff-cancel-request-title"
               className="text-[#1E2A35] leading-none mt-1 truncate"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.45rem', letterSpacing: '0.04em' }}
             >
               {context.className}
             </h2>
@@ -220,8 +220,8 @@ export function StaffCancellationRequestModal({
             <CheckCircle size={40} className="text-green-500" />
             <p className="text-[#1E2A35] font-semibold">Request submitted</p>
             <p className="text-[#8A7E6E] text-sm max-w-xs">
-              An admin will review your cancellation request. The class stays on the schedule until
-              approved.
+              Front desk will notify enrolled students, then admin confirms a replacement coach or
+              cancels the class. The class stays on the schedule until then.
             </p>
           </div>
         ) : (
@@ -231,7 +231,7 @@ export function StaffCancellationRequestModal({
                 <div className="sm:col-span-2 flex items-start gap-2 rounded-2xl border border-[#c49a3c]/45 bg-[#F8F0DC] px-3 py-2.5">
                   <CheckCircle size={14} className="text-[#a67f2e] shrink-0 mt-0.5" />
                   <p className="text-[#6B5420] text-xs leading-relaxed">
-                    You already requested cancellation for this class. Waiting for admin approval.
+                    You already requested cancellation for this class. Front desk is notifying students, then admin reviews.
                   </p>
                 </div>
               )}
@@ -243,8 +243,8 @@ export function StaffCancellationRequestModal({
                       Submit this schedule cancellation request?
                     </p>
                     <p className="text-[#5A5048] text-xs leading-relaxed mt-1">
-                      Admin must approve before the class is removed. Enrolled members are notified
-                      after approval.
+                      Front desk notifies enrolled members first. Admin then confirms a coach change
+                      or cancels the session.
                     </p>
                   </div>
                   <div className="sm:col-span-2 rounded-2xl border border-[#D4CDB5]/60 bg-[#FBF9F3]/80 px-3 py-2.5 flex flex-col gap-2">

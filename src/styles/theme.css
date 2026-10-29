@@ -79,6 +79,9 @@
 }
 
 @theme inline {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bebas Neue', sans-serif;
+  --container-8xl: 96rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -125,7 +128,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   /**
@@ -135,41 +138,53 @@
 
   html {
     font-size: var(--font-size);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   }
 
   h1 {
+    font-family: 'Bebas Neue', sans-serif;
     font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
   }
 
   h2 {
+    font-family: 'Bebas Neue', sans-serif;
     font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
   }
 
   h3 {
+    font-family: 'Bebas Neue', sans-serif;
     font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
   }
 
   h4 {
+    font-family: 'Bebas Neue', sans-serif;
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    line-height: 1.25;
   }
 
   label {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     font-size: var(--text-base);
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
 
   button {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     font-size: var(--text-base);
     font-weight: var(--font-weight-medium);
+    letter-spacing: -0.01em;
     line-height: 1.5;
   }
 
@@ -239,11 +254,82 @@
 }
 
 @layer components {
-  .action-button {
+  .font-display {
     font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  .action-button {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     font-weight: 600;
-    font-size: 0.95rem;
-    letter-spacing: 0.08em;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+  }
+
+  nav a,
+  nav button,
+  aside a,
+  aside button {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Mobile: denser page content. Header and sidebar keep their own size. */
+@media (max-width: 767.98px) {
+  main[data-mobile-compact] {
+    --spacing: 0.1875rem;
+    --radius: 0.5rem;
+    --text-xs: 0.6875rem;
+    --text-sm: 0.75rem;
+    --text-base: 0.8125rem;
+    --text-lg: 0.9375rem;
+    --text-xl: 1.0625rem;
+    --text-2xl: 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    padding-bottom: 1.25rem;
+  }
+
+  main[data-mobile-compact] .action-button {
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  main[data-mobile-compact] label,
+  main[data-mobile-compact] button,
+  main[data-mobile-compact] input,
+  main[data-mobile-compact] textarea,
+  main[data-mobile-compact] select {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+
+  main[data-mobile-compact] h1:not([style]),
+  main[data-mobile-compact] h2:not([style]),
+  main[data-mobile-compact] h3:not([style]),
+  main[data-mobile-compact] h4:not([style]) {
+    line-height: 1.15;
+  }
+
+  main[data-mobile-compact] [style*='clamp(2'],
+  main[data-mobile-compact] [style*='clamp(1.8'],
+  main[data-mobile-compact] [style*='clamp(1.7'],
+  main[data-mobile-compact] [style*='clamp(1.6'],
+  main[data-mobile-compact] [style*='clamp(1.5'],
+  main[data-mobile-compact] [style*='clamp(1.4'],
+  main[data-mobile-compact] [style*='clamp(1.35'] {
+    font-size: clamp(1.12rem, 5.2vw, 1.55rem) !important;
+  }
+
+  main[data-mobile-compact] [style*='2.75rem'],
+  main[data-mobile-compact] [style*='2.4rem'] {
+    font-size: 1.55rem !important;
+  }
+
+  [role='dialog'] {
+    --spacing: 0.1875rem;
+    --radius: 0.5rem;
   }
 }
 

@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toastCreated } from '../../lib/operation-toast';
-import { NATIONALITIES } from '../data/nationalities';
 import { ProfileImageHero } from '../components/ProfileImages';
 import { PrivacyModal, TermsModal } from '../components/documents/PolicyAcceptModals';
 import { exportTransparentSignaturePng, SignaturePad } from '../components/SignaturePad';
@@ -184,7 +183,6 @@ export default function ProfileSetupPage() {
   const [birthday, setBirthday]         = useState('');
   const [sex, setSex]                   = useState<'male' | 'female' | 'prefer_not_to_say' | ''>('');
   const [phone, setPhone]               = useState('');
-  const [nationality, setNationality]   = useState('');
   const [weight, setWeight]             = useState('');
   const [height, setHeight]             = useState('');
   const [healthSigned, setHealthSigned] = useState(false);
@@ -205,7 +203,6 @@ export default function ProfileSetupPage() {
     if (!firstName.trim()) e.firstName = 'First name is required.';
     if (!lastName.trim())  e.lastName  = 'Last name is required.';
     if (!phone.trim()) e.phone = 'Phone number is required.';
-    if (!nationality.trim()) e.nationality = 'Nationality is required.';
     if (!birthday) e.birthday = 'Birthday is required.';
     if (!sex) e.sex = 'Please select your sex.';
     if (!healthSigned) e.health = 'You must complete the Health Declaration.';
@@ -231,7 +228,6 @@ export default function ProfileSetupPage() {
       birthday,
       sex,
       phone: normalizedPhone,
-      nationality: nationality.trim(),
       weight: weight.trim(),
       height: height.trim(),
       healthDeclaration: healthFields
@@ -355,7 +351,7 @@ export default function ProfileSetupPage() {
             <div className="px-5 pb-5 sm:px-8 sm:pb-8 md:px-10 md:pb-10 pt-20 sm:pt-24">
             {/* Header */}
             <div className="mb-5 sm:mb-6">
-              <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.75rem, 6vw, 2.2rem)', letterSpacing: '0.05em' }}>
+              <h1 className="text-[#1E2A35] leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.75rem, 6vw, 2.2rem)', letterSpacing: '0.04em' }}>
                 Profile Setup
               </h1>
               <p className="text-[#8A7E6E] text-sm mt-1">Tell us about yourself to complete your account.</p>
@@ -450,26 +446,6 @@ export default function ProfileSetupPage() {
                   />
                 </div>
                 {errors.phone && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.phone}</p>}
-              </div>
-
-              {/* Nationality */}
-              <div>
-                <label className="text-[#5A5048] text-sm font-semibold mb-2 block">
-                  Nationality <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={nationality}
-                  onChange={e => { setNationality(e.target.value); setErrors(v => ({ ...v, nationality: '' })); }}
-                  className={`w-full bg-[#F8F3E8] border text-[#1E2A35] rounded-2xl px-4 py-4 min-h-[56px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all appearance-none ${errors.nationality ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]/60'} ${!nationality ? 'text-[#B0A898]' : ''}`}
-                >
-                  <option value="">Select nationality…</option>
-                  {NATIONALITIES.map((item) => (
-                    <option key={item} value={item} className="text-[#1E2A35]">
-                      {item}
-                    </option>
-                  ))}
-                </select>
-                {errors.nationality && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.nationality}</p>}
               </div>
 
               {/* Birthday */}

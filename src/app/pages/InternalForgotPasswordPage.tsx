@@ -34,7 +34,7 @@ export default function InternalForgotPasswordPage() {
           </div>
           <h1
             className="text-white leading-tight mb-4"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.4rem, 4vw, 3.2rem)', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.4rem, 4vw, 3.2rem)', letterSpacing: '0.04em' }}
           >
             Reset your<br />portal password
           </h1>

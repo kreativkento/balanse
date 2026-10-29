@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   AuthResult,
@@ -87,6 +87,8 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
   const [staffUser, setStaffUser] = useState<StaffUser | null>(null);
   const [staffProfile, setStaffProfile] = useState<CoachProfileData | null>(null);
   const [staffAuthReady, setStaffAuthReady] = useState(false);
+  const hasUserRef = useRef(false);
+  hasUserRef.current = staffUser != null;
 
   const hydrateStaffSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
@@ -143,7 +145,7 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
         setStaffAuthReady(true);
         return;
       }
-      setStaffAuthReady(false);
+      if (!hasUserRef.current) setStaffAuthReady(false);
       setTimeout(() => {
         if (!mounted || current !== generation) return;
         void hydrateStaffSession(session.user.id, () => mounted && current === generation)

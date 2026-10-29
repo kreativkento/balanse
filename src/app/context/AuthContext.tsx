@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   AuthResult,
@@ -68,6 +68,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  /** False until the initial Supabase session has been read (avoids logout on refresh). */
   authReady: boolean;
   isAuthenticated: boolean;
   profileComplete: boolean;
@@ -144,6 +145,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const hasUserRef = useRef(false);
+  hasUserRef.current = user != null;
 
   const hydrateUserSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
@@ -184,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthReady(true);
         return;
       }
-      setAuthReady(false);
+      if (!hasUserRef.current) setAuthReady(false);
       // Supabase emits auth events while holding its session lock.
       setTimeout(() => {
         if (!mounted || current !== generation) return;

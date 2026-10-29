@@ -35,11 +35,8 @@ export default function LoginChoicePage() {
               />
               <h1
                 className="text-[#1E2A35] text-center leading-tight mb-2"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '2.2rem',
-                  letterSpacing: '0.05em',
-                }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem',
+                  letterSpacing: '0.04em' }}
               >
                 Continue to Booking
               </h1>

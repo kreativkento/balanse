@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router';
+import { useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router';
 import {
   Award,
   Bookmark,
@@ -7,224 +7,168 @@ import {
   Coins,
   CalendarDays,
   CalendarRange,
-  ChevronDown,
+  Clock,
+  Ban,
   ClipboardList,
   CreditCard,
   Receipt,
-  Crown,
   Images,
   Layers,
   LayoutDashboard,
+  Megaphone,
   MessageSquare,
   Newspaper,
   ShieldCheck,
   Sparkles,
   Users,
 } from 'lucide-react';
-import logoMain from '@/assets/logo_main.svg';
-import logoMainWhite from '@/assets/logo_main_white.svg';
 import { AdminHeaderActionsProvider } from '../../context/AdminHeaderActionsContext';
-import { AdminGreetingHeader } from './DashboardGreetingBar';
+import {
+  PortalSectionNavProvider,
+  usePortalSectionNav,
+  type PortalSectionGroup,
+} from '../../context/PortalSectionNavContext';
+import { AdminGreetingHeader, AdminPortalHeader } from './DashboardGreetingBar';
 import { AppSidebarLayout } from './AppSidebarLayout';
 import { isPublicNavActive } from './NavBar';
-import { useAdminCoachRequestsPendingCount } from '../../hooks/useAdminCoachRequestsPendingCount';
+import { useAdminBulletinPendingCount } from '../../hooks/useAdminBulletinPendingCount';
+import { useAdminCoachQueuePendingCounts } from '../../hooks/useAdminCoachRequestsPendingCount';
 import { useAdminCreditCheckoutPendingCount } from '../../hooks/useAdminCreditCheckoutPendingCount';
-import { SidebarNavLink } from './SidebarNavLink';
+import { SidebarCollapseBar, SidebarNav, SidebarNavGroupButton, SidebarNavLink } from './SidebarNavLink';
+import { useUnreadAccountNotifications } from '../../hooks/useUnreadAccountNotifications';
 
-const COACH_REQUESTS_PATH = '/admin-coach-requests';
+const COACH_SLOTS_PATH = '/admin-coach-slots';
+const COACH_CANCELLATIONS_PATH = '/admin-coach-cancellations';
 const ADMIN_CREDITS_PATH = '/admin-credits';
 
-const dashboardLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-}[] = [
-  { label: 'Dashboard', path: '/admin-dashboard', icon: <LayoutDashboard size={16} /> },
-];
+const dashboardLink = {
+  label: 'Dashboard',
+  path: '/admin-dashboard',
+  icon: <LayoutDashboard size={16} />,
+};
 
-const communityLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-}[] = [
-  { label: 'Clients', path: '/admin-students', icon: <Users size={16} /> },
-  { label: 'Coaches', path: '/admin-coaches', icon: <Award size={16} /> },
-  { label: 'Disciplines', path: '/admin-disciplines', icon: <Layers size={16} /> },
-];
-
-const scheduleLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-}[] = [
-  { label: 'Time Blocking', path: '/admin-schedule', icon: <CalendarDays size={16} /> },
-  { label: 'Class Schedule', path: '/admin-classes', icon: <CalendarRange size={16} /> },
-  { label: 'Coach Requests', path: COACH_REQUESTS_PATH, icon: <ClipboardList size={16} /> },
-];
-
-const marketingLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-  disabled?: boolean;
-}[] = [
-  { label: 'Gallery', path: '/admin-gallery', icon: <Images size={16} /> },
-  { label: 'Amenities', path: '/admin-amenities', icon: <Sparkles size={16} /> },
-  { label: 'Bulletin', path: '/admin-bulletin', icon: <Newspaper size={16} /> },
-];
-
-const financeLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-  disabled?: boolean;
-}[] = [
-  { label: 'Credits', path: '/admin-credits', icon: <Coins size={16} /> },
-  { label: 'Payments', path: '/admin-payments', icon: <CreditCard size={16} /> },
-  { label: 'OR Register', path: '/admin-official-receipts', icon: <Receipt size={16} /> },
-  { label: 'Payment Channels', path: '/admin-payment-channels', icon: <Layers size={16} /> },
-];
-
-const adminLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-  disabled?: boolean;
-}[] = [
-  { label: 'Staffing', path: '/admin-staff', icon: <Briefcase size={16} /> },
-  { label: 'Subscriptions', path: '/admin-subscriptions', icon: <Bookmark size={16} /> },
-  { label: 'Policies', path: '/admin-policies', icon: <ShieldCheck size={16} /> },
-];
-
-const NAV_GROUPS: {
-  key: string;
-  label: string;
-  links: { label: string; path: string; icon: ReactNode; disabled?: boolean }[];
-}[] = [
-  { key: 'community', label: 'Community', links: communityLinks },
-  { key: 'schedule', label: 'Schedule', links: scheduleLinks },
-  { key: 'marketing', label: 'Marketing', links: marketingLinks },
-  { key: 'finance', label: 'Finance', links: financeLinks },
-  { key: 'admin', label: 'Admin', links: adminLinks },
-];
-
-function AdminBadge({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-[#c49a3c] px-1.5 py-0.5">
-      <Crown size={compact ? 7 : 8} className="text-[#1E2A35]" />
-      <span className={`font-bold uppercase tracking-widest text-[#1E2A35] ${compact ? 'text-[0.45rem]' : 'text-[0.5rem]'}`}>
-        Admin
-      </span>
-    </div>
-  );
+function buildAdminGroups(
+  coachSlotPendingCount: number,
+  coachCancellationPendingCount: number,
+  creditCheckoutPendingCount: number,
+  bulletinPendingCount: number,
+): PortalSectionGroup[] {
+  return [
+    {
+      key: 'community',
+      label: 'Community',
+      icon: <Users size={16} />,
+      links: [
+        { label: 'Clients', path: '/admin-students', icon: <Users size={16} /> },
+        { label: 'Coaches', path: '/admin-coaches', icon: <Award size={16} /> },
+        { label: 'Coach Availability', path: '/admin-coach-availability', icon: <Clock size={16} /> },
+        { label: 'Disciplines', path: '/admin-disciplines', icon: <Layers size={16} /> },
+      ],
+    },
+    {
+      key: 'schedule',
+      label: 'Schedule',
+      icon: <CalendarDays size={16} />,
+      links: [
+        { label: 'Time Blocking', path: '/admin-schedule', icon: <CalendarDays size={16} /> },
+        { label: 'Class Schedule', path: '/admin-classes', icon: <CalendarRange size={16} /> },
+        {
+          label: 'Coach Slots',
+          path: COACH_SLOTS_PATH,
+          icon: <ClipboardList size={16} />,
+          pendingCount: coachSlotPendingCount,
+        },
+        {
+          label: 'Coach Cancellations',
+          path: COACH_CANCELLATIONS_PATH,
+          icon: <Ban size={16} />,
+          pendingCount: coachCancellationPendingCount,
+        },
+      ],
+    },
+    {
+      key: 'marketing',
+      label: 'Marketing',
+      icon: <Megaphone size={16} />,
+      links: [
+        { label: 'Gallery', path: '/admin-gallery', icon: <Images size={16} /> },
+        { label: 'Amenities', path: '/admin-amenities', icon: <Sparkles size={16} /> },
+        {
+          label: 'Bulletin',
+          path: '/admin-bulletin',
+          icon: <Newspaper size={16} />,
+          pendingCount: bulletinPendingCount,
+        },
+      ],
+    },
+    {
+      key: 'finance',
+      label: 'Finance',
+      icon: <Coins size={16} />,
+      links: [
+        {
+          label: 'Credits',
+          path: ADMIN_CREDITS_PATH,
+          icon: <Coins size={16} />,
+          pendingCount: creditCheckoutPendingCount,
+        },
+        { label: 'Payments', path: '/admin-payments', icon: <CreditCard size={16} /> },
+        { label: 'OR Register', path: '/admin-official-receipts', icon: <Receipt size={16} /> },
+        { label: 'Payment Channels', path: '/admin-payment-channels', icon: <Layers size={16} /> },
+      ],
+    },
+    {
+      key: 'admin',
+      label: 'Admin',
+      icon: <ShieldCheck size={16} />,
+      links: [
+        { label: 'Staffing', path: '/admin-staff', icon: <Briefcase size={16} /> },
+        { label: 'Subscriptions', path: '/admin-subscriptions', icon: <Bookmark size={16} /> },
+        { label: 'Pricing & Services', path: '/admin-pricing', icon: <CreditCard size={16} /> },
+        { label: 'Policies', path: '/admin-policies', icon: <ShieldCheck size={16} /> },
+      ],
+    },
+  ];
 }
 
-function AdminSidebarNav({
-  onNavigate,
-}: {
-  onNavigate: () => void;
-}) {
+function AdminSidebarNav({ onNavigate }: { onNavigate: () => void }) {
   const location = useLocation();
-  const coachRequestsPendingCount = useAdminCoachRequestsPendingCount();
-  const creditCheckoutPendingCount = useAdminCreditCheckoutPendingCount();
+  const { groups } = usePortalSectionNav();
+  const unreadNotifications = useUnreadAccountNotifications();
   const isActive = (path: string) => isPublicNavActive(location.pathname, path);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_GROUPS.map((group) => [group.key, true])),
-  );
-
-  const toggleGroup = (key: string) => {
-    setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
-  };
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-white/10 bg-[#1e2a35] px-5 py-5">
-        <Link to="/admin-dashboard" className="flex items-center gap-2" onClick={onNavigate}>
-          <img src={logoMainWhite} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
-          <AdminBadge />
-        </Link>
-      </div>
+      <SidebarCollapseBar onCloseMobile={onNavigate} />
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="flex flex-col gap-0.5">
-          {dashboardLinks.map((link) => (
-            <SidebarNavLink
-              key={link.path}
-              to={link.path}
-              icon={link.icon}
-              label={link.label}
-              active={isActive(link.path)}
+      <SidebarNav>
+        <div className="flex flex-col gap-1">
+          <SidebarNavLink
+            to={dashboardLink.path}
+            icon={dashboardLink.icon}
+            label={dashboardLink.label}
+            active={isActive(dashboardLink.path)}
+            onNavigate={onNavigate}
+          />
+          {groups.map((group) => (
+            <SidebarNavGroupButton
+              key={group.key}
+              group={group}
+              active={group.links.some((link) => isActive(link.path))}
               onNavigate={onNavigate}
             />
           ))}
-
-          {NAV_GROUPS.map((group) => {
-            const open = openGroups[group.key] ?? true;
-            const groupActive = group.links.some((link) => isActive(link.path));
-
-            return (
-              <div key={group.key} className="mt-3 first:mt-0">
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.key)}
-                  aria-expanded={open}
-                  aria-label={`${open ? 'Collapse' : 'Expand'} ${group.label}`}
-                  className="group/nav mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-[#EDE8D8]/50"
-                >
-                  <span
-                    className={`text-[11px] font-bold uppercase tracking-[0.12em] transition-colors ${
-                      groupActive
-                        ? 'text-[#745b3c] group-hover/nav:text-[#5F4A32]'
-                        : 'text-[#8A7E6E] group-hover/nav:text-[#5A5048]'
-                    }`}
-                  >
-                    {group.label}
-                  </span>
-                  <span className="h-px min-w-0 flex-1 bg-[#D4CDB5]/60 transition-colors group-hover/nav:bg-[#C4B8A0]" />
-                  <ChevronDown
-                    size={12}
-                    className={`shrink-0 text-[#C4B8A0] transition-all group-hover/nav:text-[#8A7E6E] ${open ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {open && (
-                  <div className="flex flex-col gap-0.5 pl-2.5">
-                    {group.links.map((link) => (
-                      <SidebarNavLink
-                        key={link.path}
-                        to={link.path}
-                        icon={link.icon}
-                        label={link.label}
-                        active={isActive(link.path)}
-                        onNavigate={onNavigate}
-                        disabled={link.disabled}
-                        disabledTitle="Temporarily unavailable"
-                        pendingCount={
-                          link.path === COACH_REQUESTS_PATH
-                            ? coachRequestsPendingCount
-                            : link.path === ADMIN_CREDITS_PATH
-                              ? creditCheckoutPendingCount
-                              : undefined
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <SidebarNavLink
+            to="/admin-feedback"
+            icon={<MessageSquare size={16} />}
+            label="System Feedback"
+            active={isActive('/admin-feedback')}
+            onNavigate={onNavigate}
+            appearance="gold"
+            pendingCount={unreadNotifications}
+          />
         </div>
-      </nav>
-
-      <div className="px-3 py-4 border-t border-[#D4CDB5]/30">
-        <SidebarNavLink
-          to="/admin-feedback"
-          icon={<MessageSquare size={16} />}
-          label="System Feedback"
-          active={isActive('/admin-feedback')}
-          onNavigate={onNavigate}
-          appearance="gold"
-        />
-      </div>
+      </SidebarNav>
     </div>
   );
 }
@@ -236,33 +180,46 @@ interface AdminSidebarProps {
 /** Logged-in admin portal chrome (sidebar). */
 export function AdminSidebar({ children }: AdminSidebarProps) {
   const { pathname } = useLocation();
+  const coachQueuePending = useAdminCoachQueuePendingCounts();
+  const creditCheckoutPendingCount = useAdminCreditCheckoutPendingCount();
+  const bulletinPendingCount = useAdminBulletinPendingCount();
+  const groups = useMemo(
+    () =>
+      buildAdminGroups(
+        coachQueuePending.slots,
+        coachQueuePending.cancellations,
+        creditCheckoutPendingCount,
+        bulletinPendingCount,
+      ),
+    [coachQueuePending.slots, coachQueuePending.cancellations, creditCheckoutPendingCount, bulletinPendingCount],
+  );
 
   useEffect(() => {
     document.querySelector('[data-admin-main-scroll]')?.scrollTo(0, 0);
   }, [pathname]);
 
   return (
-    <AppSidebarLayout
-      sidebarWidthClass="w-60"
-      mainOverflow="desktop-hidden"
-      renderSidebar={(closeMobile) => <AdminSidebarNav onNavigate={closeMobile} />}
-      mobileBrand={
-        <Link to="/admin-dashboard" className="flex min-w-0 items-center gap-2">
-          <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto shrink-0 object-contain" />
-          <AdminBadge compact />
-        </Link>
-      }
-      >
-      <AdminHeaderActionsProvider>
-        <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
-          <div className="mx-auto w-full max-w-7xl shrink-0 px-6">
-            <AdminGreetingHeader searchPlaceholder="Search clients, coaches, payments, pages…" />
+    <AdminHeaderActionsProvider>
+      <PortalSectionNavProvider groups={groups}>
+        <AppSidebarLayout
+          sidebarWidthClass="w-60"
+          mainOverflow="desktop-hidden"
+          header={<AdminPortalHeader searchPlaceholder="Search clients, coaches, payments, pages…" />}
+          renderSidebar={(closeMobile) => <AdminSidebarNav onNavigate={closeMobile} />}
+        >
+          <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
+            <div className="mx-auto w-full max-w-8xl shrink-0 px-4 md:px-6">
+              <AdminGreetingHeader slot="nav" />
+            </div>
+            <div data-admin-main-scroll className="min-h-0 flex-1 overflow-y-auto flex flex-col">
+              <div className="mx-auto w-full max-w-8xl shrink-0 px-4 md:px-6">
+                <AdminGreetingHeader slot="title" />
+              </div>
+              {children}
+            </div>
           </div>
-          <div data-admin-main-scroll className="min-h-0 flex-1 overflow-y-auto flex flex-col">
-            {children}
-          </div>
-        </div>
-      </AdminHeaderActionsProvider>
-    </AppSidebarLayout>
+        </AppSidebarLayout>
+      </PortalSectionNavProvider>
+    </AdminHeaderActionsProvider>
   );
 }

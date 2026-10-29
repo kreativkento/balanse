@@ -255,7 +255,7 @@ export function BulletinCard({
         </div>
         <h3
           className="text-[#1E2A35] leading-snug mb-2"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.04em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}
         >
           {post.title}
         </h3>

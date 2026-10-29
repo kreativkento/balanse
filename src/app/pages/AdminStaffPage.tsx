@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Search, X, ChevronDown, KeyRound, ShieldOff, Archive, AlertTriangle, Mail, Phone, UserCheck, Globe, Check, Pencil, Trash2, LayoutGrid, List, Newspaper } from 'lucide-react';
+import { Plus, Search, X, ChevronDown, Mail, Phone, UserCheck, Check, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
 import { SearchableIdSelect } from '../components/SearchableIdSelect';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
-import { SearchableSelect } from '../components/SearchableSelect';
 import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { CARD_HOVER_GROW } from '../../lib/motion-classes';
-import { NATIONALITIES } from '../data/nationalities';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { ACCOUNT_STATUS_FILTER_GROUP } from '../components/filters/status-filter-groups';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import {
   createStaffAccount,
   deleteManagedAccount,
@@ -23,11 +28,6 @@ import {
 import { fetchDisciplinesForAdmin, type DisciplineDisplay } from '../../lib/discipline-service';
 import type { StaffUserRole } from '../../lib/database.types';
 import { STAFF_USER_ROLES } from '../../lib/database.types';
-import {
-  approveBulletinPost,
-  BULLETIN_VISIBILITY_META,
-  useBulletinPosts,
-} from '../../lib/bulletin';
 
 // ── Types & Data ───────────────────────────────────────────────
 
@@ -87,7 +87,6 @@ const EMPTY_FORM = {
   name: '',
   email: '',
   staffRole: 'coach' as StaffUserRole,
-  nationality: '',
   disciplineIds: [] as string[],
   status: 'active' as 'active' | 'inactive',
   password: '',
@@ -245,12 +244,9 @@ function StaffPhotoModal({ member, onClose }: { member: StaffMember; onClose: ()
               style={{ backgroundColor: `${accent}18` }}
             >
               <span
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '4rem',
-                  letterSpacing: '0.08em',
-                  color: accent,
-                }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '4rem',
+                  letterSpacing: '0.04em',
+                  color: accent }}
               >
                 {staffInitials(member.name)}
               </span>
@@ -328,12 +324,9 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                   style={{ backgroundColor: `${accent}18` }}
                 >
                   <span
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '2rem',
-                      letterSpacing: '0.08em',
-                      color: accent,
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem',
+                      letterSpacing: '0.04em',
+                      color: accent }}
                   >
                     {initials}
                   </span>
@@ -359,12 +352,6 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                       style={{ backgroundColor: `${accent}18`, color: accent }}
                     >
                       {member.experience}
-                    </span>
-                  )}
-                  {member.nationality.trim() && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
-                      <Globe size={11} className="text-[#c49a3c]" />
-                      {member.nationality}
                     </span>
                   )}
                   <span
@@ -413,10 +400,6 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
                   <div className="flex items-center gap-2 text-sm text-[#5A5048]">
                     <Phone size={13} className="text-[#c49a3c] shrink-0" />
                     <span>{member.phone.trim() || 'No phone on file'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-[#5A5048]">
-                    <Globe size={13} className="text-[#c49a3c] shrink-0" />
-                    <span>{member.nationality.trim() || 'No nationality on file'}</span>
                   </div>
                 </div>
               </div>
@@ -468,42 +451,12 @@ function StaffSummaryModal({ member, onClose }: { member: StaffMember; onClose: 
   );
 }
 
-// ── Account Logs Data ──────────────────────────────────────────
-
-const PASSWORD_LOGS = [
-  { id: 1, account: 'Rex Santos',    email: 'rex@balanse.com',     changedBy: 'Super Admin', date: 'Apr 8, 2026',  time: '2:30 PM' },
-  { id: 2, account: 'Jodi Reyes',    email: 'jodi@balanse.com',    changedBy: 'Super Admin', date: 'Mar 15, 2026', time: '10:00 AM' },
-  { id: 3, account: 'Wolf Andrada',  email: 'wolf@balanse.com',    changedBy: 'Super Admin', date: 'Feb 28, 2026', time: '3:45 PM' },
-];
-
-const DEACTIVATION_LOGS = [
-  { id: 1, account: 'Old Staff Member', email: 'old.staff@balanse.com', role: 'Coach', deactivatedBy: 'Super Admin', date: 'Feb 20, 2026', reason: 'Contract ended' },
-  { id: 2, account: 'Temp Instructor',  email: 'temp@balanse.com',      role: 'Coach', deactivatedBy: 'Super Admin', date: 'Jan 10, 2026', reason: 'Probation period ended' },
-];
-
-interface DeletionRequest {
-  id: number; account: string; email: string; type: 'Student' | 'Staff';
-  requestedAt: string; status: 'pending' | 'approved' | 'archived' | 'rejected';
-}
-
-const INITIAL_DELETION_REQS: DeletionRequest[] = [
-  { id: 1, account: 'Diego Tan',    email: 'diego.t@email.com',  type: 'Student', requestedAt: 'Apr 7, 2026',  status: 'pending'  },
-  { id: 2, account: 'Old Account',  email: 'old@email.com',      type: 'Student', requestedAt: 'Mar 30, 2026', status: 'archived' },
-];
-
-// ── Component ──────────────────────────────────────────────────
-
 export default function AdminStaffPage() {
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
-
-  const [pageTab, setPageTab]           = useState<'staff' | 'approvals' | 'logs'>('staff');
-  const pendingBulletin = useBulletinPosts({ pendingOnly: true });
-  const [approvingUid, setApprovingUid] = useState<string | null>(null);
-  const [approvalError, setApprovalError] = useState('');
-  const canApproveBulletin = adminUser?.role === 'admin';
-  const [logTab, setLogTab]             = useState<'passwords' | 'deactivations' | 'deletions'>('passwords');
-  const [deletionReqs, setDeletionReqs] = useState<DeletionRequest[]>(INITIAL_DELETION_REQS);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [roleFilters, setRoleFilters] = useState<string[]>([]);
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -565,11 +518,32 @@ export default function AdminStaffPage() {
     if (adminUser) void loadStaff();
   }, [adminUser, loadStaff]);
 
-  const filtered = useMemo(() => staff.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.email.toLowerCase().includes(search.toLowerCase()) ||
-    s.specialty.toLowerCase().includes(search.toLowerCase())
-  ), [staff, search]);
+  const staffFilterGroups = useMemo(
+    () => [
+      ACCOUNT_STATUS_FILTER_GROUP,
+      {
+        id: 'role',
+        label: 'Role',
+        options: [...new Set(staff.map((member) => member.role))].sort().map((role) => ({
+          value: role,
+          label: role,
+        })),
+      },
+    ],
+    [staff],
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const matched = staff.filter((s) =>
+      (s.name.toLowerCase().includes(q)
+        || s.email.toLowerCase().includes(q)
+        || s.specialty.toLowerCase().includes(q))
+      && matchesAnySelected(statusFilters, s.status)
+      && matchesAnySelected(roleFilters, s.role),
+    );
+    return sortAlphabetically(matched, (s) => s.name, alphaOrder);
+  }, [staff, search, statusFilters, roleFilters, alphaOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -582,7 +556,7 @@ export default function AdminStaffPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, viewMode]);
+  }, [search, viewMode, statusFilters, roleFilters, alphaOrder]);
 
   useEffect(() => {
     setDeleteConfirmInput('');
@@ -608,7 +582,6 @@ export default function AdminStaffPage() {
       name: member.name,
       email: member.email,
       staffRole: accountRoleToStaffRole(member.accountRole),
-      nationality: member.nationality,
       disciplineIds: [...member.disciplineIds],
       status: member.status,
       password: '',
@@ -694,7 +667,6 @@ export default function AdminStaffPage() {
           name: savedName,
         email: form.email.trim(),
           specialty: specialtyLabel,
-          nationality: form.nationality,
           staffRole: form.staffRole,
           disciplineIds: form.disciplineIds,
           status: form.status,
@@ -770,81 +742,73 @@ export default function AdminStaffPage() {
   };
 
   const inputClass =
-    'w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]';
-  const selectClass = `${inputClass} appearance-none cursor-pointer bg-white`;
+    "w-full px-4 py-3 rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]";
+  const selectClass = `${inputClass} appearance-none cursor-pointer`;
 
   return (
     <>
-      <div className={pageTab === 'staff' ? 'h-full min-h-0 overflow-hidden flex flex-col' : undefined}>
-      <div className={`max-w-7xl mx-auto px-6 py-8 w-full ${pageTab === 'staff' ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : ''}`}>
-
-        {/* ── Page Tabs ── */}
-        <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm mb-6 w-fit shrink-0">
-          {([['staff', 'Staffing Accounts'], ['approvals', 'Bulletin Approvals'], ['logs', 'Account Logs']] as const).map(([id, label]) => (
+      <div className="h-full min-h-0 overflow-hidden flex flex-col">
+      <div className="max-w-8xl mx-auto px-6 pb-8 pt-1 w-full flex-1 min-h-0 flex flex-col overflow-hidden">
+        <PortalTitleToolbar>
+          <div className="relative flex-1 max-w-sm min-w-[200px]">
+            <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, email, or discipline…"
+              className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm h-[42px] shrink-0">
             <button
-              key={id}
-              onClick={() => setPageTab(id)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${pageTab === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}
+              type="button"
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                viewMode === 'list' ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+              }`}
             >
-              {label}
+              <List size={13} /> List
             </button>
-          ))}
-        </div>
+            <button
+              type="button"
+              onClick={() => setViewMode('card')}
+              aria-label="Card view"
+              aria-pressed={viewMode === 'card'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                viewMode === 'card' ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
+              }`}
+            >
+              <LayoutGrid size={13} /> Card
+            </button>
+          </div>
+          <CategorizedAddFilter
+            groups={staffFilterGroups}
+            selected={{ status: statusFilters, role: roleFilters }}
+            onChange={(next) => {
+              setStatusFilters(next.status ?? []);
+              setRoleFilters(next.role ?? []);
+            }}
+          />
+          <AlphabeticalSortSelect value={alphaOrder} onChange={setAlphaOrder} />
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
+              {filtered.length} of {staff.length} staff
+            </span>
+            <button
+              type="button"
+              onClick={openAdd}
+              className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
+            >
+              <Plus size={16} className="shrink-0" />
+              <span>Add Staff</span>
+            </button>
+          </div>
+        </PortalTitleToolbar>
 
-        {/* ══ STAFF ACCOUNTS TAB ══ */}
-        {pageTab === 'staff' && (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            {/* Search + View toggle + Count */}
-            <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
-              <div className="relative flex-1 max-w-sm min-w-[200px]">
-                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, email, or discipline…"
-                  className="w-full h-[42px] pl-10 pr-4 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8]"
-                />
-              </div>
-              <div className="flex items-center gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm h-[42px] shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('list')}
-                  aria-label="List view"
-                  aria-pressed={viewMode === 'list'}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                    viewMode === 'list' ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                  }`}
-                >
-                  <List size={13} /> List
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('card')}
-                  aria-label="Card view"
-                  aria-pressed={viewMode === 'card'}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                    viewMode === 'card' ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                  }`}
-                >
-                  <LayoutGrid size={13} /> Card
-                </button>
-            </div>
-              <div className="ml-auto flex shrink-0 items-center gap-3">
-                <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
-                  {filtered.length} of {staff.length} staff
-                </span>
-                <button
-                  type="button"
-                  onClick={openAdd}
-                  className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] active:scale-[0.97] transition-all shadow-sm leading-none"
-                 
-                >
-                  <Plus size={16} className="shrink-0" />
-                  <span>Add Staff</span>
-                </button>
-              </div>
-              </div>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
               {staffLoading ? (
               <div ref={containerRef} className="flex-1 min-h-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm px-6 py-12 text-center text-[#B0A898] text-sm">
@@ -909,7 +873,7 @@ export default function AdminStaffPage() {
                           ) : (
                             <span
                               className="font-bold"
-                              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.06em', color: accent }}
+                              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.05em', color: accent }}
                             >
                               {staffInitials(member.name)}
                             </span>
@@ -1057,8 +1021,8 @@ export default function AdminStaffPage() {
                     );
                   })}
                 </div>
-                </div>
-              )}
+              </div>
+            )}
 
             <AdminTablePagination
               page={currentPage}
@@ -1069,219 +1033,8 @@ export default function AdminStaffPage() {
               noun="staff"
               onPageChange={setPage}
             />
-            </div>
-        )}
-
-        {pageTab === 'approvals' && (
-          <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
-            <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Newspaper size={14} className="text-[#c49a3c]" />
-                <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>
-                  Pending Bulletin Posts
-                </h2>
-              </div>
-              <span className="text-[#8A7E6E] text-xs">{pendingBulletin.posts.length} pending</span>
-            </div>
-
-            {approvalError && (
-              <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {approvalError}
-              </div>
-            )}
-
-            {!canApproveBulletin && (
-              <p className="px-6 pt-4 text-xs text-[#8A7E6E]">
-                Only an admin can approve a post. Dev, frontend, and marketing submissions wait here until then.
-              </p>
-            )}
-
-            <div className="hidden md:grid grid-cols-[7rem_minmax(0,2fr)_7rem_7rem_8rem_7.5rem] gap-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
-              {['UID', 'Title', 'Type', 'Audience', 'Submitted', 'Action'].map((heading) => (
-                <p key={heading} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{heading}</p>
-              ))}
-            </div>
-
-            {pendingBulletin.loading ? (
-              <p className="px-6 py-10 text-sm text-[#8A7E6E]">Loading pending posts…</p>
-            ) : pendingBulletin.posts.length === 0 ? (
-              <p className="px-6 py-10 text-sm text-[#8A7E6E]">No bulletin posts are waiting for approval.</p>
-            ) : (
-              <div className="divide-y divide-[#D4CDB5]/30">
-                {pendingBulletin.posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="grid grid-cols-1 md:grid-cols-[7rem_minmax(0,2fr)_7rem_7rem_8rem_7.5rem] gap-2 md:gap-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors"
-                  >
-                    <p className="text-[#1E2A35] text-sm font-semibold tracking-wide">{post.uid}</p>
-                    <div className="min-w-0">
-                      <p className="text-[#1E2A35] text-sm font-semibold truncate">{post.title}</p>
-                      <p className="text-[#8A7E6E] text-xs line-clamp-1">{post.excerpt}</p>
-                    </div>
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${post.badgeColor}`}>{post.badgeText}</span>
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${BULLETIN_VISIBILITY_META[post.visibility].badgeClass}`}>
-                      {BULLETIN_VISIBILITY_META[post.visibility].label}
-                    </span>
-                    <p className="text-[#8A7E6E] text-sm">{post.date}</p>
-                    <div>
-                      {canApproveBulletin ? (
-                        <button
-                          type="button"
-                          disabled={approvingUid === post.uid}
-                          onClick={async () => {
-                            setApprovalError('');
-                            setApprovingUid(post.uid);
-                            const result = await approveBulletinPost(post.id);
-                            setApprovingUid(null);
-                            if (result.error) {
-                              setApprovalError(result.error);
-                              return;
-                            }
-                            await pendingBulletin.refresh();
-                          }}
-                          className="h-8 px-3 rounded-lg bg-[#1E2A35] text-white text-xs font-bold hover:bg-[#263545] active:scale-95 transition-all disabled:opacity-60"
-                        >
-                          {approvingUid === post.uid ? 'Approving…' : 'Approve'}
-                        </button>
-                      ) : (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        )}
-
-        {/* ══ ACCOUNT LOGS TAB ══ */}
-        {pageTab === 'logs' && (
-          <div className="flex flex-col gap-5">
-            {/* Log sub-tabs */}
-            <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm w-fit">
-              {([
-                ['passwords', 'Password Changes', KeyRound],
-                ['deactivations', 'Deactivations', ShieldOff],
-                ['deletions', 'Deletion Requests', AlertTriangle],
-              ] as const).map(([id, label, Icon]) => (
-                <button
-                  key={id}
-                  onClick={() => setLogTab(id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all ${logTab === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'}`}
-                >
-                  <Icon size={12} /> {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Password Change Log */}
-            {logTab === 'passwords' && (
-              <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
-                <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center gap-2">
-                  <KeyRound size={14} className="text-[#c49a3c]" />
-                  <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Password Change Log</h2>
-                </div>
-                <div className="grid grid-cols-[2fr_2.2fr_1.5fr_1.5fr] gap-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
-                  {['Account', 'Email', 'Changed By', 'Date & Time'].map(h => (
-                    <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-                  ))}
-                </div>
-                <div className="divide-y divide-[#D4CDB5]/30">
-                  {PASSWORD_LOGS.map(log => (
-                    <div key={log.id} className="grid grid-cols-[2fr_2.2fr_1.5fr_1.5fr] gap-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors">
-                      <p className="text-[#1E2A35] text-sm font-semibold">{log.account}</p>
-                      <p className="text-[#8A7E6E] text-sm">{log.email}</p>
-                      <p className="text-[#5A5048] text-sm">{log.changedBy}</p>
-                      <p className="text-[#8A7E6E] text-sm">{log.date} · {log.time}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Deactivation Log */}
-            {logTab === 'deactivations' && (
-              <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
-                <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center gap-2">
-                  <ShieldOff size={14} className="text-[#c49a3c]" />
-                  <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Account Deactivation Log</h2>
-                </div>
-                <div className="grid grid-cols-[2fr_2.2fr_1fr_1.5fr_2fr] gap-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
-                  {['Account', 'Email', 'Role', 'Date', 'Reason'].map(h => (
-                    <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-                  ))}
-                </div>
-                <div className="divide-y divide-[#D4CDB5]/30">
-                  {DEACTIVATION_LOGS.map(log => (
-                    <div key={log.id} className="grid grid-cols-[2fr_2.2fr_1fr_1.5fr_2fr] gap-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors">
-                      <p className="text-[#1E2A35] text-sm font-semibold">{log.account}</p>
-                      <p className="text-[#8A7E6E] text-sm">{log.email}</p>
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#EDE8D8] text-[#5A5048] border border-[#D4CDB5]/60 w-fit">{log.role}</span>
-                      <p className="text-[#8A7E6E] text-sm">{log.date}</p>
-                      <p className="text-[#5A5048] text-sm italic">{log.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Deletion Requests */}
-            {logTab === 'deletions' && (
-              <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden ${CARD_HOVER_GROW}`}>
-                <div className="px-6 py-4 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle size={14} className="text-amber-500" />
-                    <h2 className="text-[#1E2A35]" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}>Deletion / Deactivation Requests</h2>
-                  </div>
-                  <span className="text-[#8A7E6E] text-xs">{deletionReqs.filter(r => r.status === 'pending').length} pending</span>
-                </div>
-                <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_150px] gap-x-4 px-6 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40">
-                  {['Account', 'Email', 'Type', 'Requested', 'Status', 'Actions'].map(h => (
-                    <p key={h} className="text-[#8A7E6E] text-xs uppercase tracking-widest font-medium">{h}</p>
-                  ))}
-                </div>
-                <div className="divide-y divide-[#D4CDB5]/30">
-                  {deletionReqs.map(req => (
-                    <div key={req.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_150px] gap-x-4 px-6 py-4 items-center hover:bg-[#F8F3E8]/50 transition-colors min-h-[64px]">
-                      <p className="text-[#1E2A35] text-sm font-semibold truncate">{req.account}</p>
-                      <p className="text-[#8A7E6E] text-sm truncate">{req.email}</p>
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#EDE8D8] text-[#5A5048] border border-[#D4CDB5]/60 w-fit">{req.type}</span>
-                      <p className="text-[#8A7E6E] text-sm">{req.requestedAt}</p>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit ${
-                        req.status === 'pending'  ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                        req.status === 'approved' || req.status === 'archived' ? 'bg-[#EDE8D8] text-[#5A5048] border border-[#D4CDB5]/60' :
-                        'bg-red-50 text-red-600 border border-red-200'
-                      }`}>
-                        {req.status === 'archived' ? '✓ Archived' : req.status}
-                      </span>
-                      <div className="flex items-center gap-1 w-[150px]">
-                        {req.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => setDeletionReqs(prev => prev.map(r => r.id === req.id ? { ...r, status: 'archived' } : r))}
-                              className="h-7 px-2.5 bg-[#EDE8D8] text-[#5A5048] text-xs font-bold rounded-lg hover:bg-[#E3DCC8] active:scale-95 transition-all whitespace-nowrap"
-                            >
-                              Archive
-                            </button>
-                            <button
-                              onClick={() => setDeletionReqs(prev => prev.map(r => r.id === req.id ? { ...r, status: 'rejected' } : r))}
-                              className="h-7 px-2.5 bg-red-50 text-red-600 border border-red-200 text-xs font-bold rounded-lg hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
       </div>
 
       {selectedMember && (
@@ -1309,7 +1062,7 @@ export default function AdminStaffPage() {
                 <h3
                   id="delete-staff-title"
                   className="text-[#1E2A35]"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
                 >
                   {staffDeleteDialogCopy(deleteTarget).title}
                 </h3>
@@ -1368,7 +1121,7 @@ export default function AdminStaffPage() {
             <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between">
               <h3
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 {editingId !== null ? 'Edit Staff Member' : 'Add Staff Member'}
               </h3>
@@ -1403,21 +1156,6 @@ export default function AdminStaffPage() {
                   className={inputClass}
                 />
               </div>
-
-              {/* Nationality (edit only) */}
-              {editingId !== null && (
-                <div>
-                  <label className="block text-[#8A7E6E] text-xs uppercase tracking-widest mb-1.5">Nationality</label>
-                  <SearchableSelect
-                    value={form.nationality}
-                    onChange={(nationality) => setForm((f) => ({ ...f, nationality }))}
-                    options={[...NATIONALITIES]}
-                    placeholder="Select nationality…"
-                    searchPlaceholder="Search country…"
-                    emptyText="No match."
-                  />
-                </div>
-              )}
 
               {/* Password (add only) */}
               {editingId === null && (

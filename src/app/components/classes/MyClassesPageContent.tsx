@@ -8,7 +8,14 @@ import {
   MapPin,
   User,
 } from 'lucide-react';
+import { CategorizedAddFilter, matchesAnySelected } from '../filters/CategorizedAddFilter';
 import { CARD_HOVER_GROW } from '../../../lib/motion-classes';
+import { ContentSkeleton } from '../layout/PageLoadingScreen';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../layout/ChronologicalSortSelect';
 import {
   fetchCoachAssignedClassDisplayById,
   fetchCoachClassRoster,
@@ -257,11 +264,8 @@ function ClassRow({
             </span>
             <span
               className={`tabular-nums ${isToday ? 'text-[#a67f2e]' : 'text-[#1E2A35]'}`}
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: '1.75rem',
-                letterSpacing: '0.02em',
-              }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem',
+                letterSpacing: '0.04em' }}
             >
               {day}
             </span>
@@ -278,7 +282,7 @@ function ClassRow({
               </span>
               <h3
                 className="mt-1.5 truncate text-[#1E2A35] leading-tight"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.04em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
               >
                 {item.className}
               </h3>
@@ -322,6 +326,11 @@ function ClassRow({
           ) : null}
           {memberCancellation?.pendingCancel ? (
             <p className="text-[10px] font-semibold text-amber-800">Cancellation pending approval</p>
+          ) : null}
+          {item.pendingStudioCancel && item.status === 'confirmed' ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] font-semibold leading-snug text-amber-950 sm:text-[11px]">
+              Studio is reviewing a coach or schedule change for this class. You will be emailed when it is confirmed.
+            </p>
           ) : null}
         </div>
       </div>
@@ -434,6 +443,7 @@ export function MyClassesPageContent({
   staffCoachDetail,
 }: MyClassesPageContentProps) {
   const [view, setView] = useState<ClassView>('today');
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [now] = useState(() => new Date());
   const [selectedItem, setSelectedItem] = useState<MemberEnrolledClassItem | null>(null);
   const [detail, setDetail] = useState<MemberMyClassDetail | null>(null);
@@ -761,15 +771,19 @@ export function MyClassesPageContent({
     };
   }, [selectedItem, staffCoachDetail]);
 
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+
   const filteredBySearch = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return classes;
-    return classes.filter((item) =>
-      `${item.className} ${item.coachLabel} ${item.disciplineName} ${item.location} ${item.status}`
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [classes, search]);
+    return classes.filter((item) => {
+      const matchQuery =
+        !q
+        || `${item.className} ${item.coachLabel} ${item.disciplineName} ${item.location} ${item.status}`
+          .toLowerCase()
+          .includes(q);
+      return matchQuery && matchesAnySelected(statusFilters, item.status);
+    });
+  }, [classes, search, statusFilters]);
 
   const buckets = useMemo(() => {
     const today: MemberEnrolledClassItem[] = [];
@@ -783,15 +797,15 @@ export function MyClassesPageContent({
       else past.push(item);
     }
 
-    today.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-    upcoming.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-    past.sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
-
     return { today, upcoming, past };
   }, [filteredBySearch, now]);
 
   const activeList =
     view === 'today' ? buckets.today : view === 'upcoming' ? buckets.upcoming : buckets.past;
+  const orderedActiveList = useMemo(
+    () => sortChronologically(activeList, (item) => item.startsAt, chronoOrder),
+    [activeList, chronoOrder],
+  );
 
   const viewCounts = {
     today: buckets.today.length,
@@ -823,11 +837,8 @@ export function MyClassesPageContent({
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">{pageEyebrow}</p>
             <h2
               className="text-[#1E2A35] leading-tight"
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(1.4rem, 3vw, 1.9rem)',
-                letterSpacing: '0.04em',
-              }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)',
+                letterSpacing: '0.04em' }}
             >
               {pageTitle}
             </h2>
@@ -901,6 +912,21 @@ export function MyClassesPageContent({
             </button>
           ))}
         </div>
+        <CategorizedAddFilter
+          groups={[{
+            id: 'status',
+            label: 'Status',
+            options: [
+              { value: 'confirmed', label: 'Enrolled' },
+              { value: 'waitlisted', label: 'Waitlisted' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ],
+          }]}
+          selected={{ status: statusFilters }}
+          onChange={(next) => setStatusFilters(next.status ?? [])}
+        />
         {primaryAction ? (
           <button
             type="button"
@@ -920,9 +946,8 @@ export function MyClassesPageContent({
 
       <section aria-live="polite">
         {loading ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-[#D4CDB5]/50 bg-white py-20 text-[#8A7E6E] shadow-sm">
-            <Loader2 size={28} className="text-[#c49a3c] animate-spin mb-3" />
-            <p className="text-sm font-medium">Loading your classes…</p>
+          <div role="status" aria-live="polite" aria-label="Loading your classes">
+            <ContentSkeleton variant="list" />
           </div>
         ) : activeList.length === 0 ? (
           <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-6 py-16 text-center shadow-sm">

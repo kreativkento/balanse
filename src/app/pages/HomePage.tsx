@@ -148,12 +148,9 @@ export default function HomePage() {
               </p>
               <h1
                 className="text-white leading-none mb-4 md:mb-6"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: 'clamp(3rem, 8vw, 5.5rem)',
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(3rem, 8vw, 5.5rem)',
                   lineHeight: '1',
-                  letterSpacing: '0.04em',
-                }}
+                  letterSpacing: '0.04em' }}
               >
                 Find Your
                 <br />
@@ -206,11 +203,8 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h2
               className="text-[#1E2A35]"
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
-                letterSpacing: '0.06em',
-              }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
+                letterSpacing: '0.04em' }}
             >
               Balance in Motion
             </h2>
@@ -347,11 +341,8 @@ export default function HomePage() {
         <section id="why-balanse" className="mx-4 md:mx-8 mb-14 md:mb-20 rounded-3xl border border-[#c49a3c]/25 px-5 md:px-10 py-8 md:py-14 scroll-mt-24" style={{ backgroundColor: 'rgba(196,154,60,0.07)' }}>
           <h2
             className="text-[#1E2A35] mb-4 md:mb-6 md:text-center"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: '1.8rem',
-              letterSpacing: '0.05em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem',
+              letterSpacing: '0.04em' }}
           >
             Why BALANSÉ?
           </h2>

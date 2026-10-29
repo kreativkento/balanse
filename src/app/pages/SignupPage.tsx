@@ -111,7 +111,7 @@ export default function SignupPage() {
                 <div className="mt-auto">
                   <h1
                     className="text-[#1E2A35] leading-tight"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.05em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}
                   >
                     Sign Up
                   </h1>

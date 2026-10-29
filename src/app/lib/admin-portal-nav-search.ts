@@ -30,6 +30,12 @@ export function getAdminPortalNavItems(): AdminPortalNavItem[] {
       keywords: ['trainers', 'instructors', 'staff coaches'],
     },
     {
+      path: '/admin-coach-availability',
+      label: 'Coach Availability',
+      group: 'Community',
+      keywords: ['hours', 'calendar', 'time off', 'day off', 'staff availability'],
+    },
+    {
       path: '/admin-disciplines',
       label: 'Disciplines',
       group: 'Community',
@@ -48,10 +54,16 @@ export function getAdminPortalNavItems(): AdminPortalNavItem[] {
       keywords: ['classes', 'sessions', 'calendar', 'timetable'],
     },
     {
-      path: '/admin-coach-requests',
-      label: 'Coach Requests',
+      path: '/admin-coach-slots',
+      label: 'Coach Slots',
       group: 'Schedule',
-      keywords: ['portal', 'slot', 'cancellation', 'booking requests'],
+      keywords: ['portal', 'slot', 'booking requests', 'coach requests'],
+    },
+    {
+      path: '/admin-coach-cancellations',
+      label: 'Coach Cancellations',
+      group: 'Schedule',
+      keywords: ['portal', 'cancellation', 'refund', 'holding', 'coach requests'],
     },
     {
       path: '/admin-gallery',
@@ -100,6 +112,12 @@ export function getAdminPortalNavItems(): AdminPortalNavItem[] {
       label: 'Staffing',
       group: 'Admin',
       keywords: ['staff', 'front desk', 'marketing', 'dev', 'employees'],
+    },
+    {
+      path: '/admin-pricing',
+      label: 'Pricing & Services',
+      group: 'Admin',
+      keywords: ['pricing', 'plans', 'rates', 'gold', 'silver', 'services', 'membership'],
     },
     {
       path: '/admin-policies',

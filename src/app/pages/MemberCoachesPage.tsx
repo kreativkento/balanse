@@ -1,11 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, ChevronRight, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Users, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { fetchPublicCoaches, type PublicCoachProfile } from '../../lib/admin-service';
 import { CoachProfileModal } from '../components/coaches/CoachProfileModal';
 import { CoachCardMedia } from '../components/coaches/CoachCardMedia';
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
 
 type Coach = PublicCoachProfile;
 
@@ -24,7 +31,7 @@ function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
         </div>
       </CoachCardMedia>
       <div className="px-3.5 py-2.5 md:px-4 md:py-3">
-        <h3 className="text-[#1E2A35] leading-none mb-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}>{coach.name}</h3>
+        <h3 className="text-[#1E2A35] leading-none mb-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.05em' }}>{coach.name}</h3>
         <p className="text-[#8A7E6E] text-[11px] font-semibold mb-2 line-clamp-1">{coach.role}</p>
         <div className="flex flex-wrap gap-1 mb-2 min-h-[18px]">
           {coach.classes.slice(0, 2).map((cls) => (
@@ -50,6 +57,7 @@ export default function MemberCoachesPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
 
   useEffect(() => {
     let cancelled = false;
@@ -68,14 +76,16 @@ export default function MemberCoachesPage() {
 
   const visibleCoaches = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return coaches;
-    return coaches.filter((coach) => {
-      const name = coach.name.toLowerCase();
-      const role = coach.role.toLowerCase();
-      const classes = coach.classes.join(' ').toLowerCase();
-      return name.includes(query) || role.includes(query) || classes.includes(query);
-    });
-  }, [coaches, search]);
+    const matched = !query
+      ? coaches
+      : coaches.filter((coach) => {
+          const name = coach.name.toLowerCase();
+          const role = coach.role.toLowerCase();
+          const classes = coach.classes.join(' ').toLowerCase();
+          return name.includes(query) || role.includes(query) || classes.includes(query);
+        });
+    return sortAlphabetically(matched, (coach) => coach.name, alphaOrder);
+  }, [coaches, search, alphaOrder]);
 
   const totalPages = Math.max(1, Math.ceil(visibleCoaches.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -99,23 +109,15 @@ export default function MemberCoachesPage() {
           setPage(1);
         }}
       >
-        <div className="pt-6 mb-6">
-          <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Studio</p>
-          <h2
-            className="text-[#1E2A35] leading-tight"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
-          >
-            Coaches
-          </h2>
-          <p className="text-[#8A7E6E] text-sm mt-1 max-w-xl">
+        <PortalTitleToolbar>
+          <AlphabeticalSortSelect value={alphaOrder} onChange={(order) => { setAlphaOrder(order); setPage(1); }} />
+        </PortalTitleToolbar>
+        <div className="pt-2 mb-6">
+          <p className="text-[#8A7E6E] text-sm max-w-xl">
             Meet the coaches who help you move better, feel stronger, and live well. Tap a card to view a full profile.
           </p>
-        </div>
-
-        {loading && (
-          <div className="flex items-center justify-center gap-2 py-16 text-[#8A7E6E]">
-            <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-            <span className="text-sm">Loading coaches…</span>
+          <div role="status" aria-live="polite" aria-label="Loading coaches">
+            <ContentSkeleton variant="cards" />
           </div>
         )}
 

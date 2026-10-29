@@ -195,12 +195,9 @@ export function ProfileImageHero({
         ) : (
           <span
             className="flex h-full w-full items-center justify-center"
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: '2rem',
-              letterSpacing: '0.08em',
-              color: accent,
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem',
+              letterSpacing: '0.04em',
+              color: accent }}
           >
             {initials}
           </span>

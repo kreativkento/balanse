@@ -207,7 +207,7 @@ export function GalleryPostFormModal({
         <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between sticky top-0 bg-white z-10">
           <h3
             className="text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
           >
             {isEdit ? 'Edit Gallery Post' : 'Create Gallery Post'}
           </h3>

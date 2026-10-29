@@ -8,10 +8,15 @@ import {
   AlertCircle,
   ChevronRight,
   X,
-  Plus,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { ProfileAvatar } from '../components/ProfileImages';
 import { toast } from 'sonner';
 import {
@@ -163,7 +168,7 @@ function CreditTransactionModal({
           <h3
             id="credit-txn-title"
             className="text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
           >
             Credit transaction
           </h3>
@@ -189,7 +194,7 @@ function CreditTransactionModal({
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Change</p>
               <p
                 className={`font-bold tabular-nums ${txn.delta > 0 ? 'text-emerald-700' : 'text-[#5A5048]'}`}
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em',  fontSize: '1.75rem' }}
               >
                 {formatCreditDelta(txn.delta)}
               </p>
@@ -198,7 +203,7 @@ function CreditTransactionModal({
               <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-1">Balance after</p>
               <p
                 className="text-[#1E2A35] font-bold tabular-nums"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.75rem' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em',  fontSize: '1.75rem' }}
               >
                 {txn.balanceAfter ?? '—'}
               </p>
@@ -260,8 +265,10 @@ export default function AdminCreditsPage() {
   const [selected, setSelected] = useState<CreditTransactionDisplay | null>(null);
   const [selectedCheckout, setSelectedCheckout] = useState<SubscriptionPackagePaymentDisplay | null>(null);
   const [checkoutRefreshSignal, setCheckoutRefreshSignal] = useState(0);
-  const [grantSignal, setGrantSignal] = useState(0);
   const [page, setPage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const { containerRef, pageSize } = useFitPageSize({ layout: 'table', fallback: 6 });
   const checkoutPendingCount = useAdminCreditCheckoutPendingCount();
 
@@ -301,7 +308,7 @@ export default function AdminCreditsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, activeTab]);
+  }, [search, activeTab, chronoOrder, statusFilters, typeFilters]);
 
   const ledgerCreditsIn = transactions.filter(
     (t) =>
@@ -314,11 +321,10 @@ export default function AdminCreditsPage() {
   const creditsInRows: AdminCreditTableRow[] = [
     ...checkoutRows,
     ...ledgerCreditsIn.map((t) => ledgerRowFromTxn(t, 'posted')),
-  ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
+  ];
 
   const creditsOutRows: AdminCreditTableRow[] = creditsOut
-    .map((t) => ledgerRowFromTxn(t, 'posted'))
-    .sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
+    .map((t) => ledgerRowFromTxn(t, 'posted'));
 
   const totalGranted =
     ledgerCreditsIn.filter((t) => t.delta > 0).reduce((sum, t) => sum + t.delta, 0)
@@ -328,21 +334,26 @@ export default function AdminCreditsPage() {
 
   const filteredRows = (list: AdminCreditTableRow[]) => {
     const q = search.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
-      (row) =>
-        row.student.toLowerCase().includes(q)
+    return list.filter((row) => {
+      const matchQuery =
+        !q
+        || row.student.toLowerCase().includes(q)
         || row.email.toLowerCase().includes(q)
         || row.reason.toLowerCase().includes(q)
         || row.reference.toLowerCase().includes(q)
         || row.subline.toLowerCase().includes(q)
         || row.typeLabel.toLowerCase().includes(q)
-        || row.status.includes(q),
-    );
+        || row.status.includes(q);
+      return (
+        matchQuery
+        && matchesAnySelected(statusFilters, row.status)
+        && matchesAnySelected(typeFilters, row.typeLabel.toLowerCase())
+      );
+    });
   };
 
   const activeList = activeTab === 'in' ? creditsInRows : creditsOutRows;
-  const visible = filteredRows(activeList);
+  const visible = sortChronologically(filteredRows(activeList), (row) => row.sortAt, chronoOrder);
   const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageRows = useMemo(() => {
@@ -413,8 +424,9 @@ export default function AdminCreditsPage() {
         />
       ) : null}
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-1 min-h-0 flex-col px-6 py-6">
-        <div className="mb-4 grid min-w-0 shrink-0 grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mx-auto flex w-full min-w-0 max-w-8xl flex-1 min-h-0 flex-col gap-4 overflow-y-auto px-6 py-6 lg:flex-row lg:items-stretch lg:overflow-hidden">
+        <div className="flex w-full min-h-0 min-w-0 flex-col gap-3 lg:w-1/2 lg:overflow-hidden">
+        <div className="grid min-w-0 shrink-0 grid-cols-2 gap-3">
           {[
             {
               label: 'Credits added',
@@ -456,11 +468,8 @@ export default function AdminCreditsPage() {
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
                 <p
                   className="text-[#1E2A35] leading-none"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.5rem',
-                    letterSpacing: '0.04em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem',
+                    letterSpacing: '0.04em' }}
                 >
                   {s.value}
                 </p>
@@ -472,11 +481,12 @@ export default function AdminCreditsPage() {
         <AdminCreditDesk
           transactions={transactions}
           refreshKey={checkoutRefreshSignal}
-          grantSignal={grantSignal}
           onChanged={() => setCheckoutRefreshSignal((n) => n + 1)}
         />
+        </div>
 
-        <div className="mb-3 flex min-w-0 shrink-0 flex-nowrap items-center gap-3">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="mb-3 flex min-w-0 shrink-0 flex-wrap items-center gap-2">
           <div className="flex gap-1 bg-white border border-[#D4CDB5]/60 rounded-2xl p-1 shadow-sm shrink-0">
             {(
               [
@@ -512,7 +522,39 @@ export default function AdminCreditsPage() {
               );
             })}
           </div>
-          <div className="flex items-center gap-2 ml-auto shrink-0 min-w-0">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+            <CategorizedAddFilter
+              groups={[
+                {
+                  id: 'status',
+                  label: 'Status',
+                  options: [
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'approved', label: 'Approved' },
+                    { value: 'rejected', label: 'Rejected' },
+                    { value: 'posted', label: 'Posted' },
+                  ],
+                },
+                {
+                  id: 'type',
+                  label: 'Type',
+                  options: [
+                    { value: 'checkout', label: 'Checkout' },
+                    { value: 'grant', label: 'Grant' },
+                    { value: 'used', label: 'Used' },
+                    { value: 'expired', label: 'Expired' },
+                    { value: 'adjustment', label: 'Adjustment' },
+                    { value: 'reversal', label: 'Reversal' },
+                  ],
+                },
+              ]}
+              selected={{ status: statusFilters, type: typeFilters }}
+              onChange={(next) => {
+                setStatusFilters(next.status ?? []);
+                setTypeFilters(next.type ?? []);
+              }}
+            />
+            <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
             <div className="relative w-52 sm:w-64 shrink min-w-0">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
               <input
@@ -523,14 +565,6 @@ export default function AdminCreditsPage() {
                 className={`${INP} w-full`}
               />
             </div>
-            <button
-              type="button"
-              className="action-button flex items-center gap-2 bg-[#1E2A35] text-white px-5 py-2.5 rounded-full hover:bg-[#263545] hover:shadow-md transition-[background-color,box-shadow] shadow-sm shrink-0 whitespace-nowrap"
-              onClick={() => setGrantSignal((n) => n + 1)}
-            >
-              <Plus size={16} />
-              Add Entry
-            </button>
           </div>
         </div>
 
@@ -609,11 +643,8 @@ export default function AdminCreditsPage() {
                             ? 'text-emerald-700'
                             : 'text-[#5A5048]'
                       }`}
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '1.1rem',
-                        letterSpacing: '0.04em',
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem',
+                        letterSpacing: '0.05em' }}
                     >
                       {formatCreditDelta(row.delta)}
                     </p>
@@ -651,6 +682,7 @@ export default function AdminCreditsPage() {
           noun="records"
           onPageChange={setPage}
         />
+        </div>
       </div>
       </div>
     </>

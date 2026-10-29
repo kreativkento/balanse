@@ -91,7 +91,7 @@ export function StaffCoachClassDetailModal({
                 <h2
                   id="staff-class-detail-title"
                   className="text-[#1E2A35] leading-tight"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.55rem', letterSpacing: '0.05em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.55rem', letterSpacing: '0.04em' }}
                 >
                   {classRow.name.trim() || classRow.disciplineName}
                 </h2>

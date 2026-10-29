@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
 import { AdminTablePagination, PaginationPageButtons, useFitPageSize } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import {
   AdminDisciplineCardsGrid,
   DisciplineDensityToggle,
@@ -25,6 +32,7 @@ export default function MemberDisciplinesPage() {
   const [density, setDensity] = useState<DisciplineCardDensity>('large');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
 
   const isCompact = density === 'compact';
   const { containerRef, pageSize: fitPageSize } = useFitPageSize({
@@ -51,13 +59,15 @@ export default function MemberDisciplinesPage() {
 
   const visibleDisciplines = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return disciplines;
-    return disciplines.filter((item) => {
-      const name = item.name?.toLowerCase() ?? '';
-      const description = item.description?.toLowerCase() ?? '';
-      return name.includes(query) || description.includes(query);
-    });
-  }, [disciplines, search]);
+    const matched = !query
+      ? disciplines
+      : disciplines.filter((item) => {
+          const name = item.name?.toLowerCase() ?? '';
+          const description = item.description?.toLowerCase() ?? '';
+          return name.includes(query) || description.includes(query);
+        });
+    return sortAlphabetically(matched, (item) => item.name ?? '', alphaOrder);
+  }, [disciplines, search, alphaOrder]);
 
   const pageSize = isCompact ? fitPageSize : LARGE_PAGE_SIZE;
   const totalPages = Math.max(1, Math.ceil(visibleDisciplines.length / pageSize));
@@ -77,31 +87,27 @@ export default function MemberDisciplinesPage() {
   };
 
   const pageIntro = (
-    <div
-      className={`flex shrink-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between ${
-        isCompact ? 'mb-3 pt-4 md:mb-4' : 'mb-6 pt-6'
-      }`}
-    >
-      <div className="min-w-0">
-        <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">Studio</p>
-        <h2
-          className="leading-tight text-[#1E2A35]"
-          style={{
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: 'clamp(1.4rem, 3vw, 1.9rem)',
-            letterSpacing: '0.04em',
-          }}
-        >
-          Disciplines
-        </h2>
-        <p className={`mt-1 max-w-xl text-sm text-[#8A7E6E] ${isCompact ? 'hidden md:block' : ''}`}>
+    <>
+      <PortalTitleToolbar>
+        {!disciplinesLoading && visibleDisciplines.length > 0 ? (
+          <>
+            <AlphabeticalSortSelect
+              value={alphaOrder}
+              onChange={(order) => {
+                setAlphaOrder(order);
+                setPage(1);
+              }}
+            />
+            <DisciplineDensityToggle density={density} onChange={handleDensityChange} />
+          </>
+        ) : null}
+      </PortalTitleToolbar>
+      <div className={`shrink-0 ${isCompact ? 'mb-3 pt-2 md:mb-4' : 'mb-6 pt-2'}`}>
+        <p className={`max-w-xl text-sm text-[#8A7E6E] ${isCompact ? 'hidden md:block' : ''}`}>
           Explore the movement practices we offer at BALANSÉ.
         </p>
       </div>
-      {!disciplinesLoading && visibleDisciplines.length > 0 && (
-        <DisciplineDensityToggle density={density} onChange={handleDensityChange} />
-      )}
-    </div>
+    </>
   );
 
   const paginationFooter = (
@@ -162,12 +168,12 @@ export default function MemberDisciplinesPage() {
           {disciplinesLoading && (
             <div
               ref={isCompact ? containerRef : undefined}
-              className={`flex items-center justify-center gap-2 text-[#8A7E6E] ${
-                isCompact ? 'min-h-0 flex-1 py-8' : 'py-16'
-              }`}
+              className={isCompact ? 'min-h-0 flex-1 overflow-auto py-2' : 'py-2'}
+              role="status"
+              aria-live="polite"
+              aria-label="Loading disciplines"
             >
-              <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-              <span className="text-sm">Loading disciplines…</span>
+              <ContentSkeleton variant="cards" />
             </div>
           )}
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   AuthResult,
@@ -43,6 +43,8 @@ const AdminAuthContext = createContext<AdminAuthContextType | null>(null);
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [adminAuthReady, setAdminAuthReady] = useState(false);
+  const hasUserRef = useRef(false);
+  hasUserRef.current = adminUser != null;
 
   const hydrateAdminSession = useCallback(async (authUserId: string, isCurrent: () => boolean) => {
     const data = await fetchAccountWithProfileByAuthUserId(authUserId);
@@ -86,7 +88,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         setAdminAuthReady(true);
         return;
       }
-      setAdminAuthReady(false);
+      if (!hasUserRef.current) setAdminAuthReady(false);
       setTimeout(() => {
         if (!mounted || current !== generation) return;
         void hydrateAdminSession(session.user.id, () => mounted && current === generation)

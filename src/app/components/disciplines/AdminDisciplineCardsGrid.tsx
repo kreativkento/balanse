@@ -93,11 +93,8 @@ export function AdminDisciplineCardsGrid({
               />
               <h2
                 className="relative z-10 text-white leading-none mt-3"
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '1.15rem',
-                  letterSpacing: '0.04em',
-                }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem',
+                  letterSpacing: '0.05em' }}
               >
                 {discipline.name}
               </h2>
@@ -127,11 +124,8 @@ export function AdminDisciplineCardsGrid({
                 <div className="absolute flex items-end justify-between gap-2 bottom-3 left-4 right-4">
                   <h2
                     className="text-white leading-none min-w-0"
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '1.6rem',
-                      letterSpacing: '0.04em',
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem',
+                      letterSpacing: '0.04em' }}
                   >
                     {discipline.name}
                   </h2>

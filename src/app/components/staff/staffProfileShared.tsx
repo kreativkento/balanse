@@ -11,11 +11,8 @@ export const CARD =
   'bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 transition-[box-shadow,border-color] duration-500 ease-in-out delay-100 hover:border-[#c49a3c] hover:shadow-[inset_0_0_0_3px_#c49a3c]';
 export const SLIM_SCROLL_OUTSET =
   'overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#C4B8A0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C4B8A0] [&::-webkit-scrollbar-thumb:hover]:bg-[#c49a3c]/55';
-export const SECTION_TITLE: CSSProperties = {
-  fontFamily: "'Bebas Neue', sans-serif",
-  fontSize: '1.2rem',
-  letterSpacing: '0.06em',
-};
+export const SECTION_TITLE: CSSProperties = { fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem',
+  letterSpacing: '0.05em' };
 
 export const TABS = [
   { id: 'personal' as const, label: 'Personal Information', Icon: User },
@@ -52,9 +49,9 @@ export function computeCoachProfileScore(
   if (!profile) return 0;
   const checks = [
     profile.displayName?.trim(),
-    profile.nationality?.trim(),
     profile.phone?.trim(),
     profile.photo?.trim(),
+    profile.coverImage?.trim(),
     profile.bio?.trim(),
     profile.experience?.trim(),
     disciplineCount > 0,
@@ -66,9 +63,9 @@ export function computeOpsStaffProfileScore(profile: CoachProfileData | null): n
   if (!profile) return 0;
   const checks = [
     profile.displayName?.trim(),
-    profile.nationality?.trim(),
     profile.phone?.trim(),
     profile.photo?.trim(),
+    profile.coverImage?.trim(),
     profile.bio?.trim(),
     profile.experience?.trim(),
   ];

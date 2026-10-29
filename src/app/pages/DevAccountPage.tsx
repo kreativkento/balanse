@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useDevAuth } from '../context/DevAuthContext';
-import { DevSidebar } from '../components/layout/DevSidebar';
 import { AccountImagesCard } from '../components/ProfileImages';
 
 export default function DevAccountPage() {
@@ -17,12 +16,11 @@ export default function DevAccountPage() {
   const initials = devUser.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <DevSidebar>
       <div className="h-full overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+        <div className="max-w-8xl mx-auto px-4 md:px-8 py-8">
           <h1
             className="text-[#1E2A35] leading-none mb-1"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)', letterSpacing: '0.04em' }}
           >
             My Profile
           </h1>
@@ -39,6 +37,5 @@ export default function DevAccountPage() {
           />
         </div>
       </div>
-    </DevSidebar>
   );
 }

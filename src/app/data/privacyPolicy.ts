@@ -25,7 +25,7 @@ export const PRIVACY_BLOCKS: TermsBlock[] = [
     items: [
       {
         label: 'Account & profile:',
-        text: 'name, email, phone, birthday, sex, nationality, address (province, city, barangay), emergency contact, height, and weight.',
+        text: 'name, email, phone, birthday, sex, address (province, city, barangay), emergency contact, height, and weight.',
       },
       {
         label: 'Health declaration:',

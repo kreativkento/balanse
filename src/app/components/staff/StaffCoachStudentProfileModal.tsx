@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Shield, Stethoscope, X } from 'lucide-react';
 import type { CoachStudentProfileItem } from '../../../lib/admin-service';
 import { fetchCoachStudentProfileForClass } from '../../../lib/admin-service';
-import { formatNationalityLabel } from '../../data/nationalities';
 import {
   HEALTH_QUESTIONS,
   parseHealthDeclaration,
@@ -53,11 +52,6 @@ function formatWeight(value?: string | null): string {
   if (!trimmed) return '—';
   if (/^\d+(\.\d+)?$/.test(trimmed)) return `${trimmed} kg`;
   return trimmed;
-}
-
-function formatNationality(value?: string | null): string {
-  const label = formatNationalityLabel(value);
-  return label || '—';
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
@@ -203,7 +197,7 @@ export function StaffCoachStudentProfileModal({
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-2 gap-2">
                   <StatTile label="Member since" value={displayText(client.joinDate)} />
-                  <StatTile label="Nationality" value={formatNationality(client.nationality)} />
+                  <StatTile label="Nickname" value={displayText(client.nickname)} />
                   <StatTile label="Age" value={formatAge(client.age)} />
                   <StatTile label="Sex" value={formatSex(client.sex)} />
                   <StatTile label="Height" value={formatHeight(client.height)} />

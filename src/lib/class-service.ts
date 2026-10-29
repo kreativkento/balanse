@@ -704,6 +704,8 @@ export interface MemberEnrolledClassItem {
   freeCancellationUntil: string | null;
   bookingRefundKind: MemberBookingRefundKind;
   creditsOnBooking: number | null;
+  /** Coach asked to cancel this class; studio has not confirmed yet. */
+  pendingStudioCancel?: boolean;
 }
 
 type ClassRowForMemberList = Pick<
@@ -723,15 +725,16 @@ function resolveMemberClassStatus(
   const endMs = row.ends_at ? new Date(row.ends_at).getTime() : startMs;
   const sessionEnded = Number.isFinite(endMs) && endMs < nowMs;
 
+  if (row.status_block === 'cancelled') {
+    return 'cancelled';
+  }
+
   if (kind === 'waitlist') {
     if (paymentStatus === 'pending') return 'pending';
     return 'waitlisted';
   }
 
   if (sessionEnded) {
-    if (row.status_block === 'cancelled') {
-      return 'cancelled';
-    }
     return 'completed';
   }
 
@@ -944,6 +947,17 @@ export async function fetchMemberEnrolledClasses(): Promise<{
     (classRows ?? []).map((row) => [row.id as string, row as ClassRowForMemberList]),
   );
   const coachByClass = await coachLabelsForClassIds(classIds);
+  const pendingStudioCancelIds = new Set<string>();
+  const { data: holdingRows } = await supabase
+    .from('class_cancel_holdings')
+    .select('class_id, outcome')
+    .eq('account_id', accountId)
+    .in('class_id', classIds);
+  for (const row of holdingRows ?? []) {
+    if ((row.outcome as string) === 'pending_review' && row.class_id) {
+      pendingStudioCancelIds.add(row.class_id as string);
+    }
+  }
   const nowMs = Date.now();
 
   const items: MemberEnrolledClassItem[] = [];
@@ -968,6 +982,7 @@ export async function fetchMemberEnrolledClasses(): Promise<{
       location: 'Main studio',
       status: resolveMemberClassStatus(row, 'enrolled', null, nowMs),
       sortAt: row.starts_at,
+      pendingStudioCancel: pendingStudioCancelIds.has(classId),
       ...bookingMetaForClass(classId),
     });
   }

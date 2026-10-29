@@ -57,11 +57,8 @@ export function ErrorScreen({
         <p className="text-[#9A8E7E] text-xs uppercase tracking-widest mb-2">{code}</p>
         <h1
           className="text-[#1E2A35] leading-none mb-3"
-          style={{
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: '2rem',
-            letterSpacing: '0.05em',
-          }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem',
+            letterSpacing: '0.04em' }}
         >
           {title}
         </h1>

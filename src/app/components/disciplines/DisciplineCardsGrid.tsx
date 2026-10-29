@@ -32,11 +32,8 @@ export function DisciplineCardsGrid({
               <div className="absolute bottom-3 left-4">
                 <h2
                   className="text-white leading-none"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.6rem',
-                    letterSpacing: '0.04em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem',
+                    letterSpacing: '0.04em' }}
                 >
                   {discipline.name}
                 </h2>

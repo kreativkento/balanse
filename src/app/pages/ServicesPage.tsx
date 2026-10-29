@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Check,
   Grid3X3,
@@ -11,6 +12,10 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import {
+  fetchPublicPricingOfferings,
+  type PricingOfferingRecord,
+} from '../../lib/pricing-offering-service';
 
 const SERVICE_CARD =
   `rounded-2xl bg-white border border-[#D4CDB5]/50 shadow-[0_1px_4px_rgba(30,42,53,0.04)] flex flex-col ${CARD_HOVER_GROW}`;
@@ -70,7 +75,7 @@ function ServiceCardHeader({
       <div className="min-w-0 pt-0.5">
         <h2
           className="leading-none text-[#1E2A35]"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.45rem, 2.5vw, 1.65rem)', letterSpacing: '0.05em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.45rem, 2.5vw, 1.65rem)', letterSpacing: '0.04em' }}
         >
           {title}
         </h2>
@@ -106,7 +111,7 @@ function PriceRow({
           <>
             <p
               className="text-[#1E2A35] leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.04em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.05em' }}
             >
               {label}
             </p>
@@ -116,7 +121,7 @@ function PriceRow({
       </div>
       <span
         className={`leading-none shrink-0 tabular-nums ${highlight ? 'text-[#c49a3c]' : 'text-[#1E2A35]'}`}
-        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.02em' }}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '0.05em' }}
       >
         {price}
       </span>
@@ -124,7 +129,100 @@ function PriceRow({
   );
 }
 
+const SERVICE_ICONS: LucideIcon[] = [UserRoundCheck, Users, HeartPulse];
+
 export function ServicesOfferings({ onAction }: { onAction: () => void }) {
+  const [services, setServices] = useState<PricingOfferingRecord[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPublicPricingOfferings().then((result) => {
+      if (cancelled) return;
+      const rows = result.data.filter((row) => row.kind === 'service');
+      setServices(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (services && services.length > 0) {
+    return (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 items-stretch">
+          {services.map((service, index) => {
+            const Icon = SERVICE_ICONS[index % SERVICE_ICONS.length];
+            return (
+              <article key={service.id} className={SERVICE_CARD}>
+                <ServiceCardHeader icon={Icon} title={service.title} tagline={service.tagline} />
+                {service.tiers.length > 0 ? (
+                  <div className="px-5 py-4 border-t border-[#D4CDB5]/35">
+                    <SectionLabel icon={Tag}>Pricing</SectionLabel>
+                    <div className="flex flex-col gap-2">
+                      {service.tiers.map((tier, tierIndex) => (
+                        <PriceRow
+                          key={`${tier.label}-${tierIndex}`}
+                          label={tier.label}
+                          note={tier.note}
+                          price={tier.price}
+                          highlight={tier.highlight}
+                          plain={tier.plain}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {service.inclusions.length > 0 ? (
+                  <div className="px-5 py-4 border-t border-[#D4CDB5]/35 flex-1">
+                    <SectionLabel icon={Check}>Included</SectionLabel>
+                    <ul className="flex flex-col gap-2">
+                      {service.inclusions.map((item) => (
+                        <li key={item} className="flex items-start gap-2.5">
+                          <span className="w-5 h-5 rounded-full bg-[#c49a3c]/12 flex items-center justify-center shrink-0 mt-0.5">
+                            <Check size={11} className="text-[#c49a3c]" strokeWidth={3} />
+                          </span>
+                          <span className="text-[#5A5048] text-sm leading-snug">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {service.chips.length > 0 ? (
+                  <div className="px-5 py-4 border-t border-[#D4CDB5]/35 flex-1">
+                    <SectionLabel icon={Grid3X3}>Classes</SectionLabel>
+                    <div className="flex flex-wrap gap-1.5">
+                      {service.chips.map((name) => (
+                        <span
+                          key={name}
+                          className="text-xs bg-[#F8F3E8] border border-[#D4CDB5]/50 text-[#5A5048] px-2.5 py-1 rounded-full leading-snug"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <div className="px-5 pb-5 pt-2">
+                  <button
+                    type="button"
+                    onClick={onAction}
+                    className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.05em' }}
+                  >
+                    {service.ctaLabel || 'Inquire Now'}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        <p className="pt-5 text-center text-xs text-[#8A7E6E]">
+          Rates in ₱ · confirm with our team for latest pricing.
+        </p>
+      </>
+    );
+  }
+
   return (
     <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 items-stretch">
@@ -161,7 +259,7 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
                 type="button"
                 onClick={onAction}
                 className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.05em' }}
               >
                 Inquire Now
               </button>
@@ -200,7 +298,7 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
                 type="button"
                 onClick={onAction}
                 className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.05em' }}
               >
                 Inquire Now
               </button>
@@ -226,7 +324,7 @@ export function ServicesOfferings({ onAction }: { onAction: () => void }) {
                 type="button"
                 onClick={onAction}
                 className="w-full py-3 rounded-full bg-[#EDE8D8] text-[#1E2A35] border border-[#D4CDB5]/70 text-sm font-semibold hover:bg-[#E3DCC8] active:scale-[0.98] transition-all"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.1em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '0.05em' }}
               >
                 Inquire Now
               </button>
@@ -257,7 +355,7 @@ export default function ServicesPage() {
           <div>
             <h1
               className="leading-none text-[#1E2A35]"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.7rem, 3.5vw, 2.2rem)', letterSpacing: '0.04em' }}
             >
               Services
             </h1>

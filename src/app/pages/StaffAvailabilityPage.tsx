@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { STAFF_PAGE_CONTAINER } from '../lib/staff-page-meta';
+import { PageLoadingScreen } from '../components/layout/PageLoadingScreen';
 import {
   deleteMyStaffAvailability,
   fetchMyStaffAvailability,
@@ -22,6 +23,13 @@ import {
   getMondayOfWeekContaining, toDateKey, dateKeyToDate, offsetDateKey,
   isWeekendMonthGridColumn, isWeekendDate, WEEKEND_COLUMN_BG, WEEKEND_COLUMN_BG_SOFT,
 } from '../components/calendar/weekCalendarUtils';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { AVAILABILITY_DAY_FILTER_GROUP } from '../components/filters/status-filter-groups';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import {
   CALENDAR_BORDER_DIVIDER,
   CALENDAR_BORDER_DIVIDER_SOFT,
@@ -349,7 +357,7 @@ function AvailabilityEditorModal({
 }) {
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
       style={{ backgroundColor: 'rgba(30,42,53,0.5)', backdropFilter: 'blur(4px)' }}
       role="dialog"
       aria-modal="true"
@@ -358,7 +366,7 @@ function AvailabilityEditorModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md max-h-[min(90vh,720px)] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-[#D4CDB5]/60 shadow-2xl w-full max-w-md max-h-[min(92dvh,720px)] overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom,0px)]">
         <div className="px-4 py-3 border-b border-[#D4CDB5]/40 flex items-center justify-between gap-2 shrink-0">
           <div className="min-w-0">
             <p className="text-[#9A8E7E] text-[10px] uppercase tracking-widest leading-none">
@@ -504,6 +512,8 @@ export default function StaffAvailabilityPage() {
   const [customRangeEnd, setCustomRangeEnd] = useState(() => offsetDateKey(todayKey, 13));
 
   const [entries, setEntries] = useState<AvailabilityEntry[]>([]);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -587,8 +597,15 @@ export default function StaffAvailabilityPage() {
     [entriesInRange],
   );
   const sortedEntriesInRange = useMemo(
-    () => [...entriesInRange].sort((a, b) => a.date.localeCompare(b.date)),
-    [entriesInRange],
+    () =>
+      sortChronologically(
+        entriesInRange.filter((entry) =>
+          matchesAnySelected(statusFilters, entry.dayOff ? 'day_off' : 'open'),
+        ),
+        (entry) => entry.date,
+        chronoOrder,
+      ),
+    [entriesInRange, chronoOrder, statusFilters],
   );
 
   useLayoutEffect(() => {
@@ -681,7 +698,7 @@ export default function StaffAvailabilityPage() {
         type="button"
         disabled={disabled}
         onClick={() => openDate(key)}
-        className={`relative h-full min-h-0 flex flex-col items-stretch text-left p-1.5 border-r border-b ${CALENDAR_BORDER_DIVIDER_SOFT} transition-colors ${
+        className={`relative h-full min-h-[2.75rem] lg:min-h-0 flex flex-col items-stretch text-left p-1 sm:p-1.5 border-r border-b ${CALENDAR_BORDER_DIVIDER_SOFT} transition-colors ${
           (cellIndex + 1) % 7 === 0 ? 'border-r-0' : ''
         } ${
           disabled
@@ -692,7 +709,7 @@ export default function StaffAvailabilityPage() {
         }`}
       >
         <span
-          className={`self-start w-8 h-8 flex items-center justify-center rounded-lg text-sm leading-none shrink-0 ${
+          className={`self-start w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md sm:rounded-lg text-xs sm:text-sm leading-none shrink-0 ${
             isSel
               ? 'bg-white/15 text-white font-bold'
               : isToday
@@ -703,30 +720,40 @@ export default function StaffAvailabilityPage() {
                     ? 'font-bold text-[#1E3A2F]'
                     : 'font-semibold text-[#1E2A35]'
           }`}
-          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
         >
           {day}
         </span>
-        {isSel ? (
-          entry?.dayOff ? (
-            <span className="mt-auto text-[10px] font-semibold text-white/90 leading-tight">Day off</span>
+        <span className="mt-auto hidden sm:block">
+          {isSel ? (
+            entry?.dayOff ? (
+              <span className="text-[10px] font-semibold text-white/90 leading-tight">Day off</span>
+            ) : entry && entry.periods.length > 0 ? (
+              <span className="text-[10px] text-white/85 tabular-nums leading-tight line-clamp-2">
+                {formatTimeRange24(entry.periods[0].start, entry.periods[0].end)}
+                {entry.periods.length > 1 ? ` +${entry.periods.length - 1}` : ''}
+              </span>
+            ) : entry ? (
+              <span className="text-[10px] text-white/80">Open</span>
+            ) : null
+          ) : entry?.dayOff ? (
+            <span className="text-[10px] font-semibold text-red-800 leading-tight">Day off</span>
           ) : entry && entry.periods.length > 0 ? (
-            <span className="mt-auto text-[10px] text-white/85 tabular-nums leading-tight line-clamp-2">
+            <span className="text-[10px] font-medium text-[#2F4F3F] tabular-nums leading-tight line-clamp-2">
               {formatTimeRange24(entry.periods[0].start, entry.periods[0].end)}
               {entry.periods.length > 1 ? ` +${entry.periods.length - 1}` : ''}
             </span>
           ) : entry ? (
-            <span className="mt-auto text-[10px] text-white/80">Open</span>
-          ) : null
-        ) : entry?.dayOff ? (
-          <span className="mt-auto text-[10px] font-semibold text-red-800 leading-tight">Day off</span>
-        ) : entry && entry.periods.length > 0 ? (
-          <span className="mt-auto text-[10px] font-medium text-[#2F4F3F] tabular-nums leading-tight line-clamp-2">
-            {formatTimeRange24(entry.periods[0].start, entry.periods[0].end)}
-            {entry.periods.length > 1 ? ` +${entry.periods.length - 1}` : ''}
-          </span>
-        ) : entry ? (
-          <span className="mt-auto text-[10px] text-[#5A5048]">Open</span>
+            <span className="text-[10px] text-[#5A5048]">Open</span>
+          ) : null}
+        </span>
+        {entry && !isSel ? (
+          <span
+            className={`mt-auto sm:hidden h-1 w-1 rounded-full self-center mb-0.5 ${
+              entry.dayOff ? 'bg-red-500' : 'bg-green-600'
+            }`}
+            aria-hidden
+          />
         ) : null}
       </button>
     );
@@ -759,7 +786,7 @@ export default function StaffAvailabilityPage() {
         key={key}
         type="button"
         onClick={() => openDate(key)}
-        className={`group relative flex h-full min-h-[6.5rem] flex-col rounded-xl p-3 sm:px-3.5 sm:py-3.5 text-left transition-all ring-1 ring-inset ${
+        className={`group relative flex h-full min-h-[5.25rem] sm:min-h-[6.5rem] flex-col rounded-xl p-2.5 sm:px-3.5 sm:py-3.5 text-left transition-all ring-1 ring-inset ${
           isSel
             ? 'bg-[#1E2A35] text-white shadow-sm ring-[#1E2A35]'
             : `${staffAvailabilityCellClasses(entry, isToday, isWeekend)} ring-[#D4CDB5]/35 hover:ring-[#D4CDB5]`
@@ -784,11 +811,8 @@ export default function StaffAvailabilityPage() {
                     ? 'text-red-900'
                     : 'text-[#1E2A35]'
             }`}
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: '1.65rem',
-              letterSpacing: '0.04em',
-            }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.25rem, 5vw, 1.65rem)',
+              letterSpacing: '0.04em' }}
           >
             {date.getDate()}
           </span>
@@ -961,32 +985,28 @@ export default function StaffAvailabilityPage() {
         />
       )}
 
-      <div className={`${STAFF_PAGE_CONTAINER} flex min-h-0 flex-1 flex-col overflow-hidden py-4 sm:py-5`}>
+      <div className={`${STAFF_PAGE_CONTAINER} relative flex flex-col py-3 lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:py-5`}>
+        {loadingEntries && (
+          <PageLoadingScreen overlay variant="calendar" message="Loading your availability" />
+        )}
         {loadError && (
-          <div className="mb-3 shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-2 sm:mb-3 shrink-0 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
             {loadError}
           </div>
         )}
 
-        {loadingEntries && (
-          <div className="mb-3 shrink-0 flex items-center gap-2 text-sm text-[#8A7E6E]">
-            <Loader2 size={16} className="animate-spin text-[#c49a3c]" />
-            Loading your availability…
-          </div>
-        )}
-
         {/* ── Date range filter ── */}
-        <div className="mb-3 shrink-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <p className="text-[#8A7E6E] text-[10px] uppercase tracking-widest shrink-0">Show range</p>
-              <div className="flex p-1 bg-[#F8F3E8] rounded-full border border-[#D4CDB5]/40 w-fit">
+        <div className="mb-2 sm:mb-3 shrink-0 bg-white rounded-2xl sm:rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-3 sm:p-5">
+          <div className="flex flex-col gap-2.5 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <p className="hidden sm:block text-[#8A7E6E] text-[10px] uppercase tracking-widest shrink-0">Show range</p>
+              <div className="flex p-0.5 sm:p-1 bg-[#F8F3E8] rounded-full border border-[#D4CDB5]/40 w-full sm:w-fit">
                 {(['weekly', 'monthly', 'custom'] as const).map((mode) => (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => setRangeModeAndSync(mode)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all ${
                       rangeMode === mode
                         ? 'bg-[#1E2A35] text-white shadow-sm'
                         : 'text-[#5A5048] hover:text-[#1E2A35]'
@@ -999,7 +1019,7 @@ export default function StaffAvailabilityPage() {
             </div>
 
             {rangeMode === 'custom' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0 flex-1 lg:max-w-md">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 min-w-0 flex-1 lg:max-w-md">
                 <ClockDatePicker
                   label="From"
                   value={customRangeStart}
@@ -1012,7 +1032,7 @@ export default function StaffAvailabilityPage() {
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-2 sm:gap-3 min-w-0">
+              <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={shiftRangePrev}
@@ -1022,8 +1042,8 @@ export default function StaffAvailabilityPage() {
                   <ChevronLeft size={16} />
                 </button>
                 <span
-                  className="text-[#1E2A35] text-center min-w-0 truncate px-1"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.06em' }}
+                  className="text-[#1E2A35] text-center min-w-0 truncate px-1 flex-1 sm:flex-none"
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.05em' }}
                 >
                   {rangeTitle}
                 </span>
@@ -1038,52 +1058,52 @@ export default function StaffAvailabilityPage() {
               </div>
             )}
           </div>
-          <p className="mt-3 text-[#9A8E7E] text-xs">
+          <p className="mt-3 hidden sm:block text-[#9A8E7E] text-xs">
             Stats, calendar, and entries reflect{' '}
             <span className="text-[#5A5048] font-medium">{rangeTitle}</span>.
           </p>
         </div>
 
         {/* ── Stats Row ── */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 py-1 sm:py-2 mb-3 shrink-0">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-2 sm:mb-3 shrink-0">
           {[
-            { label: 'Available Days',   value: availableCount, color: 'text-green-600', bg: 'bg-green-50',       border: 'border-green-200',    icon: <CalendarDays size={14} className="text-green-600" /> },
-            { label: 'Days Off',          value: dayOffCount,    color: 'text-red-500',   bg: 'bg-red-50',         border: 'border-red-200',      icon: <X size={14} className="text-red-500" /> },
-            { label: 'Time Periods',      value: periodCount,    color: 'text-[#c49a3c]', bg: 'bg-[#c49a3c]/10',  border: 'border-[#c49a3c]/30', icon: <AlarmClock size={14} className="text-[#c49a3c]" /> },
+            { label: 'Available Days', short: 'Open', value: availableCount, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <CalendarDays size={14} className="text-green-600" /> },
+            { label: 'Days Off', short: 'Off', value: dayOffCount, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-200', icon: <X size={14} className="text-red-500" /> },
+            { label: 'Time Periods', short: 'Times', value: periodCount, color: 'text-[#c49a3c]', bg: 'bg-[#c49a3c]/10', border: 'border-[#c49a3c]/30', icon: <AlarmClock size={14} className="text-[#c49a3c]" /> },
           ].map(s => (
-            <div key={s.label} className={`bg-white rounded-xl border ${s.border} px-2.5 sm:px-3 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-2.5 min-w-0`}>
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${s.bg}`}>
+            <div key={s.label} className={`bg-white rounded-xl border ${s.border} px-2 sm:px-3 py-1.5 sm:py-2.5 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2.5 min-w-0`}>
+              <div className={`hidden sm:flex w-7 h-7 rounded-lg items-center justify-center shrink-0 ${s.bg}`}>
                 {s.icon}
               </div>
               <div className="min-w-0">
-                <p className="text-[#8A7E6E] text-[10px] sm:text-xs uppercase tracking-wider leading-none truncate">{s.label}</p>
-                <p className={`leading-none mt-0.5 ${s.color}`} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)', letterSpacing: '0.04em' }}>{s.value}</p>
+                <p className="text-[#8A7E6E] text-[10px] sm:text-xs uppercase tracking-wider leading-none truncate">
+                  <span className="sm:hidden">{s.short}</span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </p>
+                <p className={`leading-none mt-0.5 ${s.color}`} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.05rem, 4.5vw, 1.35rem)', letterSpacing: '0.05em' }}>{s.value}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* ── Calendar + entries ── */}
-        <div className="flex flex-1 min-h-0 flex-col lg:flex-row gap-4">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-3.5 sm:p-5 flex flex-1 min-h-0 flex-col">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 shrink-0">
+        <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1 lg:flex-row lg:gap-4">
+          <div className="flex w-full min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-1">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-2.5 sm:p-5 flex flex-col shrink-0 lg:min-h-0 lg:flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 sm:mb-3 shrink-0">
               <div className="min-w-0">
                 <h2
                   className="text-[#1E2A35]"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.06em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}
                 >
                   {rangeMode === 'weekly' ? 'This week' : rangeMode === 'monthly' ? 'Month view' : 'Calendar'}
                 </h2>
-                {rangeMode === 'weekly' && (
-                  <p className="text-[#9A8E7E] text-xs mt-0.5 truncate">{rangeTitle}</p>
-                )}
-                {rangeMode === 'monthly' && (
+                {(rangeMode === 'weekly' || rangeMode === 'monthly') && (
                   <p className="text-[#9A8E7E] text-xs mt-0.5 truncate">{rangeTitle}</p>
                 )}
               </div>
               {rangeMode === 'custom' && (
-                <div className="flex items-center gap-2">
+                <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2">
                   <button type="button" onClick={prevMonth} className="w-7 h-7 rounded-full bg-[#EDE8D8] flex items-center justify-center text-[#1E2A35] hover:bg-[#E3DCC8] active:scale-95 transition-all">
                     <ChevronLeft size={14} />
                   </button>
@@ -1097,42 +1117,39 @@ export default function StaffAvailabilityPage() {
               )}
             </div>
 
-            <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+            <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
             {rangeMode === 'weekly' ? (
-              <div className="flex flex-1 min-h-0 flex-col rounded-2xl border border-[#D4CDB5]/50 bg-[#F5F1E8]/35 p-2 sm:p-2.5">
-                <div className="grid flex-1 min-h-0 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 auto-rows-fr">
+              <div className="flex flex-col rounded-2xl border border-[#D4CDB5]/50 bg-[#F5F1E8]/35 p-1.5 sm:p-2.5 lg:min-h-0 lg:flex-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2 auto-rows-fr lg:min-h-0 lg:flex-1">
                   {weekDayKeys.map((key) => renderWeeklyDayBlock(key))}
                 </div>
               </div>
             ) : (
-              <div className={`flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border ${CALENDAR_BORDER_DIVIDER_SOFT}`}>
+              <div className={`flex flex-col overflow-hidden rounded-2xl border lg:min-h-0 lg:flex-1 ${CALENDAR_BORDER_DIVIDER_SOFT}`}>
                 <div className={`grid shrink-0 grid-cols-7 border-b ${CALENDAR_BORDER_DIVIDER} bg-[#F5F1E8]`}>
                   {DAY_LABELS_SHORT.map((d, colIdx) => (
                     <div
                       key={d}
-                      className={`text-center text-[#5A5048] font-semibold py-2 px-0.5 ${
+                      className={`text-center text-[#5A5048] font-semibold py-1.5 sm:py-2 px-0.5 ${
                         isWeekendMonthGridColumn(colIdx) ? WEEKEND_COLUMN_BG : ''
                       }`}
-                      style={{
-                        fontSize: '0.68rem',
-                        letterSpacing: '0.08em',
-                        fontFamily: "'Bebas Neue', sans-serif",
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.68rem',
+                        letterSpacing: '0.05em' }}
                     >
                       {d}
                     </div>
                   ))}
                 </div>
                 <div
-                  className="grid min-h-0 flex-1 grid-cols-7"
-                  style={{ gridTemplateRows: `repeat(${monthRowCount}, minmax(0, 1fr))` }}
+                  className="grid grid-cols-7 lg:min-h-0 lg:flex-1"
+                  style={{ gridTemplateRows: `repeat(${monthRowCount}, minmax(2.75rem, 1fr))` }}
                 >
                   {grid.map((day, idx) => {
                     if (!day) {
                       return (
                         <div
                           key={`e-${idx}`}
-                          className={`h-full min-h-0 border-r border-b ${CALENDAR_BORDER_DIVIDER_SOFT} ${
+                          className={`h-full min-h-[2.75rem] lg:min-h-0 border-r border-b ${CALENDAR_BORDER_DIVIDER_SOFT} ${
                             (idx + 1) % 7 === 0 ? 'border-r-0' : ''
                           } ${isWeekendMonthGridColumn(idx % 7) ? WEEKEND_COLUMN_BG_SOFT : 'bg-[#FAF8F3]'}`}
                         />
@@ -1145,23 +1162,23 @@ export default function StaffAvailabilityPage() {
             )}
             </div>
 
-            <div className="mt-3 pt-3 shrink-0 border-t border-[#E8E2D2]/70 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-[#5A5048]">
+            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 shrink-0 border-t border-[#E8E2D2]/70 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-2 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] sm:text-[11px] text-[#5A5048]">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-3 rounded-sm bg-green-100 ring-1 ring-green-200/80" />
+                  <span className="w-3.5 h-2.5 sm:w-4 sm:h-3 rounded-sm bg-green-100 ring-1 ring-green-200/80" />
                   Available
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-3 rounded-sm bg-red-100 ring-1 ring-red-200/80" />
+                  <span className="w-3.5 h-2.5 sm:w-4 sm:h-3 rounded-sm bg-red-100 ring-1 ring-red-200/80" />
                   Day off
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-4 h-3 rounded-sm bg-white ring-1 ring-[#D4CDB5]/80" />
+                  <span className="w-3.5 h-2.5 sm:w-4 sm:h-3 rounded-sm bg-white ring-1 ring-[#D4CDB5]/80" />
                   Not set
                 </span>
                 {rangeMode === 'custom' && (
                   <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-3 rounded-sm bg-[#F5F2E8]/80 ring-1 ring-[#C0B8A8]/50 opacity-60" />
+                    <span className="w-3.5 h-2.5 sm:w-4 sm:h-3 rounded-sm bg-[#F5F2E8]/80 ring-1 ring-[#C0B8A8]/50 opacity-60" />
                     Outside range
                   </span>
                 )}
@@ -1169,7 +1186,7 @@ export default function StaffAvailabilityPage() {
               <button
                 type="button"
                 onClick={() => openDate(todayKey)}
-                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-dashed border-[#c49a3c]/40 text-[#a67f2e] text-xs font-semibold hover:bg-[#c49a3c]/08 active:scale-[0.98] transition-all"
+                className="flex w-full sm:w-auto items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-dashed border-[#c49a3c]/40 text-[#a67f2e] text-xs font-semibold hover:bg-[#c49a3c]/08 active:scale-[0.98] transition-all"
               >
                 <Plus size={14} /> Add for today
               </button>
@@ -1178,9 +1195,9 @@ export default function StaffAvailabilityPage() {
           </div>
 
           {/* ── Entries in range (sidebar) ── */}
-          <div className="flex w-full shrink-0 flex-col min-h-0 max-h-[38vh] lg:max-h-none lg:w-80 xl:w-96 lg:self-stretch">
-            <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-1 min-h-0 flex-col overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
+          <div className="flex w-full shrink-0 flex-col lg:min-h-0 lg:w-80 xl:w-96 lg:self-stretch">
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#D4CDB5]/60 shadow-sm flex flex-col overflow-visible lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+              <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 shrink-0">
                 <div className="flex items-center justify-between gap-2">
                   <h2
                     className="text-[#1E2A35]"
@@ -1195,6 +1212,14 @@ export default function StaffAvailabilityPage() {
                     </span>
                   </span>
                 </div>
+                <div className="mt-2 flex flex-wrap justify-start sm:justify-end gap-2">
+                  <CategorizedAddFilter
+                    groups={[AVAILABILITY_DAY_FILTER_GROUP]}
+                    selected={{ status: statusFilters }}
+                    onChange={(next) => setStatusFilters(next.status ?? [])}
+                  />
+                  <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+                </div>
               </div>
 
               {sortedEntriesInRange.length === 0 ? (
@@ -1208,7 +1233,7 @@ export default function StaffAvailabilityPage() {
               ) : (
                 <div
                   ref={entriesListRef}
-                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-[#D4CDB5]/25 [scrollbar-gutter:stable]"
+                  className="divide-y divide-[#D4CDB5]/25 overflow-visible lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-gutter:stable]"
                 >
                   {sortedEntriesInRange.map((entry) => {
                     const isActive = entry.date === selectedDate;
@@ -1283,8 +1308,8 @@ export default function StaffAvailabilityPage() {
               )}
 
               {sortedEntriesInRange.length > 0 && (
-                <div className="shrink-0 border-t border-[#D4CDB5]/40 bg-[#FAF8F3]/80 px-4 py-2 text-center">
-                  <p className="text-[#9A8E7E] text-[10px] sm:text-xs">
+                <div className="hidden shrink-0 border-t border-[#D4CDB5]/40 bg-[#FAF8F3]/80 px-4 py-2 text-center lg:block">
+                  <p className="text-[#9A8E7E] text-xs">
                     {entriesListOverflows
                       ? 'Scroll down for more data'
                       : `${sortedEntriesInRange.length} ${

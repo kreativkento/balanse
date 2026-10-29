@@ -1,8 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, ChevronRight, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Users, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import { fetchPublicCoaches, type PublicCoachProfile } from '../../lib/admin-service';
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
+import { PAGE_HEADING_TOOLBAR_ROW_CLASS } from '../components/layout/PortalAppHeader';
 import { PublicBreadcrumb } from '../components/layout/PublicBreadcrumb';
 import { CoachProfileModal } from '../components/coaches/CoachProfileModal';
 import { CoachCardMedia } from '../components/coaches/CoachCardMedia';
@@ -23,7 +30,7 @@ function CoachCard({ coach, onClick }: { coach: Coach; onClick: () => void }) {
         </div>
       </CoachCardMedia>
       <div className="px-3.5 py-2.5 md:px-4 md:py-3">
-        <h3 className="text-[#1E2A35] leading-none mb-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.04em' }}>{coach.name}</h3>
+        <h3 className="text-[#1E2A35] leading-none mb-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '0.05em' }}>{coach.name}</h3>
         <p className="text-[#8A7E6E] text-[11px] font-semibold mb-2 line-clamp-1">{coach.role}</p>
         <div className="flex flex-wrap gap-1 mb-2 min-h-[18px]">
           {coach.classes.slice(0, 2).map((cls) => (
@@ -47,6 +54,7 @@ export default function CoachesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
 
   useEffect(() => {
     let cancelled = false;
@@ -63,16 +71,21 @@ export default function CoachesPage() {
     };
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(coaches.length / PAGE_SIZE));
+  const orderedCoaches = useMemo(
+    () => sortAlphabetically(coaches, (coach) => coach.name, alphaOrder),
+    [coaches, alphaOrder],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(orderedCoaches.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
 
   const pageCoaches = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return coaches.slice(start, start + PAGE_SIZE);
-  }, [coaches, currentPage]);
+    return orderedCoaches.slice(start, start + PAGE_SIZE);
+  }, [orderedCoaches, currentPage]);
 
-  const rangeStart = coaches.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(currentPage * PAGE_SIZE, coaches.length);
+  const rangeStart = orderedCoaches.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, orderedCoaches.length);
 
   return (
     <div className="bg-[#F8F3E8] flex flex-col">
@@ -81,12 +94,17 @@ export default function CoachesPage() {
       <div className="max-w-6xl mx-auto w-full px-4 md:px-8 py-4 md:py-5 flex flex-col">
         <div className="shrink-0 mb-3 md:mb-4">
           <PublicBreadcrumb parent="Our Community" current="Coaches" parentTo="/bulletin" />
-          <h1
-            className="text-[#1E2A35] leading-none"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', letterSpacing: '0.04em' }}
-          >
-            Our Coaches
-          </h1>
+          <div className={PAGE_HEADING_TOOLBAR_ROW_CLASS}>
+            <h1
+              className="text-[#1E2A35] leading-none min-w-0 shrink-0"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', letterSpacing: '0.04em' }}
+            >
+              Our Coaches
+            </h1>
+            {coaches.length > 0 ? (
+              <AlphabeticalSortSelect value={alphaOrder} onChange={(order) => { setAlphaOrder(order); setPage(1); }} />
+            ) : null}
+          </div>
           <p className="text-[#8A7E6E] text-xs md:text-sm mt-1 max-w-xl line-clamp-2">
             World-class coaches dedicated to helping you move better, feel stronger, and live well.
             Tap any coach card to view their full profile.
@@ -95,9 +113,8 @@ export default function CoachesPage() {
 
         <div className="flex flex-col">
           {loading && (
-            <div className="flex-1 flex items-center justify-center gap-2 text-[#8A7E6E]">
-              <Loader2 size={18} className="animate-spin text-[#c49a3c]" />
-              <span className="text-sm">Loading coaches…</span>
+            <div className="flex-1" role="status" aria-live="polite" aria-label="Loading coaches">
+              <ContentSkeleton variant="cards" />
             </div>
           )}
 
@@ -135,7 +152,7 @@ export default function CoachesPage() {
 
               <div className="shrink-0 mt-3 md:mt-4 pt-3 border-t border-[#D4CDB5]/50 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <p className="text-[#8A7E6E] text-xs">
-                  Showing {rangeStart}–{rangeEnd} of {coaches.length} coaches
+                  Showing {rangeStart}–{rangeEnd} of {orderedCoaches.length} coaches
                 </p>
                 <div className="flex items-center gap-2">
                   <button

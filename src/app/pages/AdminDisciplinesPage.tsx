@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, Loader2, Plus, Search } from 'lucide-react';
+import { AlertCircle, Plus, Search } from 'lucide-react';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PortalTitleToolbar } from '../context/PortalChromeContext';
 import {
   AdminDisciplineCardsGrid,
   DisciplineLayoutToggle,
   type DisciplineLayoutMode,
 } from '../components/disciplines/AdminDisciplineCardsGrid';
 import { AdminDisciplineModal } from '../components/disciplines/AdminDisciplineModal';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { ACCOUNT_STATUS_FILTER_GROUP } from '../components/filters/status-filter-groups';
 import { AdminTablePagination, useFitPageSize, type FitLayout } from '../components/layout/AdminTablePagination';
+import {
+  AlphabeticalSortSelect,
+  sortAlphabetically,
+  type AlphabeticalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import {
   createDiscipline,
   createEmptyDisciplineDraft,
@@ -63,7 +72,7 @@ function AddDisciplineTrigger({
       </div>
       <span
         className="text-[#1E2A35]"
-        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isCompact ? '1rem' : '1.2rem', letterSpacing: '0.06em' }}
+        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isCompact ? '1rem' : '1.2rem', letterSpacing: '0.05em' }}
       >
         Add Discipline
       </span>
@@ -85,6 +94,8 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [search, setSearch] = useState('');
   const [layout, setLayout] = useState<DisciplineLayoutMode>('list');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [alphaOrder, setAlphaOrder] = useState<AlphabeticalOrder>('az');
   const [page, setPage] = useState(1);
   const { containerRef, pageSize: fitPageSize } = useFitPageSize({
     layout: FIT_LAYOUT[layout],
@@ -112,7 +123,7 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
 
   useEffect(() => {
     setPage(1);
-  }, [search, layout]);
+  }, [search, layout, statusFilters, alphaOrder]);
 
   const openCreateModal = () => {
     setSelectedDiscipline(createEmptyDisciplineDraft());
@@ -174,14 +185,17 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
 
   const filteredDisciplines = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return disciplines;
-    return disciplines.filter((discipline) =>
-      discipline.name.toLowerCase().includes(query)
-      || discipline.description.toLowerCase().includes(query)
-      || discipline.slug.toLowerCase().includes(query)
-      || discipline.status.name.toLowerCase().includes(query),
-    );
-  }, [disciplines, search]);
+    const matched = disciplines.filter((discipline) => {
+      const matchesQuery =
+        !query
+        || discipline.name.toLowerCase().includes(query)
+        || discipline.description.toLowerCase().includes(query)
+        || discipline.slug.toLowerCase().includes(query)
+        || discipline.status.name.toLowerCase().includes(query);
+      return matchesQuery && matchesAnySelected(statusFilters, discipline.status.slug);
+    });
+    return sortAlphabetically(matched, (discipline) => discipline.name, alphaOrder);
+  }, [disciplines, search, statusFilters, alphaOrder]);
 
   const includeTrailingSlot = !viewOnly && layout !== 'list' && filteredDisciplines.length > 0;
   const totalSlots = filteredDisciplines.length + (includeTrailingSlot ? 1 : 0);
@@ -228,8 +242,8 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
       )}
 
       <div className="h-full min-h-0 overflow-hidden flex flex-col">
-      <div className="max-w-7xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col">
-        <div className="flex items-center gap-4 mb-5 flex-wrap shrink-0">
+      <div className="max-w-8xl mx-auto px-6 pb-8 pt-1 w-full flex-1 min-h-0 flex flex-col">
+        <PortalTitleToolbar>
           <DisciplineLayoutToggle layout={layout} onChange={setLayout} />
           <div className="relative flex-1 max-w-sm">
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B0A898]" />
@@ -242,6 +256,12 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
               className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-[#D4CDB5]/70 bg-white text-[#1E2A35] text-sm outline-none focus:ring-2 focus:ring-[#c49a3c]/25 focus:border-[#c49a3c]/50 transition-all placeholder-[#C0B8A8] disabled:opacity-60"
             />
           </div>
+          <CategorizedAddFilter
+            groups={[ACCOUNT_STATUS_FILTER_GROUP]}
+            selected={{ status: statusFilters }}
+            onChange={(next) => setStatusFilters(next.status ?? [])}
+          />
+          <AlphabeticalSortSelect value={alphaOrder} onChange={setAlphaOrder} />
           <div className="ml-auto flex shrink-0 items-center gap-3">
             {!loading && (
               <span className="text-[#8A7E6E] text-sm whitespace-nowrap">
@@ -252,12 +272,17 @@ export default function AdminDisciplinesPage({ viewOnly = false }: { viewOnly?: 
               <AddDisciplineTrigger onClick={openCreateModal} variant="button" />
             )}
           </div>
-        </div>
+        </PortalTitleToolbar>
 
         {loading && (
-          <div ref={containerRef} className="flex-1 min-h-0 flex items-center justify-center gap-2 text-[#8A7E6E]">
-            <Loader2 size={18} className="animate-spin" />
-            <span className="text-sm">Loading disciplines…</span>
+          <div
+            ref={containerRef}
+            className="flex-1 min-h-0 overflow-auto py-2"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading disciplines"
+          >
+            <ContentSkeleton variant="cards" />
           </div>
         )}
 

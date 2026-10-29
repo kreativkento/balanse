@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router';
 
 interface AdminHeaderActionsContextValue {
   actions: ReactNode;
@@ -9,12 +8,7 @@ interface AdminHeaderActionsContextValue {
 const AdminHeaderActionsContext = createContext<AdminHeaderActionsContextValue | null>(null);
 
 export function AdminHeaderActionsProvider({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
   const [actions, setActions] = useState<ReactNode>(null);
-
-  useEffect(() => {
-    setActions(null);
-  }, [pathname]);
 
   const value = useMemo(() => ({ actions, setActions }), [actions]);
   return (

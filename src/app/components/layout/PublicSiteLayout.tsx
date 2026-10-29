@@ -1,6 +1,8 @@
 import { Outlet, useLocation } from 'react-router';
+import { Suspense } from 'react';
 import { NavBar } from './NavBar';
 import { BottomCTA } from './BottomCTA';
+import { ContentAreaFallback } from './PortalRouteOutlet';
 
 const PAGES_WITH_CTA = [
   '/',
@@ -36,9 +38,12 @@ export function PublicSiteLayout() {
     >
       <NavBar />
       <main
-        className={`flex-1 flex flex-col min-h-0 ${lockScroll ? 'overflow-hidden' : ''}`}
+        data-mobile-compact
+        className={`relative z-0 flex min-h-0 flex-1 flex-col pb-5 md:pb-10 ${lockScroll ? 'overflow-hidden' : ''}`}
       >
-        <Outlet />
+        <Suspense fallback={<ContentAreaFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
       {showBottomCTA && <BottomCTA />}
     </div>

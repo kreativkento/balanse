@@ -99,7 +99,7 @@ export default function StaffLoginPage() {
 
           <h1
             className="text-white leading-tight mb-4"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.4rem, 4vw, 3.2rem)', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2.4rem, 4vw, 3.2rem)', letterSpacing: '0.04em' }}
           >
             Welcome Back,<br />Team.
           </h1>
@@ -129,7 +129,7 @@ export default function StaffLoginPage() {
         <div className="border-t border-white/10 pt-6">
           <p
             className="text-white/25 italic"
-            style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1rem' }}
+            style={{ fontWeight: 600, fontSize: '1rem' }}
           >
             "Movement is medicine. Your guidance makes it possible."
           </p>
@@ -152,7 +152,7 @@ export default function StaffLoginPage() {
             </div>
             <h2
               className="text-[#1E2A35] leading-none mb-1"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}
             >
               Staff Login
             </h2>

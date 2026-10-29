@@ -78,7 +78,7 @@ export function MonthCalendarGrid({
             style={
               useFullWeekdayLabels
                 ? { fontSize: '0.62rem', letterSpacing: '0.02em', fontWeight: 600 }
-                : { fontSize: '0.68rem', letterSpacing: '0.08em', fontFamily: "'Bebas Neue', sans-serif" }
+                : { fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.68rem', letterSpacing: '0.05em' }
             }
           >
             {d}
@@ -135,7 +135,7 @@ export function MonthCalendarGrid({
                       ? 'text-[#8A6520] font-bold'
                       : 'text-[#1E2A35]'
                 }`}
-                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.02em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
               >
                 {day}
               </span>

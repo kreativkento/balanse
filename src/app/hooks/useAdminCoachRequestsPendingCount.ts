@@ -1,16 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
+import { countClassCancelHoldingsPendingRefund } from '../../lib/class-cancel-holding-service';
 import {
   fetchPendingPortalRequestCount,
   PORTAL_REQUESTS_CHANGED,
 } from '../../lib/portal-request-service';
 
-/** Pending portal requests (booking + cancellation) for admin sidebar badge. */
-export function useAdminCoachRequestsPendingCount(): number {
-  const [count, setCount] = useState(0);
+export type AdminCoachQueuePendingCounts = {
+  slots: number;
+  cancellations: number;
+};
+
+/** Pending coach slot requests vs cancellation / refund-holding queues. */
+export function useAdminCoachQueuePendingCounts(): AdminCoachQueuePendingCounts {
+  const [counts, setCounts] = useState<AdminCoachQueuePendingCounts>({
+    slots: 0,
+    cancellations: 0,
+  });
 
   const refresh = useCallback(async () => {
-    const pending = await fetchPendingPortalRequestCount();
-    setCount(pending);
+    const [slots, cancelRequests, refunds] = await Promise.all([
+      fetchPendingPortalRequestCount(['slot_request']),
+      fetchPendingPortalRequestCount(['cancellation_request', 'member_enrollment_cancellation']),
+      countClassCancelHoldingsPendingRefund(),
+    ]);
+    setCounts({
+      slots,
+      cancellations: cancelRequests + refunds,
+    });
   }, []);
 
   useEffect(() => {
@@ -22,5 +38,5 @@ export function useAdminCoachRequestsPendingCount(): number {
     return () => window.removeEventListener(PORTAL_REQUESTS_CHANGED, onChange);
   }, [refresh]);
 
-  return count;
+  return counts;
 }

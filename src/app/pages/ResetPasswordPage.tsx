@@ -128,7 +128,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-7 md:p-9">
         <h1
           className="text-[#1E2A35] leading-none mb-1"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.05em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', letterSpacing: '0.04em' }}
         >
           Set new password
         </h1>

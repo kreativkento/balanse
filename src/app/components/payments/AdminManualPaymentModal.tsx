@@ -5,6 +5,7 @@ import { SearchableIdSelect } from '../SearchableIdSelect';
 import type { ClientDirectoryItem } from '../../../lib/admin-service';
 import type { ClassDisplay } from '../../../lib/class-service';
 import type { PaymentChannelRecord } from '../../../lib/payment-channel-service';
+import type { PricingOfferingRecord } from '../../../lib/pricing-offering-service';
 import {
   adminCreateClassPayment,
   uploadClassPaymentProof,
@@ -26,6 +27,30 @@ function formatClassOption(c: ClassDisplay): string {
   return `${label} · ${when}`;
 }
 
+function offeringKindLabel(kind: PricingOfferingRecord['kind']): string {
+  if (kind === 'membership') return 'Membership';
+  if (kind === 'featured_pass') return 'Pass';
+  return 'Service';
+}
+
+function formatOfferingOption(offering: PricingOfferingRecord): string {
+  const price = [offering.heroPriceLabel, offering.heroPriceUnit].filter(Boolean).join(' ').trim();
+  return price
+    ? `${offeringKindLabel(offering.kind)} · ${offering.title} · ${price}`
+    : `${offeringKindLabel(offering.kind)} · ${offering.title}`;
+}
+
+function parseOfferingAmount(offering: PricingOfferingRecord): string {
+  const fromHero = offering.heroPriceLabel.replace(/[^\d.]/g, '');
+  if (fromHero && Number(fromHero) > 0) return fromHero;
+  const fromTier = offering.tiers.find((tier) => {
+    const n = Number(String(tier.price).replace(/[^\d.]/g, ''));
+    return Number.isFinite(n) && n > 0;
+  });
+  if (!fromTier) return '';
+  return String(fromTier.price).replace(/[^\d.]/g, '');
+}
+
 function methodLeading(slug: string, label: string) {
   const s = slug.toLowerCase();
   const l = label.toLowerCase();
@@ -44,6 +69,7 @@ function methodLeading(slug: string, label: string) {
 export function AdminManualPaymentModal({
   clients,
   classes,
+  offerings,
   channels,
   loadingOptions,
   onClose,
@@ -51,13 +77,14 @@ export function AdminManualPaymentModal({
 }: {
   clients: ClientDirectoryItem[];
   classes: ClassDisplay[];
+  offerings: PricingOfferingRecord[];
   channels: PaymentChannelRecord[];
   loadingOptions: boolean;
   onClose: () => void;
   onCreated: () => void | Promise<void>;
 }) {
   const [accountId, setAccountId] = useState('');
-  const [classId, setClassId] = useState('');
+  const [itemKey, setItemKey] = useState('');
   const [channelId, setChannelId] = useState('');
   const [amount, setAmount] = useState('');
   const [reference, setReference] = useState('');
@@ -105,15 +132,27 @@ export function AdminManualPaymentModal({
     [clients],
   );
 
-  const classOptions = useMemo(
-    () =>
-      enrollableClasses.map((c) => ({
-        value: c.id,
-        label: formatClassOption(c),
-        keywords: c.disciplineName ?? '',
+  const itemOptions = useMemo(
+    () => [
+      ...enrollableClasses.map((c) => ({
+        value: `class:${c.id}`,
+        label: `Class · ${formatClassOption(c)}`,
+        keywords: `${c.name} ${c.disciplineName ?? ''} class`,
       })),
-    [enrollableClasses],
+      ...offerings
+        .filter((offering) => offering.isActive)
+        .map((offering) => ({
+          value: `offering:${offering.id}`,
+          label: formatOfferingOption(offering),
+          keywords: `${offering.title} ${offering.kind} ${offering.tagline} service`,
+        })),
+    ],
+    [enrollableClasses, offerings],
   );
+
+  const selectedClassId = itemKey.startsWith('class:') ? itemKey.slice(6) : '';
+  const selectedOfferingId = itemKey.startsWith('offering:') ? itemKey.slice(9) : '';
+  const selectedOffering = offerings.find((offering) => offering.id === selectedOfferingId) ?? null;
 
   const methodOptions = useMemo(
     () =>
@@ -146,8 +185,8 @@ export function AdminManualPaymentModal({
       setFormError('Select a student.');
       return;
     }
-    if (!classId) {
-      setFormError('Select a class.');
+    if (!selectedClassId && !selectedOfferingId) {
+      setFormError('Select a class or a pricing service.');
       return;
     }
     if (!channelId) {
@@ -175,7 +214,8 @@ export function AdminManualPaymentModal({
 
       const result = await adminCreateClassPayment({
         accountId,
-        classId,
+        classId: selectedClassId || null,
+        pricingOfferingId: selectedOfferingId || null,
         paymentChannelId: channelId,
         amountPaid: amountNum,
         paymentReference: reference.trim(),
@@ -216,7 +256,7 @@ export function AdminManualPaymentModal({
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-0.5">Manual entry</p>
             <h3
               className="text-[#1E2A35] leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
             >
               Add payment record
             </h3>
@@ -265,18 +305,26 @@ export function AdminManualPaymentModal({
 
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">
-              Class <span className="text-red-500">*</span>
+              Class or service <span className="text-red-500">*</span>
             </span>
             <SearchableIdSelect
-              value={classId}
-              onChange={setClassId}
-              options={classOptions}
-              placeholder="Select class…"
-              searchPlaceholder="Search class or date…"
-              emptyText="No enrollable classes."
+              value={itemKey}
+              onChange={(next) => {
+                setItemKey(next);
+                const offeringId = next.startsWith('offering:') ? next.slice(9) : '';
+                const offering = offerings.find((row) => row.id === offeringId);
+                if (offering) {
+                  const parsed = parseOfferingAmount(offering);
+                  if (parsed) setAmount(parsed);
+                }
+              }}
+              options={itemOptions}
+              placeholder="Select class or pricing service…"
+              searchPlaceholder="Search class, service, or date…"
+              emptyText="No enrollable classes or pricing services."
               loading={loadingOptions}
               disabled={loadingOptions}
-              invalid={Boolean(formError) && !classId}
+              invalid={Boolean(formError) && !itemKey}
             />
           </label>
 
@@ -399,9 +447,13 @@ export function AdminManualPaymentModal({
 
           <div className="flex items-start justify-between gap-4 rounded-2xl border border-[#D4CDB5]/50 bg-[#F8F3E8]/80 px-4 py-3">
             <div>
-              <p className="text-[#1E2A35] text-sm font-semibold">Verify &amp; enroll now</p>
+              <p className="text-[#1E2A35] text-sm font-semibold">
+                {selectedOffering ? 'Verify now' : 'Verify & enroll now'}
+              </p>
               <p className="text-[#8A7E6E] text-xs mt-0.5">
-                When off, the record stays pending until you approve it. Drop-in payments stay held until the studio cancellation window; they are not an official receipt until cleared.
+                {selectedOffering
+                  ? 'When off, the record stays pending until you approve it. Pricing services are not class enrollments.'
+                  : 'When off, the record stays pending until you approve it. Drop-in payments stay held until the studio cancellation window; they are not an official receipt until cleared.'}
               </p>
             </div>
             <Switch

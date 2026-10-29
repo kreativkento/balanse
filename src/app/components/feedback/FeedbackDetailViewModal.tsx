@@ -30,6 +30,8 @@ import {
   type FeedbackStatus,
 } from '../../../lib/feedback-service';
 import type { UserRole } from '../../../lib/database.types';
+import { FeedbackCommentThread } from './FeedbackCommentThread';
+import { markFeedbackTicketRead } from '../../../lib/feedback-comment-service';
 
 const DEESCALATE_BTN =
   'action-button inline-flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-slate-400 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60';
@@ -63,6 +65,7 @@ export function FeedbackDetailViewModal({
   onDeescalate,
   actionBusy = false,
   actionError = '',
+  currentAccountId = null,
 }: {
   item: FeedbackDisplay;
   submittedAtLabel: string;
@@ -92,6 +95,7 @@ export function FeedbackDetailViewModal({
   onDeescalate?: () => void;
   actionBusy?: boolean;
   actionError?: string;
+  currentAccountId?: string | null;
 }) {
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
   const [attachmentError, setAttachmentError] = useState('');
@@ -117,6 +121,10 @@ export function FeedbackDetailViewModal({
       cancelled = true;
     };
   }, [item.attachmentPath]);
+
+  useEffect(() => {
+    void markFeedbackTicketRead(item.id);
+  }, [item.id]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -233,6 +241,8 @@ export function FeedbackDetailViewModal({
               <div className={`${FEEDBACK_DETAIL_FIELD_INP} text-[#8A7E6E]`}>No file attached</div>
             )}
           </div>
+
+          <FeedbackCommentThread ticketId={item.id} currentAccountId={currentAccountId} />
 
           <div className="rounded-2xl border border-[#D4CDB5]/70 bg-[#F8F3E8] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Ticket ID</p>

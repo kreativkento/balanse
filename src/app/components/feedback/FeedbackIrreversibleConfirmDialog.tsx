@@ -28,7 +28,7 @@ export function FeedbackIrreversibleConfirmDialog({
       >
         <h3
           className="text-[#1E2A35] leading-none"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
         >
           {title}
         </h3>

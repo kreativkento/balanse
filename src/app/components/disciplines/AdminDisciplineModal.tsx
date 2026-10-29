@@ -425,7 +425,7 @@ export function AdminDisciplineModal({
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Discipline name"
                     className="w-full px-3 py-2 rounded-xl bg-white/95 border border-[#D4CDB5]/70 text-[#1E2A35] text-lg font-semibold outline-none focus:ring-2 focus:ring-[#c49a3c]/30"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
                   />
                 ) : (
                   <h2

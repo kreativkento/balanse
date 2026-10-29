@@ -8,7 +8,6 @@ import { useAuth, type UserProfile } from '../context/AuthContext';
 import { ProfileImageHero } from '../components/ProfileImages';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 import logoMain from '@/assets/logo_main.svg';
-import { CountryFlag, CountrySelect } from '../components/CountrySelect';
 import { ClearableInput, ClearableTextarea } from '../components/FieldClearButton';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { PrivacyModal, TermsModal } from '../components/documents/PolicyAcceptModals';
@@ -16,7 +15,6 @@ import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } f
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { exportTransparentSignaturePng, SignaturePad } from '../components/SignaturePad';
 import { usePhAddressOptions } from '../components/usePhAddressOptions';
-import { toCountryName } from '../data/nationalities';
 import { buildFullName } from '../../lib/auth-helpers';
 import { changeLoggedInUserPassword } from '../../lib/password-recovery';
 import { toastOperationFailed, toastSaved } from '../../lib/operation-toast';
@@ -63,11 +61,8 @@ const CARD =
 const SLIM_SCROLL =
   'overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#C4B8A0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C4B8A0] [&::-webkit-scrollbar-thumb:hover]:bg-[#c49a3c]/55';
 const SLIM_SCROLL_OUTSET = SLIM_SCROLL;
-const SECTION_TITLE: React.CSSProperties = {
-  fontFamily: "'Bebas Neue', sans-serif",
-  fontSize: '1.2rem',
-  letterSpacing: '0.06em',
-};
+const SECTION_TITLE: React.CSSProperties = { fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem',
+  letterSpacing: '0.05em' };
 
 const SEX_OPTIONS: { value: UserProfile['sex']; label: string }[] = [
   { value: 'male', label: 'Male' },
@@ -88,8 +83,8 @@ const EMERGENCY_RELATIONSHIPS = [
 ];
 
 type EditableCardId = 'basic' | 'contact' | 'emergency' | 'health';
-type BasicRequiredKey = 'firstName' | 'lastName' | 'birthday' | 'sex' | 'nationality' | 'weight' | 'height';
-type ContactRequiredKey = 'phone' | 'province' | 'city';
+type BasicRequiredKey = 'firstName' | 'lastName' | 'birthday' | 'sex' | 'weight' | 'height';
+type ContactRequiredKey = 'phone' | 'province' | 'city' | 'barangay';
 type EmergencyRequiredKey = 'name' | 'phone' | 'relationship';
 const REQUIRED_MSG = 'This field is required.';
 const INVALID_PHONE_MSG = 'Invalid number';
@@ -727,11 +722,8 @@ function NicknameWelcomeModal({
               className={`w-full bg-transparent px-2 py-2.5 text-center text-[#1E2A35] placeholder:text-[#8A7E6E] outline-none border-0 border-b rounded-none ${
                 error ? 'border-red-400' : 'border-[#D4CDB5] focus:border-[#c49a3c]'
               }`}
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(1.45rem, 3.4vw, 2.1rem)',
-                letterSpacing: '0.04em',
-              }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.45rem, 3.4vw, 2.1rem)',
+                letterSpacing: '0.04em' }}
             />
             {error ? (
               <p className="mt-2 flex items-center justify-center gap-1 text-xs text-red-500">
@@ -791,7 +783,6 @@ export default function MemberProfilePage() {
   const [welcomeNicknameSaving, setWelcomeNicknameSaving] = useState(false);
   const [birthday, setBirthday] = useState('');
   const [sex, setSex] = useState<UserProfile['sex']>('');
-  const [nationality, setNationality] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [phone, setPhone] = useState('');
@@ -838,7 +829,6 @@ export default function MemberProfilePage() {
     setNickname(profile.nickname || '');
     setBirthday((profile.birthday || '').slice(0, 10));
     setSex(profile.sex || '');
-    setNationality(toCountryName(profile.nationality));
     setWeight(profile.weight || '');
     setHeight(profile.height || '');
     setPhone(profile.phone || '');
@@ -923,7 +913,6 @@ export default function MemberProfilePage() {
         lastName: !isFilled(profile?.lastName),
         birthday: !isFilled(profile?.birthday),
         sex: !isFilled(profile?.sex),
-        nationality: !isFilled(toCountryName(profile?.nationality)),
         weight: !isFilled(profile?.weight),
         height: !isFilled(profile?.height),
       }));
@@ -933,6 +922,7 @@ export default function MemberProfilePage() {
         phone: !isFilled(profile?.phone),
         province: !isFilled(profile?.province),
         city: !isFilled(profile?.city),
+        barangay: !isFilled(profile?.barangay),
       }));
     }
     if (card === 'emergency') {
@@ -972,7 +962,6 @@ export default function MemberProfilePage() {
       lastName: !lastName.trim(),
       birthday: !birthday.trim(),
       sex: !sex,
-      nationality: !nationality.trim(),
       weight: !weight.trim(),
       height: !height.trim(),
     });
@@ -991,7 +980,6 @@ export default function MemberProfilePage() {
       name: fullName,
       birthday,
       sex,
-      nationality: nationality.trim(),
       weight: weight.trim(),
       height: height.trim(),
     });
@@ -1003,6 +991,7 @@ export default function MemberProfilePage() {
       phone: !phone.trim(),
       province: !province.trim(),
       city: !city.trim(),
+      barangay: !barangay.trim(),
     });
     if (Object.keys(nextErrors).length > 0) {
       setContactErrors(nextErrors);
@@ -1287,7 +1276,7 @@ export default function MemberProfilePage() {
                 <p className="text-xs text-[#5A5048]">Profile Completion</p>
                 <span
                   className={`font-semibold ${profileScoreBar.text}`}
-                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.04em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
                 >
                   {profileScore}%
             </span>
@@ -1340,17 +1329,6 @@ export default function MemberProfilePage() {
                     </div>
                     <div className="col-span-1 sm:col-span-3">
                       <DisplayField label="Sex" value={sexLabel(profile?.sex)} />
-                    </div>
-                    <div className="col-span-2 sm:col-span-6">
-                      <DisplayField
-                        label="Nationality"
-                        value={displayText(toCountryName(profile?.nationality))}
-                        leading={
-                          profile?.nationality
-                            ? <CountryFlag country={toCountryName(profile.nationality)} />
-                            : undefined
-                        }
-                      />
                     </div>
                     <div className="col-span-2 flex gap-8 sm:col-span-6">
                       <DisplayField label="Weight" value={displayText(profile?.weight, ' kg')} />
@@ -1447,13 +1425,6 @@ export default function MemberProfilePage() {
                       ) : null}
               </div>
                   </Field>
-                  <Field label="Nationality" error={basicErrors.nationality}>
-                    <CountrySelect
-                      value={nationality}
-                      invalid={Boolean(basicErrors.nationality)}
-                      onChange={(next) => { setNationality(next); clearBasicError('nationality'); }}
-                    />
-                  </Field>
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="Weight" error={basicErrors.weight}>
                       <ClearableInput
@@ -1499,7 +1470,7 @@ export default function MemberProfilePage() {
                     />
                     <DisplayField label="Province" value={displayText(profile?.province)} />
                     <DisplayField label="City / Municipality" value={displayText(profile?.city)} />
-                    <DisplayField label="Barangay" optional value={displayText(profile?.barangay)} />
+                    <DisplayField label="Barangay" value={displayText(profile?.barangay)} />
                   </div>
                 }
               >
@@ -1556,6 +1527,7 @@ export default function MemberProfilePage() {
                             if (next) delete nextErrors.province;
                             else nextErrors.province = REQUIRED_MSG;
                             nextErrors.city = REQUIRED_MSG;
+                            nextErrors.barangay = REQUIRED_MSG;
                             return nextErrors;
                           });
                         }}
@@ -1573,7 +1545,13 @@ export default function MemberProfilePage() {
                         onChange={(next) => {
                           setCity(next);
                           setBarangay('');
-                          if (next) clearContactError('city');
+                          setContactErrors((current) => {
+                            const nextErrors = { ...current };
+                            if (next) delete nextErrors.city;
+                            else nextErrors.city = REQUIRED_MSG;
+                            nextErrors.barangay = REQUIRED_MSG;
+                            return nextErrors;
+                          });
                         }}
                         options={cities}
                         placeholder={province ? 'Select city…' : 'Select province first'}
@@ -1584,10 +1562,14 @@ export default function MemberProfilePage() {
                     />
                   </Field>
                 </div>
-                  <Field label="Barangay" optional>
+                  <Field label="Barangay" error={contactErrors.barangay}>
                     <SearchableSelect
                       value={barangay}
-                      onChange={setBarangay}
+                      invalid={Boolean(contactErrors.barangay)}
+                      onChange={(next) => {
+                        setBarangay(next);
+                        if (next) clearContactError('barangay');
+                      }}
                       options={barangays}
                       placeholder={
                         !province ? 'Select province first' : !city ? 'Select city first' : 'Select barangay…'

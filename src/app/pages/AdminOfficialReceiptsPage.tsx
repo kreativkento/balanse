@@ -5,6 +5,12 @@ import { toast } from 'sonner';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useAdminUrlSearchFilter } from '../hooks/useAdminUrlSearchFilter';
 import { AdminTablePagination, useFitPageSize } from '../components/layout/AdminTablePagination';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import {
   downloadOfficialReceiptCsv,
   downloadOfficialReceiptPdf,
@@ -39,6 +45,8 @@ export default function AdminOfficialReceiptsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [sourceFilters, setSourceFilters] = useState<string[]>([]);
   const { containerRef, pageSize } = useFitPageSize({ layout: 'table', fallback: 8 });
 
   useEffect(() => {
@@ -67,16 +75,19 @@ export default function AdminOfficialReceiptsPage() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((row) =>
-      row.officialReceiptNumber.toLowerCase().includes(query)
-      || row.memberName.toLowerCase().includes(query)
-      || row.description.toLowerCase().includes(query)
-      || row.gatewayRef.toLowerCase().includes(query)
-      || (row.tin ?? '').toLowerCase().includes(query)
-      || row.paymentMethod.toLowerCase().includes(query),
-    );
-  }, [rows, search]);
+    const matched = rows.filter((row) => {
+      const matchesQuery =
+        !query
+        || row.officialReceiptNumber.toLowerCase().includes(query)
+        || row.memberName.toLowerCase().includes(query)
+        || row.description.toLowerCase().includes(query)
+        || row.gatewayRef.toLowerCase().includes(query)
+        || (row.tin ?? '').toLowerCase().includes(query)
+        || row.paymentMethod.toLowerCase().includes(query);
+      return matchesQuery && matchesAnySelected(sourceFilters, row.source);
+    });
+    return sortChronologically(matched, (row) => row.issuedAt, chronoOrder);
+  }, [rows, search, chronoOrder, sourceFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -89,7 +100,7 @@ export default function AdminOfficialReceiptsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, chronoOrder, sourceFilters]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -139,7 +150,7 @@ export default function AdminOfficialReceiptsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col px-6 py-6">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-8xl flex-1 flex-col px-6 py-6">
         <div className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">Finance</p>
@@ -180,7 +191,21 @@ export default function AdminOfficialReceiptsPage() {
             Gross {peso(grossTotal)}
             {selectedIds.length > 0 ? ` · ${selectedIds.length} selected for export` : ''}
           </p>
-          <div className="relative w-full max-w-xs">
+          <div className="flex w-full max-w-xl flex-wrap items-center justify-end gap-2">
+            <CategorizedAddFilter
+              groups={[{
+                id: 'source',
+                label: 'Source',
+                options: [
+                  { value: 'drop_in', label: 'Drop-in' },
+                  { value: 'credit_pack', label: 'Credit pack' },
+                ],
+              }]}
+              selected={{ source: sourceFilters }}
+              onChange={(next) => setSourceFilters(next.source ?? [])}
+            />
+            <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+            <div className="relative w-full max-w-xs">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A898]" />
             <input
               type="text"
@@ -189,6 +214,7 @@ export default function AdminOfficialReceiptsPage() {
               placeholder="Search OR, member, class, reference…"
               className="w-full rounded-2xl border border-[#D4CDB5]/70 bg-white py-2.5 pl-10 pr-4 text-sm text-[#1E2A35] outline-none focus:border-[#c49a3c]/50 focus:ring-2 focus:ring-[#c49a3c]/25"
             />
+            </div>
           </div>
         </div>
 
@@ -269,7 +295,7 @@ export default function AdminOfficialReceiptsPage() {
                       </div>
                       <p
                         className="text-right font-bold tabular-nums text-[#1E2A35]"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.04em' }}
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.05em' }}
                       >
                         {peso(row.grossAmount)}
                       </p>

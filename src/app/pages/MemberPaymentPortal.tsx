@@ -46,7 +46,7 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
                         ? 'bg-[#c49a3c] text-white shadow-[0_0_0_3px_rgba(196,154,60,0.2)]'
                         : 'bg-[#EDE8D8] text-[#9A8E7E]'
                   }`}
-                  style={{ fontSize: '0.7rem', fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.7rem',  letterSpacing: '0.05em' }}
                 >
                   {isDone ? <Check size={13} strokeWidth={3} /> : num}
                 </div>
@@ -166,7 +166,7 @@ function SectionCard({
       <div className="border-b border-[#D4CDB5]/45 bg-[#FBF9F3]/80 px-4 py-3 sm:px-5">
         <p
           className="text-[#1E2A35] leading-none"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.06em' }}
+          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '0.05em' }}
         >
           {title}
         </p>
@@ -461,7 +461,7 @@ export default function MemberPaymentPortal() {
 
   return (
     <div className="bg-[#F8F3E8] min-h-screen pb-40 lg:pb-10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="pt-5 sm:pt-6 pb-4 sm:pb-5 border-b border-[#D4CDB5]/60">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3 min-w-0">
@@ -479,11 +479,8 @@ export default function MemberPaymentPortal() {
                 </p>
                 <h1
                   className="text-[#1E2A35] leading-none truncate"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: 'clamp(1.5rem, 4vw, 2.1rem)',
-                    letterSpacing: '0.05em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.15rem, 2.4vw, 1.5rem)',
+                    letterSpacing: '0.04em' }}
                 >
                   {checkoutMode === 'credit' ? 'Use session credit' : 'Payment verification'}
                 </h1>
@@ -510,12 +507,9 @@ export default function MemberPaymentPortal() {
                 </p>
                 <h2
                   className="leading-none mb-4 truncate"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.65rem',
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.65rem',
                     letterSpacing: '0.04em',
-                    color: classColor,
-                  }}
+                    color: classColor }}
                   title={booking.className}
                 >
                   {booking.className}
@@ -553,12 +547,9 @@ export default function MemberPaymentPortal() {
                   </span>
                   <span
                     className="leading-none tabular-nums"
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '1.85rem',
-                      letterSpacing: '0.02em',
-                      color: classColor,
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.85rem',
+                      letterSpacing: '0.04em',
+                      color: classColor }}
                   >
                     {checkoutMode === 'credit' ? '1 credit' : amountDisplay}
                   </span>
@@ -722,11 +713,8 @@ export default function MemberPaymentPortal() {
                         <div className="mt-1 flex flex-wrap items-center justify-center md:justify-start gap-2">
                           <p
                             className="text-[#1E2A35] tabular-nums"
-                            style={{
-                              fontFamily: "'Bebas Neue', sans-serif",
-                              fontSize: '1.15rem',
-                              letterSpacing: '0.06em',
-                            }}
+                            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem',
+                              letterSpacing: '0.05em' }}
                           >
                             {channel.accountNumber}
                           </p>
@@ -741,11 +729,8 @@ export default function MemberPaymentPortal() {
                       </span>
                       <span
                         className="text-[#c49a3c] leading-none tabular-nums"
-                        style={{
-                          fontFamily: "'Bebas Neue', sans-serif",
-                          fontSize: '1.65rem',
-                          letterSpacing: '0.02em',
-                        }}
+                        style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.65rem',
+                          letterSpacing: '0.04em' }}
                       >
                         ₱{amount.toLocaleString()}.00
                       </span>
@@ -851,11 +836,8 @@ export default function MemberPaymentPortal() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p
                       className="text-[#1E2A35] leading-none"
-                      style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '1.1rem',
-                        letterSpacing: '0.06em',
-                      }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem',
+                        letterSpacing: '0.05em' }}
                     >
                       Transaction details
                     </p>
@@ -955,14 +937,14 @@ export default function MemberPaymentPortal() {
       </div>
 
       <div className="fixed bottom-0 inset-x-0 z-50 pointer-events-none lg:hidden">
-        <div className="max-w-6xl mx-auto flex items-center gap-3 border-t border-[#D4CDB5]/60 bg-[#FBF9F3]/95 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(30,42,53,0.08)] pointer-events-auto">
+        <div className="max-w-8xl mx-auto flex items-center gap-3 border-t border-[#D4CDB5]/60 bg-[#FBF9F3]/95 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(30,42,53,0.08)] pointer-events-auto">
           <div className="min-w-0 shrink">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#9A8E7E]">
               {checkoutMode === 'credit' ? 'Cost' : 'Due'}
             </p>
             <p
               className="text-[#c49a3c] leading-none tabular-nums truncate"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em',  fontSize: '1.35rem' }}
             >
               {checkoutMode === 'credit' ? '1 credit' : amountDisplay}
             </p>

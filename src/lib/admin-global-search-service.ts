@@ -349,9 +349,12 @@ async function searchPortalRequests(pattern: string, rawQuery: string): Promise<
 
   return (data ?? []).map((row) => ({
     id: `portal:${row.id}`,
-    path: adminListPath('/admin-coach-requests', rawQuery),
+    path: adminListPath(
+      row.request_type === 'slot_request' ? '/admin-coach-slots' : '/admin-coach-cancellations',
+      rawQuery,
+    ),
     label: row.request_type === 'slot_request' ? 'Slot request' : 'Cancellation request',
-    group: 'Coach requests',
+    group: row.request_type === 'slot_request' ? 'Coach slots' : 'Coach cancellations',
     subtitle: [row.status, row.requester_note?.slice(0, 60)].filter(Boolean).join(' · '),
   }));
 }

@@ -1,16 +1,17 @@
-import { useState, type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router';
+import { useMemo, type ReactNode } from 'react';
+import { useLocation } from 'react-router';
 import {
-  ChevronDown,
+  Bookmark,
+  CalendarRange,
   Coins,
   CreditCard,
   LayoutDashboard,
   MessageSquare,
   Newspaper,
+  Sparkles,
   User,
   Info,
 } from 'lucide-react';
-import logoMain from '@/assets/logo_main.svg';
 import { useAuth } from '../../context/AuthContext';
 import {
   computeProfileScore,
@@ -19,7 +20,17 @@ import {
 } from '../../../lib/profile-completion';
 import { AppSidebarLayout } from './AppSidebarLayout';
 import { HelpSupportFab } from './HelpSupportFab';
-import { SidebarNavLink } from './SidebarNavLink';
+import { SidebarCollapseBar, SidebarNav, SidebarNavGroupButton, SidebarNavLink } from './SidebarNavLink';
+import { useUnreadAccountNotifications } from '../../hooks/useUnreadAccountNotifications';
+import { MemberPortalHeader, MemberGreetingHeader } from './DashboardGreetingBar';
+import { PortalSectionSubnav } from './PortalSectionSubnav';
+import { DocumentReacceptBanner } from './MemberPageShell';
+import { usePortalNavIconOnly } from '../../context/PortalChromeContext';
+import {
+  PortalSectionNavProvider,
+  usePortalSectionNav,
+  type PortalSectionGroup,
+} from '../../context/PortalSectionNavContext';
 import {
   memberClassLinks,
   isPublicNavActive,
@@ -35,23 +46,9 @@ const memberLinks: {
   { label: 'Profile', path: '/profile', icon: <User size={16} /> },
 ];
 
-const financeLinks: {
-  label: string;
-  path: string;
-  icon: ReactNode;
-}[] = [
+const financeLinks = [
   { label: 'Credits & Pass', path: '/credits', icon: <Coins size={16} /> },
   { label: 'Billing & Receipts', path: '/payment-history', icon: <CreditCard size={16} /> },
-];
-
-const NAV_GROUPS: {
-  key: string;
-  label: string;
-  links: { label: string; path: string; icon: ReactNode }[];
-}[] = [
-  { key: 'classes', label: 'Class Management', links: memberClassLinks },
-  { key: 'finances', label: 'Finances', links: financeLinks },
-  { key: 'studio', label: 'Studio', links: memberStudioLinks },
 ];
 
 const communityBulletinLink = {
@@ -60,47 +57,75 @@ const communityBulletinLink = {
   icon: <Newspaper size={16} />,
 };
 
+function memberPageHeader(pathname: string) {
+  if (pathname === '/my-classes') {
+    return {
+      crumb: 'Class Management',
+      title: 'My Classes',
+      icon: <CalendarRange size={14} className="shrink-0 text-[#c49a3c]" aria-hidden />,
+    };
+  }
+  if (pathname === '/class-schedule') {
+    return {
+      crumb: 'Class Management',
+      title: 'Class Schedule',
+      icon: <CalendarRange size={14} className="shrink-0 text-[#c49a3c]" aria-hidden />,
+    };
+  }
+  return undefined;
+}
+
+function buildMemberGroups(featuresLocked: boolean): PortalSectionGroup[] {
+  return [
+    {
+      key: 'classes',
+      label: 'Class Management',
+      icon: <Bookmark size={16} />,
+      disabled: featuresLocked,
+      links: memberClassLinks.map((link) => ({ ...link, disabled: featuresLocked })),
+    },
+    {
+      key: 'finances',
+      label: 'Finances',
+      icon: <Coins size={16} />,
+      disabled: featuresLocked,
+      links: financeLinks.map((link) => ({ ...link, disabled: featuresLocked })),
+    },
+    {
+      key: 'studio',
+      label: 'Studio',
+      icon: <Sparkles size={16} />,
+      disabled: featuresLocked,
+      links: memberStudioLinks.map((link) => ({ ...link, disabled: featuresLocked })),
+    },
+  ];
+}
+
 function MemberSidebarNav({
   onNavigate,
+  featuresLocked,
+  profileStatusDot,
+  profileScore,
 }: {
   onNavigate: () => void;
+  featuresLocked: boolean;
+  profileStatusDot?: string;
+  profileScore: number;
 }) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { groups } = usePortalSectionNav();
+  const iconOnly = usePortalNavIconOnly();
+  const unreadNotifications = useUnreadAccountNotifications();
   const isActive = (path: string) => isPublicNavActive(location.pathname, path);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_GROUPS.map((group) => [group.key, true])),
-  );
-  const profileScore = computeProfileScore(user?.profile);
-  const featuresLocked = profileScore < PROFILE_COMPLETION_READY;
-  const profileStatusDot = featuresLocked
-    ? profileScoreBarClasses(profileScore).bar
-    : undefined;
-  const toggleGroup = (key: string) => {
-    if (featuresLocked) return;
-    setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
-  };
-
-  const linkStatus = (path: string) =>
-    path === '/profile' && profileStatusDot
-      ? {
-          statusDotClass: profileStatusDot,
-          statusLabel: `Profile ${profileScore}% complete`,
-        }
-      : {};
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-5 py-5 border-b border-[#D4CDB5]/30">
-        <Link to="/dashboard" className="flex items-center" onClick={onNavigate}>
-          <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-8 w-auto object-contain" />
-        </Link>
-      </div>
+    <div className="flex h-full flex-col">
+      <SidebarCollapseBar onCloseMobile={onNavigate} />
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="flex flex-col gap-0.5">
-          {featuresLocked && (
-            <div className="mb-3 rounded-2xl border border-[#c49a3c]/30 bg-[#c49a3c]/10 px-3 py-2.5">
+      <SidebarNav>
+        <div className="flex flex-col gap-1">
+          {featuresLocked && !iconOnly && (
+            <div className="mb-2 rounded-xl border border-[#c49a3c]/30 bg-[#c49a3c]/10 px-2.5 py-2">
               <p className="flex items-start gap-2 text-[11px] font-semibold leading-relaxed text-[#8a6824]">
                 <Info size={13} className="mt-0.5 shrink-0" />
                 Finish setting up your profile to unlock all features.
@@ -117,93 +142,40 @@ function MemberSidebarNav({
               active={isActive(link.path)}
               onNavigate={onNavigate}
               disabled={featuresLocked && link.path !== '/profile'}
-              {...linkStatus(link.path)}
+              statusDotClass={link.path === '/profile' ? profileStatusDot : undefined}
+              statusLabel={link.path === '/profile' && profileStatusDot ? `Profile ${profileScore}% complete` : undefined}
             />
           ))}
 
-          {NAV_GROUPS.map((group) => {
-            const open = featuresLocked ? false : (openGroups[group.key] ?? true);
-            const groupActive = !featuresLocked && group.links.some((link) => isActive(link.path));
-            return (
-              <div key={group.key} className={`mt-3 first:mt-0${featuresLocked ? ' opacity-60' : ''}`}>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.key)}
-                  disabled={featuresLocked}
-                  aria-expanded={open}
-                  aria-disabled={featuresLocked}
-                  aria-label={`${open ? 'Collapse' : 'Expand'} ${group.label}`}
-                  className={`group/nav mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors ${
-                    featuresLocked
-                      ? 'cursor-not-allowed'
-                      : 'hover:bg-[#EDE8D8]/50'
-                  }`}
-                >
-                  <span
-                    className={`text-[11px] font-bold uppercase tracking-[0.12em] transition-colors ${
-                      featuresLocked
-                        ? 'text-[#B0A898]'
-                        : groupActive
-                          ? 'text-[#745b3c] group-hover/nav:text-[#5F4A32]'
-                          : 'text-[#8A7E6E] group-hover/nav:text-[#5A5048]'
-                    }`}
-                  >
-                    {group.label}
-                  </span>
-                  <span className={`h-px min-w-0 flex-1 ${featuresLocked ? 'bg-[#D4CDB5]/40' : 'bg-[#D4CDB5]/60 transition-colors group-hover/nav:bg-[#C4B8A0]'}`} />
-                  <ChevronDown
-                    size={12}
-                    className={`shrink-0 transition-all ${
-                      featuresLocked
-                        ? 'text-[#D4CDB5]'
-                        : `text-[#C4B8A0] group-hover/nav:text-[#8A7E6E] ${open ? 'rotate-180' : ''}`
-                    }`}
-                  />
-                </button>
-                {open && (
-                  <div className="flex flex-col gap-0.5 pl-2.5">
-                    {group.links.map((link) => (
-                      <SidebarNavLink
-                        key={link.path}
-                        to={link.path}
-                        icon={link.icon}
-                        label={link.label}
-                        active={isActive(link.path)}
-                        onNavigate={onNavigate}
-                        disabled={featuresLocked}
-                        {...linkStatus(link.path)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          <div className="mt-3">
-            <SidebarNavLink
-              to={communityBulletinLink.path}
-              icon={communityBulletinLink.icon}
-              label={communityBulletinLink.label}
-              active={isActive(communityBulletinLink.path)}
+          {groups.map((group) => (
+            <SidebarNavGroupButton
+              key={group.key}
+              group={group}
+              active={!featuresLocked && group.links.some((link) => isActive(link.path))}
               onNavigate={onNavigate}
-              disabled={featuresLocked}
             />
-          </div>
-        </div>
-      </nav>
+          ))}
 
-      <div className="px-3 py-4 border-t border-[#D4CDB5]/30">
-        <SidebarNavLink
-          to="/feedback"
-          icon={<MessageSquare size={16} />}
-          label="System Feedback"
-          active={isActive('/feedback')}
-          onNavigate={onNavigate}
-          disabled={featuresLocked}
-          appearance="gold"
-        />
-      </div>
+          <SidebarNavLink
+            to={communityBulletinLink.path}
+            icon={communityBulletinLink.icon}
+            label={communityBulletinLink.label}
+            active={isActive(communityBulletinLink.path)}
+            onNavigate={onNavigate}
+            disabled={featuresLocked}
+          />
+          <SidebarNavLink
+            to="/feedback"
+            icon={<MessageSquare size={16} />}
+            label="System Feedback"
+            active={isActive('/feedback')}
+            onNavigate={onNavigate}
+            disabled={featuresLocked}
+            appearance="gold"
+            pendingCount={unreadNotifications}
+          />
+        </div>
+      </SidebarNav>
     </div>
   );
 }
@@ -211,35 +183,55 @@ function MemberSidebarNav({
 interface MemberSidebarProps {
   children: React.ReactNode;
   lockScroll?: boolean;
-  /** Lock main-pane scroll on md+ only (mobile keeps page scroll). */
   lockScrollDesktop?: boolean;
 }
 
 /** Logged-in member dashboard chrome (sidebar + help FAB). */
 export function MemberSidebar({ children, lockScroll = false, lockScrollDesktop = false }: MemberSidebarProps) {
-  const mainOverflow = lockScroll
-    ? 'hidden'
+  const { pathname } = useLocation();
+  const { user } = useAuth();
+  const profileScore = computeProfileScore(user?.profile);
+  const featuresLocked = profileScore < PROFILE_COMPLETION_READY;
+  const profileStatusDot = featuresLocked ? profileScoreBarClasses(profileScore).bar : undefined;
+  const groups = useMemo(() => buildMemberGroups(featuresLocked), [featuresLocked]);
+
+  const innerOverflow = lockScroll
+    ? 'overflow-hidden'
     : lockScrollDesktop
-      ? 'desktop-hidden'
-      : 'auto';
+      ? 'overflow-y-auto md:overflow-hidden'
+      : 'overflow-y-auto';
 
   return (
     <>
-      <AppSidebarLayout
-        sidebarWidthClass="w-60"
-        mainOverflow={mainOverflow}
-        memberMainScroll
-        renderSidebar={(closeMobile) => (
-          <MemberSidebarNav onNavigate={closeMobile} />
-        )}
-        mobileBrand={
-          <Link to="/dashboard" className="flex items-center min-w-0">
-            <img src={logoMain} alt="BALANSÉ Wellness Hub" className="h-6 w-auto object-contain shrink-0" />
-          </Link>
-        }
-      >
-        {children}
-      </AppSidebarLayout>
+      <PortalSectionNavProvider groups={groups}>
+        <AppSidebarLayout
+          sidebarWidthClass="w-60"
+          mainOverflow="desktop-hidden"
+          memberMainScroll
+          header={<MemberPortalHeader />}
+          renderSidebar={(closeMobile) => (
+            <MemberSidebarNav
+              onNavigate={closeMobile}
+              featuresLocked={featuresLocked}
+              profileStatusDot={profileStatusDot}
+              profileScore={profileScore}
+            />
+          )}
+        >
+          <div className="flex h-full min-h-0 flex-col bg-[#F8F3E8]">
+            <div className="mx-auto w-full max-w-8xl shrink-0 px-4 pt-3 md:px-8 md:pt-5">
+              <PortalSectionSubnav />
+            </div>
+            <div className={`flex min-h-0 flex-1 flex-col ${innerOverflow}`}>
+              <div className="mx-auto w-full max-w-8xl shrink-0 px-4 md:px-8">
+                <MemberGreetingHeader pageHeader={memberPageHeader(pathname)} flushTop slot="title" />
+                <DocumentReacceptBanner />
+              </div>
+              {children}
+            </div>
+          </div>
+        </AppSidebarLayout>
+      </PortalSectionNavProvider>
       <HelpSupportFab variant="chat" />
     </>
   );

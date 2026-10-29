@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  ChevronLeft, ChevronRight, Info, Users, Clock, X, Loader2,
+  ChevronLeft, ChevronRight, ChevronDown, Info, Users, Clock, X,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PageLoadingScreen } from '../components/layout/PageLoadingScreen';
 import { fetchStaffDirectoryAccounts } from '../../lib/admin-service';
 import {
   fetchStaffAvailabilityForAccounts,
@@ -17,6 +18,13 @@ import {
   getMondayOfWeekContaining, toDateKey, dateKeyToDate, offsetDateKey,
   isWeekendMonthGridColumn, isWeekendDate, WEEKEND_COLUMN_BG, WEEKEND_COLUMN_BG_SOFT,
 } from '../components/calendar/weekCalendarUtils';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
+import { AVAILABILITY_DAY_FILTER_GROUP } from '../components/filters/status-filter-groups';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import {
   CALENDAR_BORDER_DIVIDER,
   CALENDAR_BORDER_DIVIDER_SOFT,
@@ -155,7 +163,7 @@ function EntryDetailPanel({ entry, onClose }: { entry: AvailabilityEntry; onClos
   );
 }
 
-// ── Main Panel (embeddable in Coaches Management tabs) ─────────
+// ── Main Panel ─────────────────────────────────────────────────
 
 export function AdminCoachAvailabilityPanel() {
   const todayKey = getTodayDateKey();
@@ -167,10 +175,14 @@ export function AdminCoachAvailabilityPanel() {
   const [calYear, setCalYear]   = useState(initialCal.year);
   const [calMonth, setCalMonth] = useState(initialCal.month);
   const [calendarView, setCalendarView] = useState<CalendarView>('monthly');
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [weekStartKey, setWeekStartKey] = useState(() =>
     toDateKey(getMondayOfWeekContaining(getTodayLocal())),
   );
   const [viewingEntry, setViewingEntry] = useState<AvailabilityEntry | null>(null);
+  const [coachMenuOpen, setCoachMenuOpen] = useState(false);
+  const coachMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +227,17 @@ export function AdminCoachAvailabilityPanel() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!coachMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!coachMenuRef.current?.contains(event.target as Node)) {
+        setCoachMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [coachMenuOpen]);
+
   const coach = useMemo(
     () => coaches.find((c) => c.id === selectedCoachId) ?? null,
     [coaches, selectedCoachId],
@@ -233,6 +256,18 @@ export function AdminCoachAvailabilityPanel() {
     }
     return sorted.filter((e) => e.date >= weekStartKey && e.date <= weekEndKey);
   }, [coach, calendarView, monthKeyPrefix, weekStartKey, weekEndKey]);
+
+  const orderedEntriesInView = useMemo(
+    () =>
+      sortChronologically(
+        entriesInView.filter((entry) =>
+          matchesAnySelected(statusFilters, entry.dayOff ? 'day_off' : 'open'),
+        ),
+        (entry) => entry.date,
+        chronoOrder,
+      ),
+    [entriesInView, chronoOrder, statusFilters],
+  );
 
   const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); };
   const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); };
@@ -263,6 +298,10 @@ export function AdminCoachAvailabilityPanel() {
         <EntryDetailPanel entry={viewingEntry} onClose={() => setViewingEntry(null)} />
       )}
 
+      <div className="relative">
+      {loading && (
+        <PageLoadingScreen overlay variant="calendar" message="Loading coach availability" />
+      )}
       <div className="flex items-center gap-2 mb-5">
         <Info size={13} className="text-[#B0A898] shrink-0" />
         <p className="text-[#9A8E7E] text-sm">Read-only view. Coaches manage their own availability from the Staff Portal.</p>
@@ -274,13 +313,6 @@ export function AdminCoachAvailabilityPanel() {
         </div>
       )}
 
-      {loading && (
-        <div className="mb-4 flex items-center gap-2 text-sm text-[#8A7E6E]">
-          <Loader2 size={16} className="animate-spin text-[#c49a3c]" />
-          Loading coach availability…
-        </div>
-      )}
-
       {!loading && coaches.length === 0 && !loadError && (
         <div className="rounded-2xl border border-[#D4CDB5]/60 bg-white px-5 py-10 text-center text-sm text-[#8A7E6E]">
           No coaches in the staff directory yet.
@@ -288,48 +320,72 @@ export function AdminCoachAvailabilityPanel() {
       )}
 
       {coach && (
-      <div className="flex gap-6 items-start">
-          {/* ── Coach List (left) ── */}
-          <div className="w-56 shrink-0">
-            <p className="text-[#9A8E7E] text-xs uppercase tracking-widest px-1 mb-2">Coaches</p>
-            <div className="flex flex-col gap-1">
-              {coaches.map(c => {
-                const avail   = c.availability.filter(e => !e.dayOff).length;
-                const unavail = c.availability.filter(e => e.dayOff).length;
-                const isActive = c.id === selectedCoachId;
-                return (
-                  <button key={c.id} onClick={() => setSelectedCoachId(c.id)}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl border text-left transition-all ${isActive ? 'bg-[#1E2A35] border-[#1E2A35] shadow-sm' : 'bg-white border-[#D4CDB5]/60 hover:border-[#c49a3c]/40 hover:bg-[#FDFAF5]'}`}>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + (isActive ? '40' : '25') }}>
-                      <span className="text-xs font-bold" style={{ color: isActive ? '#fff' : c.color }}>{c.initials}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold leading-tight truncate ${isActive ? 'text-white' : 'text-[#1E2A35]'}`}>{c.name}</p>
-                      <p className={`text-xs mt-0.5 ${isActive ? 'text-white/60' : 'text-[#B0A898]'}`}>
-                        {avail > 0 ? `${avail} available` : ''}{avail > 0 && unavail > 0 ? ' · ' : ''}{unavail > 0 ? `${unavail} off` : ''}
-                        {avail === 0 && unavail === 0 && 'No entries set'}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── Right Panel ── */}
-          <div className="flex-1 min-w-0 flex gap-5 items-start">
-
+      <div className="flex gap-5 items-start">
             {/* Calendar */}
             <div className="w-full min-w-[18rem] max-w-md shrink-0">
               <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-5">
-                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[#E8E2D2]/70">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: coach.color + '25' }}>
-                    <span className="text-sm font-bold" style={{ color: coach.color }}>{coach.initials}</span>
-                  </div>
-                  <div>
-                    <p className="text-[#1E2A35] text-sm font-semibold">{coach.name}</p>
-                    <p className="text-[#9A8E7E] text-xs">{coach.role}</p>
-                  </div>
+                <div ref={coachMenuRef} className="relative mb-4 pb-4 border-b border-[#E8E2D2]/70">
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={coachMenuOpen}
+                    aria-label="Select coach"
+                    onClick={() => setCoachMenuOpen((open) => !open)}
+                    className="flex w-full items-center gap-3 rounded-2xl text-left transition-colors hover:bg-[#F8F3E8]/70 -mx-1 px-1 py-1"
+                  >
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: coach.color + '25' }}>
+                      <span className="text-sm font-bold" style={{ color: coach.color }}>{coach.initials}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[#1E2A35] text-sm font-semibold truncate">{coach.name}</p>
+                      <p className="text-[#9A8E7E] text-xs truncate">{coach.role}</p>
+                    </div>
+                    <ChevronDown
+                      size={16}
+                      className={`shrink-0 text-[#B0A898] transition-transform ${coachMenuOpen ? 'rotate-180' : ''}`}
+                      aria-hidden
+                    />
+                  </button>
+                  {coachMenuOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute left-0 right-0 top-full z-20 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-[#D4CDB5]/70 bg-white p-1 shadow-lg"
+                    >
+                      {coaches.map((c) => {
+                        const avail = c.availability.filter((e) => !e.dayOff).length;
+                        const unavail = c.availability.filter((e) => e.dayOff).length;
+                        const isActive = c.id === selectedCoachId;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            role="option"
+                            aria-selected={isActive}
+                            onClick={() => {
+                              setSelectedCoachId(c.id);
+                              setCoachMenuOpen(false);
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors ${
+                              isActive ? 'bg-[#F8F3E8]' : 'hover:bg-[#FDFAF5]'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + '25' }}>
+                              <span className="text-xs font-bold" style={{ color: c.color }}>{c.initials}</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold leading-tight truncate text-[#1E2A35]">{c.name}</p>
+                              <p className="text-xs mt-0.5 text-[#B0A898]">
+                                {avail > 0 ? `${avail} available` : ''}
+                                {avail > 0 && unavail > 0 ? ' · ' : ''}
+                                {unavail > 0 ? `${unavail} off` : ''}
+                                {avail === 0 && unavail === 0 && 'No entries set'}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex p-1 mb-4 bg-[#F8F3E8] rounded-full border border-[#D4CDB5]/40 w-fit">
@@ -360,7 +416,7 @@ export function AdminCoachAvailabilityPanel() {
                   </button>
                   <span
                     className="text-[#1E2A35] text-center min-w-0 truncate px-1"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.06em' }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem', letterSpacing: '0.05em' }}
                   >
                     {calendarTitle}
                   </span>
@@ -383,11 +439,8 @@ export function AdminCoachAvailabilityPanel() {
                           className={`text-center text-[#5A5048] font-semibold py-2 px-0.5 ${
                             isWeekendMonthGridColumn(colIdx) ? WEEKEND_COLUMN_BG : ''
                           }`}
-                          style={{
-                            fontSize: '0.68rem',
-                            letterSpacing: '0.08em',
-                            fontFamily: "'Bebas Neue', sans-serif",
-                          }}
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '0.68rem',
+                            letterSpacing: '0.05em' }}
                         >
                           {d}
                         </div>
@@ -435,7 +488,7 @@ export function AdminCoachAvailabilityPanel() {
                                       ? 'font-bold text-[#1E3A2F]'
                                       : 'font-semibold text-[#1E2A35]'
                               }`}
-                              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}
+                              style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
                             >
                               {day}
                             </span>
@@ -477,7 +530,7 @@ export function AdminCoachAvailabilityPanel() {
                             </p>
                             <p
                               className="text-[#1E2A35] leading-none mt-1"
-                              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.04em' }}
+                              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.35rem', letterSpacing: '0.05em' }}
                             >
                               {date.getDate()}
                             </p>
@@ -533,9 +586,17 @@ export function AdminCoachAvailabilityPanel() {
               </div>
 
               <div className="bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm overflow-hidden">
-                <div className="grid grid-cols-[minmax(0,1.2fr)_72px_minmax(9rem,1.5fr)_72px] gap-x-3 px-5 py-3 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60">
+                <div className="px-5 py-3 border-b border-[#D4CDB5]/40 bg-[#F8F3E8]/40 flex flex-wrap items-center justify-end gap-2">
+                  <CategorizedAddFilter
+                    groups={[AVAILABILITY_DAY_FILTER_GROUP]}
+                    selected={{ status: statusFilters }}
+                    onChange={(next) => setStatusFilters(next.status ?? [])}
+                  />
+                  <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+                </div>
+                <div className="grid grid-cols-[minmax(0,1.2fr)_72px_minmax(9rem,1.5fr)_64px] gap-x-3 px-4 py-2 border-b border-[#D4CDB5]/50 bg-[#F8F3E8]/60 items-center">
                   {['Date', 'Status', 'Time Ranges', 'Actions'].map(h => (
-                    <p key={h} className="text-[#9A8E7E] text-xs uppercase tracking-widest font-medium">{h}</p>
+                    <p key={h} className="text-[#9A8E7E] text-[10px] uppercase tracking-widest font-medium">{h}</p>
                   ))}
                 </div>
 
@@ -545,38 +606,29 @@ export function AdminCoachAvailabilityPanel() {
                     <p className="text-[#B0A898] text-sm">No availability recorded for {coach.name.split(' ')[0]}.</p>
                     <p className="text-[#C0B8A8] text-xs mt-1">The coach has not set any availability yet.</p>
                   </div>
-                ) : entriesInView.length === 0 ? (
+                ) : orderedEntriesInView.length === 0 ? (
                   <div className="px-5 py-14 text-center">
                     <p className="text-[#B0A898] text-sm">No entries in this {calendarView === 'monthly' ? 'month' : 'week'}.</p>
                     <p className="text-[#C0B8A8] text-xs mt-1">Try another range or check other dates on the calendar.</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-[#D4CDB5]/30">
-                    {entriesInView.map(entry => (
-                      <div key={entry.id} className="grid grid-cols-[minmax(0,1.2fr)_72px_minmax(9rem,1.5fr)_72px] gap-x-3 px-5 py-3.5 items-start hover:bg-[#F8F3E8]/40 transition-colors">
-                        <div>
-                          <p className="text-[#1E2A35] text-sm font-semibold">{formatDateShortFromKey(entry.date)}</p>
-                          {entry.note && <p className="text-[#9A8E7E] text-xs mt-0.5 italic truncate">{entry.note}</p>}
-                        </div>
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full w-fit border mt-0.5 ${!entry.dayOff ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                    {orderedEntriesInView.map(entry => (
+                      <div key={entry.id} className="grid grid-cols-[minmax(0,1.2fr)_72px_minmax(9rem,1.5fr)_64px] gap-x-3 px-4 py-1.5 items-center hover:bg-[#F8F3E8]/40 transition-colors">
+                        <p className="text-[#1E2A35] text-xs font-semibold truncate">{formatDateShortFromKey(entry.date)}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full w-fit border leading-none ${!entry.dayOff ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                           {!entry.dayOff ? 'Open' : 'Day Off'}
                         </span>
-                        <div className="flex flex-col gap-1 min-w-0">
-                          {entry.dayOff ? (
-                            <span className="text-[#C0B8A8] text-xs">Not available</span>
-                          ) : entry.periods.length === 0 ? (
-                            <span className="text-[#C0B8A8] text-xs">No time ranges set</span>
-                          ) : (
-                            entry.periods.map(p => (
-                              <span key={p.id} className="text-xs text-[#5A5048] whitespace-nowrap tabular-nums">
-                                {formatTimeRange24(p.start, p.end)}
-                              </span>
-                            ))
-                          )}
-                        </div>
+                        <p className="text-[11px] text-[#5A5048] truncate tabular-nums min-w-0">
+                          {entry.dayOff
+                            ? 'Not available'
+                            : entry.periods.length === 0
+                              ? 'No time ranges set'
+                              : `${formatTimeRange24(entry.periods[0].start, entry.periods[0].end)}${entry.periods.length > 1 ? ` +${entry.periods.length - 1}` : ''}`}
+                        </p>
                         <button
                           onClick={() => setViewingEntry(entry)}
-                          className="h-7 px-3 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-xs font-medium rounded-lg hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap w-fit mt-0.5"
+                          className="h-6 px-2.5 bg-[#F8F3E8] text-[#5A5048] border border-[#D4CDB5]/60 text-[11px] font-medium rounded-md hover:bg-[#EDE8D8] active:scale-95 transition-all whitespace-nowrap w-fit"
                         >
                           View
                         </button>
@@ -590,24 +642,28 @@ export function AdminCoachAvailabilityPanel() {
                 {entriesInView.length} in view · {coach.availability.length} total · Staff Portal
               </p>
             </div>
-          </div>
         </div>
       )}
+      </div>
     </>
   );
 }
 
-// ── Standalone page (redirects into Coaches Management) ────────
-
 export default function AdminCoachAvailabilityPage() {
   const navigate = useNavigate();
-  const { adminUser, adminAuthReady } = useAdminAuth();
+  const { adminUser } = useAdminAuth();
 
   useEffect(() => {
-    if (!adminAuthReady) return;
     if (!adminUser) navigate('/admin-login');
-    else navigate('/admin-coaches?tab=availability', { replace: true });
-  }, [adminAuthReady, adminUser, navigate]);
+  }, [adminUser, navigate]);
 
-  return null;
+  if (!adminUser) return null;
+
+  return (
+    <div className="h-full min-h-0 overflow-hidden flex flex-col">
+      <div className="max-w-8xl mx-auto px-6 py-8 w-full flex-1 min-h-0 flex flex-col overflow-y-auto">
+        <AdminCoachAvailabilityPanel />
+      </div>
+    </div>
+  );
 }

@@ -13,6 +13,7 @@ import {
   Coins,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { useAdminUrlSearchQuery } from '../hooks/useAdminUrlSearchFilter';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import {
@@ -233,7 +234,7 @@ export default function AdminSubscriptionsPage() {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-8xl mx-auto px-6 py-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
           {[
             {
@@ -283,11 +284,8 @@ export default function AdminSubscriptionsPage() {
                 <p className="text-[#8A7E6E] text-xs uppercase tracking-widest">{s.label}</p>
                 <p
                   className="text-[#1E2A35] leading-none"
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.6rem',
-                    letterSpacing: '0.04em',
-                  }}
+                  style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem',
+                    letterSpacing: '0.04em' }}
                 >
                   {s.value}
                 </p>
@@ -309,9 +307,8 @@ export default function AdminSubscriptionsPage() {
             </button>
           </div>
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-[#8A7E6E]">
-              <Loader2 size={20} className="animate-spin" />
-              Loading packages…
+            <div role="status" aria-live="polite" aria-label="Loading packages">
+              <ContentSkeleton variant="cards" />
             </div>
           ) : visiblePackages.length === 0 ? (
             <div className="rounded-3xl border border-[#D4CDB5]/60 bg-white px-6 py-12 text-center text-[#8A7E6E] text-sm">
@@ -334,11 +331,8 @@ export default function AdminSubscriptionsPage() {
                       <div className="min-w-0">
                         <h3
                           className="text-[#1E2A35] truncate"
-                          style={{
-                            fontFamily: "'Bebas Neue', sans-serif",
-                            fontSize: '1.2rem',
-                            letterSpacing: '0.05em',
-                          }}
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem',
+                            letterSpacing: '0.05em' }}
                         >
                           {plan.name}
                         </h3>
@@ -377,11 +371,8 @@ export default function AdminSubscriptionsPage() {
                       <div>
                         <p
                           className="text-[#1E2A35]"
-                          style={{
-                            fontFamily: "'Bebas Neue', sans-serif",
-                            fontSize: '2rem',
-                            letterSpacing: '0.02em',
-                          }}
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem',
+                            letterSpacing: '0.04em' }}
                         >
                           ₱{plan.priceAmount.toLocaleString()}
                         </p>
@@ -390,7 +381,7 @@ export default function AdminSubscriptionsPage() {
                       <div className="text-right">
                         <p
                           className="text-[#1E2A35]"
-                          style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem' }}
+                          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em',  fontSize: '1.5rem' }}
                         >
                           {plan.creditsGranted}
                         </p>
@@ -432,7 +423,7 @@ export default function AdminSubscriptionsPage() {
             <div className="px-7 pt-7 pb-5 border-b border-[#D4CDB5]/50 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3
                 className="text-[#1E2A35]"
-                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
               >
                 {planForm.id ? 'Edit package' : 'Add package'}
               </h3>

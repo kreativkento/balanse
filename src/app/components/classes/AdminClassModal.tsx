@@ -918,11 +918,8 @@ export function AdminClassModal({
             </p>
             <h2
               className="text-[#1E2A35] leading-none truncate"
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: assignSchedule ? '1.45rem' : '1.8rem',
-                letterSpacing: '0.04em',
-              }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: assignSchedule ? '1.45rem' : '1.8rem',
+                letterSpacing: '0.05em' }}
             >
               {assignSchedule
                 ? assignScheduleDisplayName

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, Globe, X } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import type { PublicCoachProfile } from '../../../lib/admin-service';
 import { DisciplineChip, DisciplineLogo } from '../disciplines/DisciplineChip';
 
@@ -44,12 +44,9 @@ function CoachPhotoModal({
               style={{ backgroundColor: `${coach.color}18` }}
             >
               <span
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '4rem',
-                  letterSpacing: '0.08em',
-                  color: coach.color,
-                }}
+                style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '4rem',
+                  letterSpacing: '0.04em',
+                  color: coach.color }}
               >
                 {coach.initials}
               </span>
@@ -116,12 +113,9 @@ export function CoachProfileModal({
                   style={{ backgroundColor: `${coach.color}18` }}
                 >
                   <span
-                    style={{
-                      fontFamily: "'Bebas Neue', sans-serif",
-                      fontSize: '2rem',
-                      letterSpacing: '0.08em',
-                      color: coach.color,
-                    }}
+                    style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem',
+                      letterSpacing: '0.04em',
+                      color: coach.color }}
                   >
                     {coach.initials}
                   </span>
@@ -138,12 +132,6 @@ export function CoachProfileModal({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {coach.experience && (
                     <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: `${coach.color}18`, color: coach.color }}>{coach.experience} experience</span>
-                  )}
-                  {coach.nationality && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[#D4CDB5]/60 bg-[#F8F3E8] px-2.5 py-1 text-xs font-medium text-[#5A5048]">
-                      <Globe size={11} className="text-[#c49a3c]" />
-                      {coach.nationality}
-                    </span>
                   )}
                 </div>
               </div>
@@ -165,15 +153,6 @@ export function CoachProfileModal({
                   {coach.bio || 'This coach has not added a bio yet.'}
                 </p>
               </div>
-
-              {coach.nationality && (
-                <div>
-                  <p className="text-[#8A7E6E] text-xs uppercase tracking-widest mb-2 flex items-center gap-1">
-                    <Globe size={11} /> Nationality
-                  </p>
-                  <p className="text-[#5A5048] text-sm">{coach.nationality}</p>
-                </div>
-              )}
 
               {coach.experience && (
                 <div>

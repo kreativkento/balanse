@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Bookmark, CalendarRange } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MemberGreetingHeader } from '../components/layout/DashboardGreetingBar';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 import { MyClassesPageContent } from '../components/classes/MyClassesPageContent';
 import {
@@ -75,17 +74,6 @@ export default function MemberClasses() {
     <MemberPageShell
       searchPlaceholder="Search my classes…"
       onSearch={setSearch}
-      header={
-        <MemberGreetingHeader
-          searchPlaceholder="Search my classes…"
-          onSearch={setSearch}
-          pageHeader={{
-            crumb: 'Class Management',
-            title: 'My Classes',
-            icon: <CalendarRange size={14} className="shrink-0 text-[#c49a3c]" aria-hidden />,
-          }}
-        />
-      }
     >
       <MyClassesPageContent
         search={search}

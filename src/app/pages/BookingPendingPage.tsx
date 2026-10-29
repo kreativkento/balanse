@@ -133,7 +133,7 @@ export default function BookingPendingPage() {
 
           <h1
             className="text-[#1E2A35] leading-none mb-2"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 5vw, 3rem)', letterSpacing: '0.05em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 5vw, 3rem)', letterSpacing: '0.04em' }}
           >
             {isCredit ? 'You\'re enrolled!' : 'Booking Submitted!'}
           </h1>
@@ -163,12 +163,9 @@ export default function BookingPendingPage() {
 
             <h2
               className="leading-none mb-5"
-              style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: '2rem',
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem',
                 letterSpacing: '0.04em',
-                color: classColor,
-              }}
+                color: classColor }}
             >
               {booking.className}
             </h2>
@@ -230,7 +227,7 @@ export default function BookingPendingPage() {
                     <span className="text-[#9A8E7E] text-xs uppercase tracking-widest">Reference No.</span>
                     <span
                       className="text-[#1E2A35] text-sm"
-                      style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}
+                      style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}
                     >
                       {reference}
                     </span>
@@ -261,7 +258,7 @@ export default function BookingPendingPage() {
         <div className={`bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6 ${CARD_HOVER_GROW}`}>
           <p
             className="text-[#1E2A35] mb-4"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.06em' }}
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.15rem', letterSpacing: '0.05em' }}
           >
             What Happens Next
           </p>

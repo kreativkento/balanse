@@ -1,8 +1,7 @@
 /** Shared feedback portal UI; also default export for `/development/feedback`. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useDevAuth } from '../context/DevAuthContext';
-import { DevSidebar } from '../components/layout/DevSidebar';
 import {
   ArrowUpRight,
   Bug,
@@ -29,17 +28,27 @@ import {
 } from 'lucide-react';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
 import { PaginationPageButtons } from '../components/layout/AdminTablePagination';
+import {
+  ChronologicalSortSelect,
+  sortChronologically,
+  type ChronologicalOrder,
+} from '../components/layout/ChronologicalSortSelect';
 import { STAFF_PAGE_CONTAINER_PADDED } from '../lib/staff-page-meta';
+import { FeedbackQueueNav } from '../components/feedback/FeedbackQueueNav';
+import { CategorizedAddFilter, matchesAnySelected } from '../components/filters/CategorizedAddFilter';
 import { FeedbackDetailViewModal } from '../components/feedback/FeedbackDetailViewModal';
 import { FeedbackIrreversibleConfirmDialog } from '../components/feedback/FeedbackIrreversibleConfirmDialog';
 import { FeedbackTicketDropdown } from '../components/feedback/FeedbackTicketDropdown';
 import { FEEDBACK_DETAIL_MODAL_PANEL } from '../components/feedback/feedback-detail-modal-styles';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
+import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
+import { ContentAreaFallback } from '../components/layout/PortalRouteOutlet';
 import {
   FEEDBACK_DESCRIPTION_MAX,
   FEEDBACK_MAX_BYTES,
   FEEDBACK_MAX_VIDEO_SECONDS,
   FEEDBACK_PRIORITY_DROPDOWN_OPTIONS,
+  FEEDBACK_PRIORITIES,
   FEEDBACK_STATUSES,
   FEEDBACK_TITLE_MAX,
   canDeleteOwnFeedback,
@@ -51,9 +60,14 @@ import {
   updateFeedbackStatus,
   createFeedbackAttachmentUrl,
   deleteOwnFeedback,
+  canAdminDeescalateFeedbackToFrontdesk,
+  deescalateFeedbackToFrontdesk,
   escalateFeedbackTicket,
   fetchDevFeedbackInbox,
   fetchFeedbackInbox,
+  fetchFeedbackTicketCreatorRole,
+  forwardFeedbackToDev,
+  receiveAdminFeedbackTicket,
   fetchFeedbackSubmitter,
   fetchOwnFeedback,
   feedbackPublicTicketId,
@@ -100,7 +114,7 @@ const PAGE_SIZE = 4;
 type FeedbackPortal = 'member' | 'staff' | 'admin' | 'dev' | 'frontdesk' | 'marketing';
 
 const PORTAL_PAGE_WRAP = 'min-h-full bg-[#F8F3E8]';
-const PORTAL_PAGE_INNER = 'mx-auto w-full min-w-0 max-w-6xl px-4 pb-16 md:px-8';
+const PORTAL_PAGE_INNER = 'mx-auto w-full min-w-0 max-w-8xl px-4 pb-8 md:px-8 md:pb-16';
 
 function feedbackPortalFromPath(pathname: string): FeedbackPortal {
   if (pathname === '/staff-feedback') return 'staff';
@@ -344,6 +358,7 @@ function FeedbackRowCard({
 export type FeedbackInboxReceiveAction = {
   label: string;
   successMessage: string;
+  ticketLevel?: FeedbackTicketLevel;
 };
 
 export type FeedbackInboxForwardAction = {
@@ -351,6 +366,8 @@ export type FeedbackInboxForwardAction = {
   successMessage: string;
   /** Shown when forward is disabled (ticket still at level 0). */
   disabledTitle: string;
+  requiredLevel?: FeedbackTicketLevel;
+  toDev?: boolean;
 };
 
 export function FeedbackPortalPage({
@@ -369,6 +386,7 @@ export function FeedbackPortalPage({
 } = {}) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const portal = forcedPortal ?? feedbackPortalFromPath(pathname);
   const loginPath = loginPathForPortal(portal);
 
@@ -382,8 +400,11 @@ export function FeedbackPortalPage({
   const [inboxItems, setInboxItems] = useState<FeedbackDisplay[]>([]);
   const [listError, setListError] = useState('');
   const [listLoading, setListLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<FeedbackLabel | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<FeedbackLabel[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [priorityFilters, setPriorityFilters] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
   const [viewing, setViewing] = useState<FeedbackDisplay | null>(null);
   const [pendingDelete, setPendingDelete] = useState<FeedbackDisplay | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -401,6 +422,8 @@ export function FeedbackPortalPage({
   const [fileError, setFileError] = useState('');
   const [priority, setPriority] = useState<FeedbackPriority>('medium');
   const [pendingForwardConfirm, setPendingForwardConfirm] = useState(false);
+  const [pendingDeescalateConfirm, setPendingDeescalateConfirm] = useState(false);
+  const [ticketCreatorRole, setTicketCreatorRole] = useState<UserRole | null>(null);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
@@ -624,11 +647,42 @@ export function FeedbackPortalPage({
     toastUpdated('Status updated');
   };
 
+  useEffect(() => {
+    if (!viewing) {
+      setTicketCreatorRole(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchFeedbackTicketCreatorRole(viewing.accountId).then((result) => {
+      if (!cancelled) setTicketCreatorRole(result.role);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewing?.id, viewing?.accountId]);
+
+  useEffect(() => {
+    const ticketId = searchParams.get('ticket');
+    if (!ticketId || listLoading) return;
+    const found = [...inboxItems, ...items].find((row) => row.id === ticketId);
+    if (!found) return;
+    setViewing(found);
+    if (hasInbox && inboxItems.some((row) => row.id === ticketId)) {
+      setListMode('inbox');
+    } else {
+      setListMode('mine');
+    }
+  }, [searchParams, listLoading, items, inboxItems, hasInbox]);
+
   const handleReceive = async () => {
-    if (!viewing || viewing.ticketLevel !== 0) return;
+    const receiveLevel = inboxReceiveAction?.ticketLevel ?? 0;
+    if (!viewing || viewing.ticketLevel !== receiveLevel) return;
     setEscalating(true);
     setActionError('');
-    const result = await openFeedbackTicket(viewing.id);
+    const result =
+      receiveLevel === 2
+        ? await receiveAdminFeedbackTicket(viewing.id)
+        : await openFeedbackTicket(viewing.id);
     setEscalating(false);
 
     if (result.error) {
@@ -655,7 +709,9 @@ export function FeedbackPortalPage({
 
     setEscalating(true);
     setActionError('');
-    const result = await escalateFeedbackTicket(viewing.id);
+    const result = inboxForwardAction?.toDev
+      ? await forwardFeedbackToDev(viewing.id)
+      : await escalateFeedbackTicket(viewing.id);
     setEscalating(false);
 
     if (result.error) {
@@ -665,11 +721,27 @@ export function FeedbackPortalPage({
     }
 
     toastUpdated(
-      isFrontdeskForward
-        ? (inboxForwardAction?.successMessage ?? 'Forwarded to admin')
-        : 'Ticket escalated',
+      inboxForwardAction?.successMessage
+        ?? (isFrontdeskForward ? 'Forwarded to admin' : 'Ticket escalated'),
     );
     setPendingForwardConfirm(false);
+    setViewing(null);
+    await loadItems();
+  };
+
+  const handleDeescalate = async () => {
+    if (!viewing) return;
+    setEscalating(true);
+    setActionError('');
+    const result = await deescalateFeedbackToFrontdesk(viewing.id);
+    setEscalating(false);
+    if (result.error) {
+      setActionError(result.error);
+      toastOperationFailed(result.error);
+      return;
+    }
+    toastUpdated('Returned to front desk');
+    setPendingDeescalateConfirm(false);
     setViewing(null);
     await loadItems();
   };
@@ -678,40 +750,59 @@ export function FeedbackPortalPage({
   const showDeleteControls = listMode === 'mine';
 
   const filteredItems = useMemo(
-    () => (typeFilter === 'all' ? activeItems : activeItems.filter((item) => item.label === typeFilter)),
-    [activeItems, typeFilter],
+    () =>
+      sortChronologically(
+        activeItems.filter(
+          (item) =>
+            matchesAnySelected(typeFilter, item.label)
+            && matchesAnySelected(statusFilters, item.status)
+            && matchesAnySelected(priorityFilters, item.priority),
+        ),
+        (item) => item.createdAt,
+        chronoOrder,
+      ),
+    [activeItems, typeFilter, statusFilters, priorityFilters, chronoOrder],
   );
+
+  const receiveLevel = inboxReceiveAction?.ticketLevel ?? 0;
+  const forwardRequiredLevel = inboxForwardAction?.requiredLevel ?? 1;
 
   const canReceiveViewing = Boolean(
     inboxReceiveAction
     && viewing
     && listMode === 'inbox'
-    && viewing.ticketLevel === 0,
+    && viewing.ticketLevel === receiveLevel,
   );
 
   const showFrontdeskForward = Boolean(
     inboxForwardAction
+    && !inboxForwardAction.toDev
     && viewing
     && listMode === 'inbox'
     && viewing.ticketLevel <= 1,
   );
 
-  const showAdminEscalate = Boolean(
-    viewing
-    && portal === 'admin'
+  const showAdminForward = Boolean(
+    inboxForwardAction?.toDev
+    && viewing
     && listMode === 'inbox'
-    && viewing.ticketLevel === 2,
+    && viewing.ticketLevel <= 3,
   );
 
-  const showEscalateViewing = showFrontdeskForward || showAdminEscalate;
+  const showEscalateViewing = showFrontdeskForward || showAdminForward;
 
-  const escalateDisabledViewing = showFrontdeskForward && viewing?.ticketLevel !== 1;
+  const escalateDisabledViewing = Boolean(
+    viewing && showEscalateViewing && viewing.ticketLevel !== forwardRequiredLevel,
+  );
 
-  const escalateLabelForViewing = showFrontdeskForward
-    ? (inboxForwardAction?.label ?? 'Forward to Admin')
-    : viewing?.ticketLevel === 1
-      ? 'Pass to admin'
-      : 'Pass to dev';
+  const escalateLabelForViewing = inboxForwardAction?.label
+    ?? (showFrontdeskForward ? 'Forward to Admin' : 'Pass to dev');
+
+  const showDeescalateViewing = Boolean(
+    viewing
+    && portal === 'admin'
+    && canAdminDeescalateFeedbackToFrontdesk(viewing, ticketCreatorRole, listMode),
+  );
 
   const canEditPriorityViewing = Boolean(
     viewing
@@ -736,24 +827,24 @@ export function FeedbackPortalPage({
   const rangeStart = filteredItems.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredItems.length);
 
-  const setTypeFilterAndReset = (next: FeedbackLabel | 'all') => {
-    setTypeFilter(next);
+  const clearTicketFilters = () => {
+    setTypeFilter([]);
+    setStatusFilters([]);
+    setPriorityFilters([]);
     setPage(1);
   };
 
   const setListModeAndReset = (next: FeedbackListMode) => {
     setListMode(next);
-    setTypeFilter('all');
+    setTypeFilter([]);
+    setStatusFilters([]);
+    setPriorityFilters([]);
     setPage(1);
     setViewing(null);
   };
 
   if (!ready) {
-    return (
-      <div className="flex min-h-full min-h-dvh items-center justify-center bg-[#F8F3E8]">
-        <Loader2 size={20} className="animate-spin text-[#c49a3c]" />
-      </div>
-    );
+    return <ContentAreaFallback variant="list" />;
   }
 
   const selectedLabel = labelMeta(label);
@@ -762,39 +853,28 @@ export function FeedbackPortalPage({
 
   const usesShellPageHeader =
     portal === 'staff' || portal === 'admin' || portal === 'frontdesk' || portal === 'marketing';
+  const usesQueueNav =
+    hasInbox &&
+    (portal === 'member' || portal === 'staff' || portal === 'admin' || portal === 'dev');
+  const introCopy =
+    portal === 'dev' && hasInbox
+      ? 'Tickets forwarded from admin (level 4). Update status and priority from the inbox; open a ticket for details.'
+      : hasInbox
+        ? null
+        : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.';
+  const inboxPending = listLoading
+    ? null
+    : inboxItems.filter((item) => item.status !== 'resolved').length;
+  const headingInContent = !usesShellPageHeader || usesQueueNav || (hasInbox && portal === 'frontdesk');
   const feedbackPageContent = (
         <>
-        {!usesShellPageHeader && (
-        <div className="pt-6 mb-6">
-          <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">
-            {portalLabel(portal)}
-          </p>
-          <h2
-            className="leading-tight text-[#1E2A35]"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
-          >
-            System Feedback
-          </h2>
-          <p className="mt-1 max-w-xl text-sm text-[#8A7E6E]">
-            {portal === 'dev' && hasInbox
-              ? 'Tickets forwarded from admin (level 4). Update status and priority from the inbox; open a ticket for details.'
-              : hasInbox
-                ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
-                : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
-          </p>
-        </div>
-        )}
-        {usesShellPageHeader && (
-          <p className="mb-6 max-w-xl text-sm text-[#8A7E6E]">
-            {portal === 'dev' && hasInbox
-              ? 'Tickets forwarded from admin (level 4). Update status and priority from the inbox; open a ticket for details.'
-              : hasInbox
-                ? 'Review incoming tickets, escalate when needed, or send feedback directly to dev.'
-                : 'Review your tickets and send a new note anytime. Every submission gets a ticket id.'}
-          </p>
-        )}
-
-        {hasInbox && (
+        {usesQueueNav ? (
+          <FeedbackQueueNav
+            mode={listMode}
+            onChange={setListModeAndReset}
+            inboxPending={inboxPending}
+          />
+        ) : hasInbox ? (
           <div className="mb-4 flex flex-wrap gap-2">
             <button
               type="button"
@@ -831,17 +911,68 @@ export function FeedbackPortalPage({
               )}
             </button>
           </div>
-        )}
+        ) : null}
+
+        {headingInContent ? (
+        <div className={usesQueueNav || hasInbox ? 'mb-6' : 'pt-6 mb-6'}>
+          {!usesShellPageHeader ? (
+          <p className="mb-1 text-xs uppercase tracking-widest text-[#8A7E6E]">
+            {portalLabel(portal)}
+          </p>
+          ) : null}
+          <h1
+            className="leading-tight text-[#1E2A35]"
+            style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', letterSpacing: '0.04em' }}
+          >
+            System Feedback
+          </h1>
+          {introCopy ? (
+            <p className="mt-1 max-w-xl text-sm text-[#8A7E6E]">{introCopy}</p>
+          ) : null}
+        </div>
+        ) : introCopy ? (
+          <p className="mb-6 max-w-xl text-sm text-[#8A7E6E]">{introCopy}</p>
+        ) : null}
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#8A7E6E]">
-            {listMode === 'inbox' ? 'Incoming queue' : 'Your submissions'}
-            {!listLoading && (
-              <span className="ml-2 normal-case tracking-normal text-[#B0A898]">
-                {filteredItems.length} of {activeItems.length} {activeItems.length === 1 ? 'ticket' : 'tickets'}
-              </span>
-            )}
-          </p>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#8A7E6E]">
+              {listMode === 'inbox' ? 'Incoming queue' : 'Your submissions'}
+              {!listLoading && (
+                <span className="ml-2 normal-case tracking-normal text-[#B0A898]">
+                  {filteredItems.length} of {activeItems.length} {activeItems.length === 1 ? 'ticket' : 'tickets'}
+                </span>
+              )}
+            </p>
+            <CategorizedAddFilter
+              groups={[
+                {
+                  id: 'type',
+                  label: 'Type',
+                  options: LABEL_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  })),
+                },
+                { id: 'status', label: 'Status', options: FEEDBACK_STATUSES },
+                { id: 'priority', label: 'Priority', options: FEEDBACK_PRIORITIES },
+              ]}
+              selected={{ type: typeFilter, status: statusFilters, priority: priorityFilters }}
+              onChange={(next) => {
+                setTypeFilter((next.type ?? []) as FeedbackLabel[]);
+                setStatusFilters(next.status ?? []);
+                setPriorityFilters(next.priority ?? []);
+                setPage(1);
+              }}
+            />
+            <ChronologicalSortSelect
+              value={chronoOrder}
+              onChange={(order) => {
+                setChronoOrder(order);
+                setPage(1);
+              }}
+            />
+          </div>
           <button
             type="button"
             onClick={openModal}
@@ -850,40 +981,6 @@ export function FeedbackPortalPage({
             <Plus size={15} />
             Submit a Feedback
           </button>
-        </div>
-
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-widest text-[#8A7E6E]">Type</span>
-          <button
-            type="button"
-            onClick={() => setTypeFilterAndReset('all')}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-              typeFilter === 'all'
-                ? 'bg-[#1E2A35] text-white'
-                : 'border border-[#D4CDB5]/60 bg-white text-[#8A7E6E] hover:border-[#c49a3c]/40 hover:text-[#1E2A35]'
-            }`}
-          >
-            All
-          </button>
-          {LABEL_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            const active = typeFilter === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setTypeFilterAndReset(option.value)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                  active
-                    ? 'bg-[#1E2A35] text-white'
-                    : 'border border-[#D4CDB5]/60 bg-white text-[#8A7E6E] hover:border-[#c49a3c]/40 hover:text-[#1E2A35]'
-                }`}
-              >
-                <Icon size={12} className={active ? 'text-[#c49a3c]' : option.tone} />
-                {option.label}
-              </button>
-            );
-          })}
         </div>
 
         <div className="overflow-hidden rounded-3xl border border-[#D4CDB5]/60 bg-white shadow-sm">
@@ -900,9 +997,8 @@ export function FeedbackPortalPage({
 
           <div className="flex flex-col gap-3 p-3 sm:p-4">
             {listLoading ? (
-              <div className="flex items-center justify-center gap-2 py-16 text-sm text-[#8A7E6E]">
-                <Loader2 size={16} className="animate-spin text-[#c49a3c]" />
-                Loading feedback…
+              <div role="status" aria-live="polite" aria-label="Loading feedback">
+                <ContentSkeleton variant="list" />
               </div>
             ) : listError ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">
@@ -935,14 +1031,14 @@ export function FeedbackPortalPage({
             ) : filteredItems.length === 0 ? (
               <div className="flex flex-col items-center px-4 py-14 text-center">
                 <p className="text-sm font-semibold text-[#1E2A35]">
-                  No {typeFilter === 'all' ? '' : `${labelMeta(typeFilter).label.toLowerCase()} `}tickets
+                  No matching tickets
                 </p>
                 <p className="mt-1 max-w-sm text-sm text-[#8A7E6E]">
                   You have no feedback of this type yet. Try another filter or submit a new note.
                 </p>
                 <button
                   type="button"
-                  onClick={() => setTypeFilterAndReset('all')}
+                  onClick={clearTicketFilters}
                   className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#D4CDB5]/70 px-4 py-2.5 text-sm font-semibold text-[#1E2A35] hover:bg-white"
                 >
                   Show all tickets
@@ -1010,7 +1106,7 @@ export function FeedbackPortalPage({
         {feedbackPageContent}
       </div>
     ) : portal === 'frontdesk' ? (
-      <div className="mx-auto w-full max-w-6xl px-4 pb-16 md:px-8">{feedbackPageContent}</div>
+      <div className="mx-auto w-full max-w-8xl px-4 pb-8 md:px-8 md:pb-16">{feedbackPageContent}</div>
     ) : (
       <div className={PORTAL_PAGE_WRAP}>
         <div className={PORTAL_PAGE_INNER}>
@@ -1032,10 +1128,16 @@ export function FeedbackPortalPage({
             onClose={() => {
               setViewing(null);
               setActionError('');
+              if (searchParams.has('ticket')) {
+                const next = new URLSearchParams(searchParams);
+                next.delete('ticket');
+                setSearchParams(next, { replace: true });
+              }
             }}
             onDelete={setPendingDelete}
             showDelete={showDeleteControls}
             submitterRole={submitterRole}
+            currentAccountId={submitterAccountId}
             canReceive={canReceiveViewing}
             receiveLabel={inboxReceiveAction?.label ?? 'Receive'}
             onReceive={() => { void handleReceive(); }}
@@ -1046,6 +1148,9 @@ export function FeedbackPortalPage({
             onForward={() => {
               if (!escalateDisabledViewing) setPendingForwardConfirm(true);
             }}
+            showDeescalate={showDeescalateViewing}
+            deescalateLabel="De-escalate to Frontdesk"
+            onDeescalate={() => setPendingDeescalateConfirm(true)}
             canEditPriority={canEditPriorityViewing}
             canEditStatus={canEditStatusViewing}
             prioritySaving={prioritySaving}
@@ -1057,6 +1162,23 @@ export function FeedbackPortalPage({
           />
         );
       })()}
+
+      {pendingDeescalateConfirm && viewing && (
+        <FeedbackIrreversibleConfirmDialog
+          title="Return this ticket to front desk?"
+          message={
+            <>
+              Front desk will pick this up again.
+              {' '}
+              <span className="font-semibold text-[#1E2A35]">{viewing.title}</span>
+            </>
+          }
+          confirmLabel="De-escalate"
+          busy={escalating}
+          onCancel={() => setPendingDeescalateConfirm(false)}
+          onConfirm={() => { void handleDeescalate(); }}
+        />
+      )}
 
       {pendingForwardConfirm && viewing && (
         <FeedbackIrreversibleConfirmDialog
@@ -1086,7 +1208,7 @@ export function FeedbackPortalPage({
             </div>
             <h3
               className="text-[#1E2A35] leading-none"
-              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.05em' }}
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
             >
               Delete ticket?
             </h3>
@@ -1375,17 +1497,7 @@ export default function DevFeedbackPage() {
     if (!devUser) navigate('/development');
   }, [devUser, navigate]);
 
-  if (!devUser) {
-    return (
-      <div className="flex min-h-full min-h-dvh items-center justify-center bg-[#F8F3E8]">
-        <Loader2 size={20} className="animate-spin text-[#c49a3c]" />
-      </div>
-    );
-  }
+  if (!devUser) return null;
 
-  return (
-    <DevSidebar>
-      <FeedbackPortalPage forcedPortal="dev" inboxLevelsOverride={[4]} />
-    </DevSidebar>
-  );
+  return <FeedbackPortalPage forcedPortal="dev" inboxLevelsOverride={[4]} />;
 }

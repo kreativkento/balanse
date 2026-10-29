@@ -28,7 +28,6 @@ const MemberClassSchedule = lazy(() => import('./pages/MemberClassSchedule'));
 const MemberGuidelinesPage = lazy(() => import('./pages/MemberGuidelinesPage'));
 const MemberCreditsPage = lazy(() => import('./pages/MemberCreditsPage'));
 const MemberCreditsCheckoutPage = lazy(() => import('./pages/MemberCreditsCheckoutPage'));
-const PerformancePage = lazy(() => import('./pages/PerformancePage'));
 const CoachFeedbackPage = lazy(() => import('./pages/CoachFeedbackPage'));
 const DevFeedbackPage = lazy(() => import('./pages/DevFeedbackPage'));
 const MemberFeedbackPage = lazy(() => import('./pages/MemberFeedbackPage'));
@@ -49,7 +48,8 @@ const AdminStaffPage = lazy(() => import('./pages/AdminStaffPage'));
 const AdminStudentsPage = lazy(() => import('./pages/AdminStudentsPage'));
 const AdminTimeBlockingPage = lazy(() => import('./pages/AdminTimeBlockingPage'));
 const AdminClassSchedulePage = lazy(() => import('./pages/AdminClassSchedulePage'));
-const AdminCoachRequestsPage = lazy(() => import('./pages/AdminCoachRequestsPage'));
+const AdminCoachSlotsPage = lazy(() => import('./pages/AdminCoachSlotsPage'));
+const AdminCoachCancellationsPage = lazy(() => import('./pages/AdminCoachCancellationsPage'));
 const AdminPaymentsPage = lazy(() => import('./pages/AdminPaymentsPage'));
 const AdminOfficialReceiptsPage = lazy(() => import('./pages/AdminOfficialReceiptsPage'));
 const AdminPaymentChannelsPage = lazy(() => import('./pages/AdminPaymentChannelsPage'));
@@ -57,16 +57,17 @@ const AdminCreditsPage = lazy(() => import('./pages/AdminCreditsPage'));
 const AdminGalleryPage = lazy(() => import('./pages/AdminGalleryPage'));
 const AdminAmenitiesPage = lazy(() => import('./pages/AdminAmenitiesPage'));
 const AdminSubscriptionsPage = lazy(() => import('./pages/AdminSubscriptionsPage'));
-const AdminPromosPage = lazy(() => import('./pages/AdminPromosPage'));
+const AdminPricingPage = lazy(() => import('./pages/AdminPricingPage'));
 const AdminBulletinPage = lazy(() => import('./pages/AdminBulletinPage'));
 const AdminPoliciesPage = lazy(() => import('./pages/AdminPoliciesPage'));
-const AdminAbsenceTrackerPage = lazy(() => import('./pages/AdminAbsenceTrackerPage'));
 const AdminCoachAvailabilityPage = lazy(() => import('./pages/AdminCoachAvailabilityPage'));
 const AdminDisciplinesPage = lazy(() => import('./pages/AdminDisciplinesPage'));
 const AdminEventsRedirect = lazy(() => import('./pages/AdminEventsRedirect'));
 const AdminCoachesPage = lazy(() => import('./pages/AdminCoachesPage'));
 const AdminAccountPage = lazy(() => import('./pages/AdminAccountPage'));
 import { AdminLayout } from './components/layout/AdminLayout';
+import { DevelopmentSectionLayout } from './components/layout/DevelopmentSectionLayout';
+import { DevProtectedLayout } from './components/layout/DevProtectedLayout';
 import { FrontdeskLayout } from './components/layout/FrontdeskLayout';
 import { MarketingLayout } from './components/layout/MarketingLayout';
 const FrontdeskStudentsPage = lazy(() => import('./pages/FrontdeskStudentsPage'));
@@ -97,8 +98,6 @@ const EventsPage = lazy(() => import('./pages/EventsPage'));
 const MemberPaymentHistoryPage = lazy(() => import('./pages/MemberPaymentHistoryPage'));
 const DevelopmentLoginPage = lazy(() => import('./pages/DevelopmentLoginPage'));
 const DevDashboardPage = lazy(() => import('./pages/DevDashboardPage'));
-const DevTicketsPage = lazy(() => import('./pages/DevTicketsPage'));
-const DevAiSetupPage = lazy(() => import('./pages/DevAiSetupPage'));
 const DevAccountLogsPage = lazy(() => import('./pages/DevAccountLogsPage'));
 const DevProfileLogsPage = lazy(() => import('./pages/DevProfileLogsPage'));
 const DevTransactionLogsPage = lazy(() => import('./pages/DevTransactionLogsPage'));
@@ -151,7 +150,7 @@ export const router = createBrowserRouter([
               { path: 'profile', Component: MemberProfilePage },
               { path: 'documents', element: <Navigate to="/profile" replace /> },
               { path: 'payment-history', Component: MemberPaymentHistoryPage },
-              { path: 'performance', Component: PerformancePage },
+              { path: 'performance', element: <Navigate to="/dashboard" replace /> },
               { path: 'subscriptions', element: <Navigate to="/credits" replace /> },
               { path: 'credits', Component: MemberCreditsPage },
               { path: 'credits/checkout', Component: MemberCreditsCheckoutPage },
@@ -196,7 +195,10 @@ export const router = createBrowserRouter([
               { path: 'admin-credits', Component: AdminCreditsPage },
               { path: 'admin-financial-metrics', element: <Navigate to="/admin-credits" replace /> },
               { path: 'admin-staff', Component: AdminStaffPage },
+              { path: 'admin-staff-approvals', element: <Navigate to="/admin-staff" replace /> },
+              { path: 'admin-staff-logs', element: <Navigate to="/admin-staff" replace /> },
               { path: 'admin-coaches', Component: AdminCoachesPage },
+              { path: 'admin-coach-availability', Component: AdminCoachAvailabilityPage },
               { path: 'admin-students', Component: AdminStudentsPage },
               { path: 'admin-schedule', Component: AdminTimeBlockingPage },
               { path: 'admin-payments', Component: AdminPaymentsPage },
@@ -206,10 +208,13 @@ export const router = createBrowserRouter([
               { path: 'admin-amenities', Component: AdminAmenitiesPage },
               { path: 'admin-disciplines', Component: AdminDisciplinesPage },
               { path: 'admin-classes', Component: AdminClassSchedulePage },
-              { path: 'admin-coach-requests', Component: AdminCoachRequestsPage },
+              { path: 'admin-coach-requests', element: <Navigate to="/admin-coach-slots" replace /> },
+              { path: 'admin-coach-slots', Component: AdminCoachSlotsPage },
+              { path: 'admin-coach-cancellations', Component: AdminCoachCancellationsPage },
               { path: 'admin-events', Component: AdminEventsRedirect },
               { path: 'admin-subscriptions', Component: AdminSubscriptionsPage },
-              { path: 'admin-promos', Component: AdminPromosPage },
+              { path: 'admin-pricing', Component: AdminPricingPage },
+              { path: 'admin-promos', element: <Navigate to="/admin-pricing" replace /> },
               { path: 'admin-bulletin', Component: AdminBulletinPage },
               { path: 'admin-news', element: <Navigate to="/admin-bulletin" replace /> },
               { path: 'admin-policies', Component: AdminPoliciesPage },
@@ -248,18 +253,34 @@ export const router = createBrowserRouter([
               { path: 'marketing-feedback', Component: MarketingFeedbackPage },
             ],
           },
-          { path: 'admin-absence', Component: AdminAbsenceTrackerPage },
-          { path: 'admin-coach-availability', Component: AdminCoachAvailabilityPage },
-          { path: 'development', Component: DevelopmentLoginPage },
-          { path: 'development/dashboard', Component: DevDashboardPage },
-          { path: 'development/account', Component: DevAccountPage },
-          { path: 'development/tickets', Component: DevTicketsPage },
-          { path: 'development/feedback', Component: DevFeedbackPage },
-          { path: 'development/logs/disciplines', Component: DevDisciplineLogsPage },
-          { path: 'development/logs/classes', Component: DevClassLogsPage },
-          { path: 'development/logs/bulletin', Component: DevBulletinLogsPage },
-          { path: 'development/logs/transactions', Component: DevTransactionLogsPage },
-          { path: 'development/logs/support', Component: DevSupportLogsPage },
+          {
+            path: 'admin-absence',
+            element: <Navigate to="/admin-dashboard" replace />,
+          },
+          {
+            path: 'development',
+            Component: DevelopmentSectionLayout,
+            children: [
+              { index: true, Component: DevelopmentLoginPage },
+              {
+                Component: DevProtectedLayout,
+                children: [
+                  { path: 'dashboard', Component: DevDashboardPage },
+                  { path: 'account', Component: DevAccountPage },
+                  { path: 'tickets', element: <Navigate to="/development/feedback" replace /> },
+                  { path: 'feedback', Component: DevFeedbackPage },
+                  { path: 'logs/disciplines', Component: DevDisciplineLogsPage },
+                  { path: 'logs/classes', Component: DevClassLogsPage },
+                  { path: 'logs/bulletin', Component: DevBulletinLogsPage },
+                  { path: 'logs/transactions', Component: DevTransactionLogsPage },
+                  { path: 'logs/support', Component: DevSupportLogsPage },
+                  { path: 'logs/accounts', Component: DevAccountLogsPage },
+                  { path: 'logs/profiles', Component: DevProfileLogsPage },
+                  { path: 'ai-setup', element: <Navigate to="/development/dashboard" replace /> },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],
