@@ -4,7 +4,7 @@ import {
   Check, X, Search, Receipt,
   AlertCircle, FileCheck,
   RefreshCcw,
-  ChevronRight, Plus, Lock, Timer, Wallet,
+  ChevronRight, Plus, Lock, Timer, Wallet, Eye,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { PortalTitleToolbar } from '../context/PortalChromeContext';
