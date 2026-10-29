@@ -1940,6 +1940,7 @@ export default function AdminTimeBlockingPage({
   const isStaffTimeSlots = variant === 'staff-time-slots';
   const useClassScheduleRealtimeSync =
     variant === 'class-schedule'
+    || variant === 'frontdesk-class-schedule'
     || variant === 'staff-time-slots'
     || variant === 'staff-class-schedule'
     || variant === 'member-class-schedule';
@@ -1971,6 +1972,7 @@ export default function AdminTimeBlockingPage({
   const usesOperationsBlockColors = scheduleBlockColorMode === 'operations';
   const opensClassScheduleBlockPanel =
     variant === 'class-schedule'
+    || isFrontdeskClassSchedule
     || isMemberClassSchedule
     || isStaffClassSchedule
     || isStaffTimeSlots;
@@ -3978,7 +3980,6 @@ export default function AdminTimeBlockingPage({
 
               {showClassScheduleFeatures
                 && !showClassBlockStatusLegend
-                && !isFrontdeskClassSchedule
                 && !isStaffTimeSlots && (
                 <div className="flex items-center gap-x-3 gap-y-1.5 px-3 py-2 border-b border-[#D4CDB5]/30 flex-wrap bg-[#F8F3E8]/40">
                   {[
@@ -4905,7 +4906,7 @@ export default function AdminTimeBlockingPage({
                     <ChevronLeft size={14} />
                     Go Back
                   </button>
-                  {!isMemberClassSchedule && !isStaffTimeSlots && (
+                  {!isMemberClassSchedule && !isStaffTimeSlots && !isReadOnlySchedule && (
                   <button
                     type="button"
                     onClick={() => {
