@@ -1,9 +1,33 @@
 import { AlertTriangle, Home, RotateCcw, SearchX } from 'lucide-react';
 
+/** Logged-in member portal routes (MemberSiteLayout). */
+const MEMBER_PORTAL_PREFIXES = [
+  '/dashboard',
+  '/profile',
+  '/payment-history',
+  '/credits',
+  '/my-classes',
+  '/class-schedule',
+  '/member-payment-portal',
+  '/studio-guidelines',
+  '/studio-services',
+  '/studio-coaches',
+  '/studio-disciplines',
+  '/member-bulletin',
+  '/feedback',
+];
+
+export function isMemberPortalPath(pathname: string): boolean {
+  return MEMBER_PORTAL_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export function homePathFor(pathname: string) {
   if (pathname.startsWith('/development')) return '/development/dashboard';
   if (pathname.startsWith('/staff-')) return '/staff-dashboard';
   if (pathname.startsWith('/admin')) return '/admin-dashboard';
+  if (isMemberPortalPath(pathname)) return '/dashboard';
   return '/';
 }
 
@@ -12,6 +36,7 @@ export function homeLabelFor(pathname: string) {
     pathname.startsWith('/development')
     || pathname.startsWith('/staff-')
     || pathname.startsWith('/admin')
+    || isMemberPortalPath(pathname)
   ) {
     return 'Back to Dashboard';
   }
@@ -72,7 +97,7 @@ export function ErrorScreen({
               className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-full border border-[#D4CDB5]/70 bg-white text-[#5A5048] text-sm font-semibold hover:bg-[#EDE8D8] active:scale-[0.97] transition-all"
             >
               <RotateCcw size={15} />
-              Try again
+              Try Again
             </button>
           )}
           <button
