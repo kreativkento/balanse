@@ -31,6 +31,7 @@ import {
   usePortalSectionNav,
   type PortalSectionGroup,
 } from '../../context/PortalSectionNavContext';
+import { useMemberFinanceAttentionCounts } from '../../hooks/useMemberFinanceAttentionCounts';
 import {
   memberClassLinks,
   isPublicNavActive,
@@ -75,7 +76,10 @@ function memberPageHeader(pathname: string) {
   return undefined;
 }
 
-function buildMemberGroups(featuresLocked: boolean): PortalSectionGroup[] {
+function buildMemberGroups(
+  featuresLocked: boolean,
+  financeAttention: { classReturned: number; packReturned: number },
+): PortalSectionGroup[] {
   return [
     {
       key: 'classes',
@@ -89,7 +93,16 @@ function buildMemberGroups(featuresLocked: boolean): PortalSectionGroup[] {
       label: 'Finances',
       icon: <Coins size={16} />,
       disabled: featuresLocked,
-      links: financeLinks.map((link) => ({ ...link, disabled: featuresLocked })),
+      links: financeLinks.map((link) => ({
+        ...link,
+        disabled: featuresLocked,
+        pendingCount:
+          link.path === '/payment-history'
+            ? financeAttention.classReturned
+            : link.path === '/credits'
+              ? financeAttention.packReturned
+              : undefined,
+      })),
     },
     {
       key: 'studio',
@@ -193,7 +206,11 @@ export function MemberSidebar({ children, lockScroll = false, lockScrollDesktop 
   const profileScore = computeProfileScore(user?.profile);
   const featuresLocked = profileScore < PROFILE_COMPLETION_READY;
   const profileStatusDot = featuresLocked ? profileScoreBarClasses(profileScore).bar : undefined;
-  const groups = useMemo(() => buildMemberGroups(featuresLocked), [featuresLocked]);
+  const { classReturned, packReturned } = useMemberFinanceAttentionCounts();
+  const groups = useMemo(
+    () => buildMemberGroups(featuresLocked, { classReturned, packReturned }),
+    [featuresLocked, classReturned, packReturned],
+  );
 
   const innerOverflow = lockScroll
     ? 'overflow-hidden'

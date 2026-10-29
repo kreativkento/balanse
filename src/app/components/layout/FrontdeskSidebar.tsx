@@ -22,13 +22,21 @@ import { isPublicNavActive } from './NavBar';
 import { SidebarCollapseBar, SidebarNav, SidebarNavGroupButton, SidebarNavLink } from './SidebarNavLink';
 import { useUnreadAccountNotifications } from '../../hooks/useUnreadAccountNotifications';
 import { useFrontdeskCancelNotifyCount } from '../../hooks/useFrontdeskCancelNotifyCount';
+import { useFrontdeskBookingsPendingCount } from '../../hooks/useFrontdeskBookingsPendingCount';
+import { useAdminClassPaymentPendingCount } from '../../hooks/useAdminClassPaymentPendingCount';
+import { useAdminBulletinPendingCount } from '../../hooks/useAdminBulletinPendingCount';
 import {
   PortalSectionNavProvider,
   usePortalSectionNav,
   type PortalSectionGroup,
 } from '../../context/PortalSectionNavContext';
 
-function buildFrontdeskGroups(cancelNotifyCount: number): PortalSectionGroup[] {
+function buildFrontdeskGroups(
+  cancelNotifyCount: number,
+  bookingsPendingCount: number,
+  classPaymentPendingCount: number,
+  bulletinPendingCount: number,
+): PortalSectionGroup[] {
   return [
     {
       key: 'overview',
@@ -57,7 +65,12 @@ function buildFrontdeskGroups(cancelNotifyCount: number): PortalSectionGroup[] {
       label: 'Enrollments',
       icon: <ClipboardList size={16} />,
       links: [
-        { label: 'Bookings', path: '/frontdesk-bookings', icon: <ClipboardList size={16} /> },
+        {
+          label: 'Bookings',
+          path: '/frontdesk-bookings',
+          icon: <ClipboardList size={16} />,
+          pendingCount: bookingsPendingCount,
+        },
         {
           label: 'Cancellations',
           path: '/frontdesk-cancellations',
@@ -73,7 +86,12 @@ function buildFrontdeskGroups(cancelNotifyCount: number): PortalSectionGroup[] {
       links: [
         { label: 'Gallery', path: '/frontdesk-gallery', icon: <Images size={16} /> },
         { label: 'Amenities', path: '/frontdesk-amenities', icon: <Sparkles size={16} /> },
-        { label: 'Bulletin', path: '/frontdesk-bulletin', icon: <Newspaper size={16} /> },
+        {
+          label: 'Bulletin',
+          path: '/frontdesk-bulletin',
+          icon: <Newspaper size={16} />,
+          pendingCount: bulletinPendingCount,
+        },
       ],
     },
     {
@@ -81,7 +99,12 @@ function buildFrontdeskGroups(cancelNotifyCount: number): PortalSectionGroup[] {
       label: 'Finance',
       icon: <CreditCard size={16} />,
       links: [
-        { label: 'Payments', path: '/frontdesk-payments', icon: <CreditCard size={16} /> },
+        {
+          label: 'Payments',
+          path: '/frontdesk-payments',
+          icon: <CreditCard size={16} />,
+          pendingCount: classPaymentPendingCount,
+        },
         { label: 'Policies', path: '/frontdesk-policies', icon: <ShieldCheck size={16} /> },
       ],
     },
@@ -131,7 +154,19 @@ interface FrontdeskSidebarProps {
 export function FrontdeskSidebar({ children }: FrontdeskSidebarProps) {
   const { pathname } = useLocation();
   const cancelNotifyCount = useFrontdeskCancelNotifyCount();
-  const groups = useMemo(() => buildFrontdeskGroups(cancelNotifyCount), [cancelNotifyCount]);
+  const bookingsPendingCount = useFrontdeskBookingsPendingCount();
+  const classPaymentPendingCount = useAdminClassPaymentPendingCount();
+  const bulletinPendingCount = useAdminBulletinPendingCount();
+  const groups = useMemo(
+    () =>
+      buildFrontdeskGroups(
+        cancelNotifyCount,
+        bookingsPendingCount,
+        classPaymentPendingCount,
+        bulletinPendingCount,
+      ),
+    [cancelNotifyCount, bookingsPendingCount, classPaymentPendingCount, bulletinPendingCount],
+  );
 
   useEffect(() => {
     document.querySelector('[data-frontdesk-main-scroll]')?.scrollTo(0, 0);

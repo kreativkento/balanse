@@ -8,6 +8,7 @@ import {
 } from '../../context/PortalChromeContext';
 import { usePortalSectionNav } from '../../context/PortalSectionNavContext';
 import { MobileSectionSubnav } from './SidebarNavLink';
+import { usePortalPendingSync } from '../../hooks/usePortalPendingSync';
 
 const RAIL_WIDTH_CLASS = 'w-[4.5rem]';
 
@@ -45,6 +46,8 @@ function AppSidebarShell({
     ) ?? null;
   const [hovered, setHovered] = useState(false);
   const leaveTimer = useRef<number | null>(null);
+
+  usePortalPendingSync(true);
 
   useEffect(() => {
     closeMobile();

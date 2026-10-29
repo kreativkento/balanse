@@ -23,6 +23,7 @@ import {
   usePortalSectionNav,
   type PortalSectionGroup,
 } from '../../context/PortalSectionNavContext';
+import { useStaffPendingPortalRequestCount } from '../../hooks/useStaffPendingPortalRequestCount';
 
 const dashboardLink = {
   label: 'Dashboard',
@@ -30,24 +31,29 @@ const dashboardLink = {
   icon: <LayoutDashboard size={16} />,
 };
 
-const scheduleManagementLinks: { label: string; path: string; icon: ReactNode }[] = [
-  { label: 'My Classes', path: '/staff-my-classes', icon: <Bookmark size={16} /> },
-  { label: 'Time Slots', path: '/staff-time-slots', icon: <Clock size={16} /> },
-  { label: 'Class Schedule', path: '/staff-class-schedule', icon: <CalendarRange size={16} /> },
-  { label: 'Requests', path: '/staff-requests', icon: <CalendarDays size={16} /> },
-  { label: 'Availability', path: '/staff-availability', icon: <CalendarCheck size={16} /> },
-];
+function buildStaffGroups(pendingRequestCount: number): PortalSectionGroup[] {
+  return [
+    {
+      key: 'schedule',
+      label: 'Schedule',
+      icon: <CalendarDays size={16} />,
+      links: [
+        { label: 'My Classes', path: '/staff-my-classes', icon: <Bookmark size={16} /> },
+        { label: 'Time Slots', path: '/staff-time-slots', icon: <Clock size={16} /> },
+        { label: 'Class Schedule', path: '/staff-class-schedule', icon: <CalendarRange size={16} /> },
+        {
+          label: 'Requests',
+          path: '/staff-requests',
+          icon: <CalendarDays size={16} />,
+          pendingCount: pendingRequestCount,
+        },
+        { label: 'Availability', path: '/staff-availability', icon: <CalendarCheck size={16} /> },
+      ],
+    },
+  ];
+}
 
 const bulletinLink = { label: 'Bulletin', path: '/staff-bulletin', icon: <Newspaper size={16} /> };
-
-const staffGroups: PortalSectionGroup[] = [
-  {
-    key: 'schedule',
-    label: 'Schedule',
-    icon: <CalendarDays size={16} />,
-    links: scheduleManagementLinks,
-  },
-];
 
 function StaffSidebarNav({ onNavigate }: { onNavigate: () => void }) {
   const { staffUser } = useStaffAuth();
@@ -122,7 +128,8 @@ interface StaffSidebarProps {
 export function StaffSidebar({ children }: StaffSidebarProps) {
   const { pathname } = useLocation();
   const isDashboard = pathname === '/staff-dashboard';
-  const groups = useMemo(() => staffGroups, []);
+  const pendingRequestCount = useStaffPendingPortalRequestCount();
+  const groups = useMemo(() => buildStaffGroups(pendingRequestCount), [pendingRequestCount]);
 
   useEffect(() => {
     document.querySelector('[data-staff-main-scroll]')?.scrollTo(0, 0);

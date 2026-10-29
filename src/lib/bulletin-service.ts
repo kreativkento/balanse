@@ -7,7 +7,7 @@ import type {
 
 export const BULLETIN_POSTS_CHANGED = 'balanse:bulletin-posts-changed';
 
-function notifyBulletinPostsChanged() {
+export function notifyBulletinPostsChanged() {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new Event(BULLETIN_POSTS_CHANGED));
 }

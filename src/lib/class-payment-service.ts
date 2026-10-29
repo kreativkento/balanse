@@ -6,6 +6,58 @@ import { loadProfileImageUrlsForUser } from './storage-service';
 
 export const PAYMENT_PROOFS_BUCKET = 'payment_proofs';
 
+export const CLASS_PAYMENTS_CHANGED = 'balanse:class-payments-changed';
+
+export function notifyClassPaymentsChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(CLASS_PAYMENTS_CHANGED));
+  }
+}
+
+export type MemberFinanceAttentionCounts = {
+  classReturned: number;
+  packReturned: number;
+};
+
+export async function fetchPendingClassPaymentCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('class_payments_escrow')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+
+  if (error) {
+    console.error('fetchPendingClassPaymentCount:', error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+export async function fetchMemberFinanceAttentionCounts(): Promise<MemberFinanceAttentionCounts> {
+  const [classRes, packRes] = await Promise.all([
+    supabase
+      .from('class_payments_escrow')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'rejected'),
+    supabase
+      .from('subscription_package_payments_escrow')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'rejected'),
+  ]);
+
+  if (classRes.error) {
+    console.error('fetchMemberFinanceAttentionCounts class:', classRes.error.message);
+  }
+  if (packRes.error) {
+    console.error('fetchMemberFinanceAttentionCounts pack:', packRes.error.message);
+  }
+
+  return {
+    classReturned: classRes.count ?? 0,
+    packReturned: packRes.count ?? 0,
+  };
+}
+
 export type ClassPaymentStatus = 'pending' | 'approved' | 'rejected';
 
 export type PaymentEscrowState =
@@ -180,6 +232,7 @@ export async function submitMemberClassPayment(input: {
     });
   }
 
+  notifyClassPaymentsChanged();
   return {
     success: true,
     paymentId,
@@ -221,6 +274,7 @@ export async function resubmitMemberClassPaymentEscrow(input: {
     }
   });
 
+  notifyClassPaymentsChanged();
   return { success: true, uid: payload?.uid, error: null };
 }
 
@@ -588,6 +642,8 @@ export async function adminCreateClassPayment(input: {
   const paymentId = payload?.payment_id;
   const status = payload?.status;
 
+  notifyClassPaymentsChanged();
+
   const finalTransactionId = (payload as { final_transaction_id?: string | null })?.final_transaction_id;
   const receiptTargetId = finalTransactionId ?? paymentId;
 
@@ -664,6 +720,8 @@ export async function adminReviewClassPayment(
     final_transaction_id?: string | null;
   } | null;
 
+  notifyClassPaymentsChanged();
+
   const feedbackResult = await sendClassPaymentReviewFeedbackEmail(paymentId);
   const feedbackEmailSent = feedbackResult.ok;
   const feedbackEmailError = feedbackResult.ok ? null : feedbackResult.error;
@@ -726,6 +784,7 @@ export async function finalizeEscrowPayment(escrowPaymentId: string): Promise<{
     return { success: false, finalTransactionId: null, error: error.message };
   }
 
+  notifyClassPaymentsChanged();
   return {
     success: true,
     finalTransactionId: (data as string) ?? null,
@@ -749,6 +808,7 @@ export async function adminRefundClassPaymentEscrow(
     return { success: false, error: error.message };
   }
 
+  notifyClassPaymentsChanged();
   return { success: true, error: null };
 }
 
@@ -763,6 +823,8 @@ export async function adminForceLockEscrowPayment(
     console.error('admin_force_lock_escrow_payment:', error.message);
     return { success: false, finalTransactionId: null, error: error.message };
   }
+
+  notifyClassPaymentsChanged();
 
   const finalTransactionId = (data as string) ?? null;
   if (finalTransactionId) {
@@ -793,6 +855,7 @@ export async function adminMarkCashRefundDisbursed(
     return { success: false, error: error.message };
   }
 
+  notifyClassPaymentsChanged();
   return { success: true, error: null };
 }
 
@@ -807,7 +870,9 @@ export async function finalizeDueEscrowPayments(): Promise<{
     return { count: 0, error: error.message };
   }
 
-  return { count: Number(data ?? 0), error: null };
+  const count = Number(data ?? 0);
+  if (count > 0) notifyClassPaymentsChanged();
+  return { count, error: null };
 }
 
 async function resolveFinalTransactionId(escrowOrFinalId: string): Promise<{

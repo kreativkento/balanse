@@ -7,24 +7,32 @@ import { AppSidebarLayout } from './AppSidebarLayout';
 import { isPublicNavActive } from './NavBar';
 import { SidebarCollapseBar, SidebarNav, SidebarNavGroupButton, SidebarNavLink } from './SidebarNavLink';
 import { useUnreadAccountNotifications } from '../../hooks/useUnreadAccountNotifications';
+import { useAdminBulletinPendingCount } from '../../hooks/useAdminBulletinPendingCount';
 import {
   PortalSectionNavProvider,
   usePortalSectionNav,
   type PortalSectionGroup,
 } from '../../context/PortalSectionNavContext';
 
-const marketingGroups: PortalSectionGroup[] = [
-  {
-    key: 'marketing',
-    label: 'Marketing',
-    icon: <Megaphone size={16} />,
-    links: [
-      { label: 'Bulletin', path: '/marketing-dashboard', icon: <Newspaper size={16} /> },
-      { label: 'Gallery', path: '/marketing-gallery', icon: <Images size={16} /> },
-      { label: 'Amenities', path: '/marketing-amenities', icon: <Sparkles size={16} /> },
-    ],
-  },
-];
+function buildMarketingGroups(bulletinPendingCount: number): PortalSectionGroup[] {
+  return [
+    {
+      key: 'marketing',
+      label: 'Marketing',
+      icon: <Megaphone size={16} />,
+      links: [
+        {
+          label: 'Bulletin',
+          path: '/marketing-dashboard',
+          icon: <Newspaper size={16} />,
+          pendingCount: bulletinPendingCount,
+        },
+        { label: 'Gallery', path: '/marketing-gallery', icon: <Images size={16} /> },
+        { label: 'Amenities', path: '/marketing-amenities', icon: <Sparkles size={16} /> },
+      ],
+    },
+  ];
+}
 
 function MarketingSidebarNav({
   onNavigate,
@@ -72,7 +80,8 @@ interface MarketingSidebarProps {
 /** Logged-in marketing portal chrome (sidebar). */
 export function MarketingSidebar({ children }: MarketingSidebarProps) {
   const { pathname } = useLocation();
-  const groups = useMemo(() => marketingGroups, []);
+  const bulletinPendingCount = useAdminBulletinPendingCount();
+  const groups = useMemo(() => buildMarketingGroups(bulletinPendingCount), [bulletinPendingCount]);
 
   useEffect(() => {
     document.querySelector('[data-marketing-main-scroll]')?.scrollTo(0, 0);

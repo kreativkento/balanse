@@ -231,6 +231,21 @@ export async function fetchPendingPortalRequestCount(
   return count ?? 0;
 }
 
+/** Pending portal requests submitted by the signed-in staff member (RLS-scoped). */
+export async function fetchMyPendingPortalRequestCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('portal_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+
+  if (error) {
+    console.error('fetchMyPendingPortalRequestCount:', error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 /** Vacant blocks the signed-in staff member has a pending slot request for. */
 /** Class/event ids with any pending slot or cancellation portal request. */
 export function classIdsWithPendingPortalRequests(

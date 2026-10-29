@@ -34,6 +34,7 @@ import { isPublicNavActive } from './NavBar';
 import { useAdminBulletinPendingCount } from '../../hooks/useAdminBulletinPendingCount';
 import { useAdminCoachQueuePendingCounts } from '../../hooks/useAdminCoachRequestsPendingCount';
 import { useAdminCreditCheckoutPendingCount } from '../../hooks/useAdminCreditCheckoutPendingCount';
+import { useAdminClassPaymentPendingCount } from '../../hooks/useAdminClassPaymentPendingCount';
 import { SidebarCollapseBar, SidebarNav, SidebarNavGroupButton, SidebarNavLink } from './SidebarNavLink';
 import { useUnreadAccountNotifications } from '../../hooks/useUnreadAccountNotifications';
 
@@ -52,6 +53,7 @@ function buildAdminGroups(
   coachCancellationPendingCount: number,
   creditCheckoutPendingCount: number,
   bulletinPendingCount: number,
+  classPaymentPendingCount: number,
 ): PortalSectionGroup[] {
   return [
     {
@@ -112,7 +114,12 @@ function buildAdminGroups(
           icon: <Coins size={16} />,
           pendingCount: creditCheckoutPendingCount,
         },
-        { label: 'Payments', path: '/admin-payments', icon: <CreditCard size={16} /> },
+        {
+          label: 'Payments',
+          path: '/admin-payments',
+          icon: <CreditCard size={16} />,
+          pendingCount: classPaymentPendingCount,
+        },
         { label: 'OR Register', path: '/admin-official-receipts', icon: <Receipt size={16} /> },
         { label: 'Payment Channels', path: '/admin-payment-channels', icon: <Layers size={16} /> },
       ],
@@ -183,6 +190,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
   const coachQueuePending = useAdminCoachQueuePendingCounts();
   const creditCheckoutPendingCount = useAdminCreditCheckoutPendingCount();
   const bulletinPendingCount = useAdminBulletinPendingCount();
+  const classPaymentPendingCount = useAdminClassPaymentPendingCount();
   const groups = useMemo(
     () =>
       buildAdminGroups(
@@ -190,8 +198,15 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         coachQueuePending.cancellations,
         creditCheckoutPendingCount,
         bulletinPendingCount,
+        classPaymentPendingCount,
       ),
-    [coachQueuePending.slots, coachQueuePending.cancellations, creditCheckoutPendingCount, bulletinPendingCount],
+    [
+      coachQueuePending.slots,
+      coachQueuePending.cancellations,
+      creditCheckoutPendingCount,
+      bulletinPendingCount,
+      classPaymentPendingCount,
+    ],
   );
 
   useEffect(() => {

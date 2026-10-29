@@ -388,6 +388,7 @@ export async function submitMemberSubscriptionPackagePayment(input: {
   }
 
   const payload = data as { payment_id?: string; uid?: string } | null;
+  notifySubscriptionPackagePaymentsChanged();
   return {
     success: true,
     paymentId: payload?.payment_id,
@@ -421,6 +422,7 @@ export async function resubmitMemberSubscriptionPackagePayment(input: {
   }
 
   const payload = data as { uid?: string } | null;
+  notifySubscriptionPackagePaymentsChanged();
   return { success: true, uid: payload?.uid, error: null };
 }
 
@@ -448,6 +450,8 @@ export async function adminReviewSubscriptionPackagePayment(
   }
 
   const reviewPayload = reviewData as { final_transaction_id?: string | null } | null;
+
+  notifySubscriptionPackagePaymentsChanged();
 
   const feedbackResult = await sendSubscriptionPackagePaymentReviewFeedbackEmail(paymentId);
   const feedbackEmailSent = feedbackResult.ok;

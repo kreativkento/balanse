@@ -19,12 +19,8 @@ export function useUnreadAccountNotifications(): number {
       void refresh();
     };
     window.addEventListener(ACCOUNT_NOTIFICATIONS_CHANGED, onChange);
-    const timer = window.setInterval(() => {
-      void refresh();
-    }, 30000);
     return () => {
       window.removeEventListener(ACCOUNT_NOTIFICATIONS_CHANGED, onChange);
-      window.clearInterval(timer);
     };
   }, [pathname, refresh]);
 
