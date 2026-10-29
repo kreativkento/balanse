@@ -42,7 +42,6 @@ import {
 import { AdminManualPaymentModal } from '../components/payments/AdminManualPaymentModal';
 import { ClassPaymentReceiptPrintModal } from '../components/payments/ClassPaymentReceiptPrintModal';
 import { PaymentStudentContactPanel } from '../components/payments/PaymentStudentContactPanel';
-import { AdminCreditPackPaymentsSection } from '../components/payments/AdminCreditPackPaymentsSection';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -757,7 +756,6 @@ export default function AdminPaymentsPage() {
   const [payments, setPayments]           = useState<Payment[]>([]);
   const [packPayments, setPackPayments]   = useState<{ amountPaid: number; status: string; createdAt: string }[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
-  const [paymentDomain, setPaymentDomain] = useState<'class' | 'credits'>('class');
   const [ledgerFilters, setLedgerFilters] = useState<string[]>([]);
   const [search, setSearch] = useAdminUrlSearchFilter();
   const [chronoOrder, setChronoOrder] = useState<ChronologicalOrder>('latest');
@@ -1063,25 +1061,21 @@ export default function AdminPaymentsPage() {
               className={INP}
             />
           </div>
-          {paymentDomain === 'class' ? (
-            <CategorizedAddFilter
-              groups={[{
-                id: 'status',
-                label: 'Status',
-                options: [
-                  { value: 'held', label: 'On hold', count: payments.filter(isHeld).length },
-                  { value: 'cleared', label: 'Locked / cleared', count: payments.filter(isCleared).length },
-                  { value: 'voided', label: 'Voided / refunded', count: payments.filter(isVoided).length },
-                ],
-              }]}
-              selected={{ status: ledgerFilters }}
-              onChange={(next) => setLedgerFilters(next.status ?? [])}
-            />
-          ) : null}
-          {paymentDomain === 'class' ? (
-            <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
-          ) : null}
-          {paymentDomain === 'class' && isStudioAdmin ? (
+          <CategorizedAddFilter
+            groups={[{
+              id: 'status',
+              label: 'Status',
+              options: [
+                { value: 'held', label: 'On hold', count: payments.filter(isHeld).length },
+                { value: 'cleared', label: 'Locked / cleared', count: payments.filter(isCleared).length },
+                { value: 'voided', label: 'Voided / refunded', count: payments.filter(isVoided).length },
+              ],
+            }]}
+            selected={{ status: ledgerFilters }}
+            onChange={(next) => setLedgerFilters(next.status ?? [])}
+          />
+          <ChronologicalSortSelect value={chronoOrder} onChange={setChronoOrder} />
+          {isStudioAdmin ? (
             <button
               type="button"
               onClick={openAddRecordModal}
@@ -1093,35 +1087,6 @@ export default function AdminPaymentsPage() {
           ) : null}
         </PortalTitleToolbar>
 
-        <div className="mb-5 flex min-w-0 flex-wrap items-center gap-3">
-          <div className="flex w-fit max-w-full gap-1 rounded-2xl border border-[#D4CDB5]/60 bg-white p-1 shadow-sm">
-            {(
-              [
-                ['class', 'Class enrollments'],
-                ['credits', 'Credit packs'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setPaymentDomain(id)}
-                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                  paymentDomain === id ? 'bg-[#1E2A35] text-white shadow-sm' : 'text-[#8A7E6E] hover:text-[#1E2A35]'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {paymentDomain === 'credits' ? (
-          <div className="min-w-0 bg-white rounded-3xl border border-[#D4CDB5]/60 shadow-sm p-6">
-            <AdminCreditPackPaymentsSection search={search} />
-          </div>
-        ) : null}
-
-        {paymentDomain === 'class' ? (
         <>
         <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-3">
           {[
@@ -1323,7 +1288,6 @@ export default function AdminPaymentsPage() {
           Click a row for proof and review. Held rows can use Issue OR or Manual Refund (each requires confirmation).
         </p>
         </>
-        ) : null}
       </div>
       </div>
     </>

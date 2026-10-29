@@ -8,7 +8,6 @@ import {
   Newspaper,
   Users,
   CalendarRange,
-  Coins,
   Loader2,
   RefreshCcw,
   Award,
@@ -176,8 +175,8 @@ export default function AdminDashboardPage() {
   if (!adminUser) return null;
 
   const s = snapshot;
-  const pendingInflow = (s?.pendingPaymentAmount ?? 0) + (s?.pendingPackAmount ?? 0);
-  const pendingCount = (s?.pendingPayments ?? 0) + (s?.pendingPackPayments ?? 0);
+  const pendingInflow = s?.pendingPaymentAmount ?? 0;
+  const pendingCount = s?.pendingPayments ?? 0;
   const reviewTotal =
     pendingCount + (s?.portalRequestsPending ?? 0) + (s?.bulletinPending ?? 0);
 
@@ -223,7 +222,7 @@ export default function AdminDashboardPage() {
           </p>
         ) : null}
 
-        <div className="mb-5 grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-5 grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard
             to="/admin-official-receipts"
             icon={<Wallet size={17} className="text-green-700" />}
@@ -246,20 +245,8 @@ export default function AdminDashboardPage() {
               loading
                 ? undefined
                 : pendingCount > 0
-                  ? `${pendingCount} class / pack payment${pendingCount === 1 ? '' : 's'}`
+                  ? `${pendingCount} class payment${pendingCount === 1 ? '' : 's'}`
                   : 'No pending inflows'
-            }
-          />
-          <StatCard
-            to="/admin-credits"
-            icon={<Coins size={17} className="text-[#745b3c]" />}
-            iconWrap="bg-[#EDE8D8]"
-            label="Credit pack sales"
-            value={loading ? '—' : formatPeso(s?.packRevenueThisMonth ?? 0)}
-            hint={
-              loading
-                ? undefined
-                : `${s?.pendingPackPayments ?? 0} pack checkout${(s?.pendingPackPayments ?? 0) === 1 ? '' : 's'} pending`
             }
           />
           <StatCard
@@ -422,18 +409,6 @@ export default function AdminDashboardPage() {
                     : `${formatPeso(s?.pendingPaymentAmount ?? 0)} awaiting approval`
                 }
                 count={s?.pendingPayments ?? 0}
-                loading={loading}
-              />
-              <ApprovalRow
-                to="/admin-credits"
-                icon={<Coins size={17} />}
-                label="Credit pack checkouts"
-                detail={
-                  loading
-                    ? 'Pack purchases to verify'
-                    : `${formatPeso(s?.pendingPackAmount ?? 0)} in pending packs`
-                }
-                count={s?.pendingPackPayments ?? 0}
                 loading={loading}
               />
               <ApprovalRow

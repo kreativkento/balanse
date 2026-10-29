@@ -5,7 +5,6 @@ import {
   CalendarRange,
   ChevronRight,
   ClipboardList,
-  Coins,
   CreditCard,
   Loader2,
   Newspaper,
@@ -141,16 +140,12 @@ export default function FrontdeskDashboardPage() {
         </p>
       ) : null}
 
-      <div className="mb-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
         <StatTile label="Clients" value={loading ? '—' : String(s?.clientCount ?? 0)} />
         <StatTile
           label="Pending pay"
           value={loading ? '—' : String(s?.pendingPayments ?? 0)}
           hint={loading ? undefined : pendingAmountLabel}
-        />
-        <StatTile
-          label="Pack checkouts"
-          value={loading ? '—' : String(s?.pendingPackPayments ?? 0)}
         />
         <StatTile label="Classes week" value={loading ? '—' : String(s?.classesThisWeek ?? 0)} />
         <StatTile label="Today" value={loading ? '—' : String(s?.classesToday ?? 0)} />
@@ -179,13 +174,6 @@ export default function FrontdeskDashboardPage() {
             icon={<CreditCard size={17} />}
             label="Payment approvals"
             count={s?.pendingPayments ?? 0}
-            loading={loading}
-          />
-          <ActionRow
-            to="/frontdesk-payments"
-            icon={<Coins size={17} />}
-            label="Credit pack checkouts"
-            count={s?.pendingPackPayments ?? 0}
             loading={loading}
           />
           <ActionRow

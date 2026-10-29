@@ -88,16 +88,6 @@ function reviewPoint(snapshot: AdminDashboardSnapshot): { line: string; actions:
       detail: `${countLabel(snapshot.pendingPayments, 'payment')} · ${peso(snapshot.pendingPaymentAmount)}`,
     });
   }
-  if (snapshot.pendingPackPayments > 0) {
-    parts.push(
-      `${countLabel(snapshot.pendingPackPayments, 'pack checkout')} (${peso(snapshot.pendingPackAmount)})`,
-    );
-    actions.push({
-      label: 'Credit packs',
-      to: '/admin-credits',
-      detail: `${countLabel(snapshot.pendingPackPayments, 'checkout')} · ${peso(snapshot.pendingPackAmount)}`,
-    });
-  }
   if (snapshot.portalRequestsPending > 0) {
     parts.push(countLabel(snapshot.portalRequestsPending, 'coach request'));
     actions.push({
