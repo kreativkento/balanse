@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { CardInfoButton } from '../components/balanse-flow/CardInfoButton';
 import { STAFF_PAGE_CONTAINER } from '../lib/staff-page-meta';
 import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import {
@@ -140,7 +141,10 @@ function StatCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="truncate text-[#8A7E6E] text-[11px] uppercase tracking-widest">{label}</p>
+        <p className="truncate text-[#8A7E6E] text-[11px] uppercase tracking-widest">
+          {label}
+          <CardInfoButton title={label} />
+        </p>
         <p
           className="text-[#1E2A35] leading-none tabular-nums"
           style={{ ...headingType, fontSize: '1.65rem' }}

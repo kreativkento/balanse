@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Menu } from 'lucide-react';
 import { usePortalChrome } from '../../context/PortalChromeContext';
+import { BalanseFlowHelpButton } from '../balanse-flow/BalanseFlowHost';
 
 export function PortalRoleBadge({
   label,
@@ -96,6 +97,7 @@ export function PortalAppHeader({
         <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
           {headerActions ? <div className="hidden md:flex">{headerActions}</div> : null}
           {search}
+          <BalanseFlowHelpButton />
           {notifications}
           {accountMenu}
         </div>

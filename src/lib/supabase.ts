@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
+import { routeBalanseFlowTraffic } from './balanse-flow/route-demo-traffic.ts';
 import { friendlyRateLimitResponse } from './supabase-rate-limit';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -11,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = routeBalanseFlowTraffic(createClient<Database>(supabaseUrl, supabaseAnonKey, {
   global: {
     fetch: async (input, init) => friendlyRateLimitResponse(input, await fetch(input, init)),
   },
@@ -20,4 +21,4 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
-});
+}));

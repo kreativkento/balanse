@@ -114,7 +114,7 @@ export function SidebarNavLink({
 
   if (disabled) {
     return (
-      <span aria-disabled="true" title={disabledTitle} className={navClass}>
+      <span aria-disabled="true" title={disabledTitle} className={navClass} data-tour={`nav-${label}`}>
         {content}
       </span>
     );
@@ -129,6 +129,7 @@ export function SidebarNavLink({
         aria-label={iconOnly ? label : undefined}
         className={navClass}
         aria-expanded={active}
+        data-tour={`nav-${label}`}
       >
         {content}
       </button>
@@ -143,6 +144,7 @@ export function SidebarNavLink({
       aria-label={iconOnly ? label : undefined}
       className={navClass}
       aria-current={active ? 'page' : undefined}
+      data-tour={`nav-${label}`}
     >
       {content}
     </Link>

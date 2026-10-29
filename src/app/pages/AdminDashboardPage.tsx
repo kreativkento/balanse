@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router';
+import { CardInfoButton } from '../components/balanse-flow/CardInfoButton';
 import {
   ChevronRight,
   CreditCard,
@@ -67,6 +68,7 @@ function StatCard({
         <div className="min-w-0 flex-1">
           <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">
             {label}
+            <CardInfoButton title={label} />
           </p>
           <p
             className="mt-1 truncate leading-none text-[#1E2A35]"
@@ -112,7 +114,10 @@ function ApprovalRow({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-[#1E2A35]">{label}</span>
+        <span className="block truncate text-sm font-semibold text-[#1E2A35]">
+          {label}
+          <CardInfoButton title={label} />
+        </span>
         <span className="mt-0.5 block truncate text-[11px] text-[#9A8E7E]">{detail}</span>
       </span>
       {loading ? (

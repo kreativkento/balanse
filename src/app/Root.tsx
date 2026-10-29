@@ -6,6 +6,7 @@ import { DevAuthProvider } from './context/DevAuthContext';
 import { Suspense } from 'react';
 import { ContentAreaFallback } from './components/layout/PortalRouteOutlet';
 import { InactivitySessionGuard } from './components/session/InactivitySessionGuard';
+import { BalanseFlowHost } from './components/balanse-flow/BalanseFlowHost';
 
 // Standalone portals — hide the public NavBar / student sidebar
 const PORTAL_PREFIXES = [
@@ -36,10 +37,12 @@ export function Root() {
       <AdminAuthProvider>
         <StaffAuthProvider>
           <AuthProvider>
-            <InactivitySessionGuard />
-            <Suspense fallback={<ContentAreaFallback />}>
-              <Shell />
-            </Suspense>
+            <BalanseFlowHost>
+              <InactivitySessionGuard />
+              <Suspense fallback={<ContentAreaFallback />}>
+                <Shell />
+              </Suspense>
+            </BalanseFlowHost>
           </AuthProvider>
         </StaffAuthProvider>
       </AdminAuthProvider>

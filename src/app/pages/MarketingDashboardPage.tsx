@@ -6,6 +6,7 @@ import { loadGalleryPostsForAdmin } from '../../lib/gallery-service';
 import { fetchAdminStudioAmenitiesSelection } from '../../lib/studio-amenities-service';
 import { ALL_STUDIO_AMENITY_LABELS } from '../data/studio-amenities';
 import AdminBulletinPage from './AdminBulletinPage';
+import { CardInfoButton } from '../components/balanse-flow/CardInfoButton';
 
 function MarketingStat({
   to,
@@ -23,7 +24,10 @@ function MarketingStat({
       to={to}
       className="min-w-0 rounded-2xl border border-[#D4CDB5]/55 bg-white px-4 py-3 shadow-sm transition-colors hover:border-[#c49a3c]/40 hover:bg-[#FBF9F3]"
     >
-      <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">{label}</p>
+      <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">
+        {label}
+        <CardInfoButton title={label} />
+      </p>
       <p
         className="mt-1 truncate leading-none text-[#1E2A35]"
         style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}

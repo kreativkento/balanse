@@ -4,6 +4,7 @@ import { Eye, EyeOff, Lock, Mail, ChevronLeft, ChevronRight } from 'lucide-react
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { staffPortalHomePath } from '../../lib/staff-portal-routes';
 import { passwordInputGuardProps } from '../components/auth/password-input-guards';
+import { BalanseFlowHelpButton, DemoRoleButtons } from '../components/balanse-flow/BalanseFlowHost';
 import logoMainWhite from 'figma:asset/logo_main_white.svg';
 import logoMain from 'figma:asset/logo_main.svg';
 
@@ -64,7 +65,10 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F3E8] flex">
+    <div className="relative min-h-screen bg-[#F8F3E8] flex">
+      <div className="absolute right-3 top-3 z-20">
+        <BalanseFlowHelpButton variant="light" />
+      </div>
       {/* ── LEFT PANEL ── */}
       <div
         className="hidden md:flex md:w-[42%] flex-col justify-between px-12 py-10 relative overflow-hidden"
@@ -232,6 +236,7 @@ export default function StaffLoginPage() {
               )}
             </button>
           </form>
+          <DemoRoleButtons portal="staff" />
 
           {/* Back to student site */}
           <p className="text-center text-[#B0A898] text-xs mt-6">

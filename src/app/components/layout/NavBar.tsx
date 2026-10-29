@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useStaffAuth } from '../../context/StaffAuthContext';
 import logoMain from 'figma:asset/logo_main.svg';
 import { AccountMenu } from './AccountMenu';
+import { BalanseFlowHelpButton } from '../balanse-flow/BalanseFlowHost';
 
 export const ratesLinks = [
   { label: 'Pricing and Plans', path: '/pricing', icon: <CreditCard size={18} /> },
@@ -225,6 +226,7 @@ export function NavBar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <BalanseFlowHelpButton variant="light" />
             {isStaffAuthenticated ? (
               <>
                 <div className="flex items-center gap-1.5 bg-[#1E2A35]/08 border border-[#1E2A35]/15 rounded-full px-3 py-1">

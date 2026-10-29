@@ -7,7 +7,8 @@
     "build": "vite build",
     "dev": "vite",
     "seed:default-colors": "node scripts/seed-default-color-swatches.mjs",
-    "seed:timeblocks": "node scripts/seed-vacant-timeblocks.mjs"
+    "seed:timeblocks": "node scripts/seed-vacant-timeblocks.mjs",
+    "test:balanse-flow": "node scripts/test-balanse-flow-demo.mjs && node scripts/test-balanse-flow-info.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

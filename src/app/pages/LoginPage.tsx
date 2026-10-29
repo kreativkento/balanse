@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowLeft, Eye, EyeOff, AlertCircle, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { passwordInputGuardProps } from '../components/auth/password-input-guards';
+import { BalanseFlowHelpButton, DemoRoleButtons } from '../components/balanse-flow/BalanseFlowHost';
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
@@ -66,7 +67,10 @@ export default function LoginPage() {
     'w-full bg-[#F8F3E8] border text-[#1E2A35] placeholder-[#B0A898] rounded-2xl py-3.5 min-h-[52px] outline-none focus:ring-2 focus:ring-[#c49a3c]/20 transition-all';
 
   return (
-    <div className="h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
+    <div className="relative h-full overflow-hidden bg-[#F8F3E8] flex flex-col">
+      <div className="absolute right-3 top-3 z-20">
+        <BalanseFlowHelpButton variant="light" />
+      </div>
       {/* Mobile back */}
       <div className="md:hidden px-5 pt-6 pb-1 shrink-0">
         <button
@@ -181,6 +185,7 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            <DemoRoleButtons portal="member" />
 
             <p className="text-center text-[#8A7E6E] text-sm mt-5">
               Don't have an account?{' '}

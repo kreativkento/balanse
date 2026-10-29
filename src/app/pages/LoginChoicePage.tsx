@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 import { LogIn, UserPlus, ArrowLeft } from 'lucide-react';
+import { DemoRoleButtons } from '../components/balanse-flow/BalanseFlowHost';
 
 export default function LoginChoicePage() {
   const navigate = useNavigate();
@@ -72,6 +73,7 @@ export default function LoginChoicePage() {
                 </div>
               </button>
             </div>
+            <DemoRoleButtons portal="member" />
 
             <p className="text-[#A09080] text-xs text-center leading-relaxed mt-5">
               By continuing, you agree to BALANSÉ's{' '}

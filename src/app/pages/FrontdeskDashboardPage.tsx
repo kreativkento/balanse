@@ -20,11 +20,15 @@ import {
 import { formatDateLongFromKey, getTodayDateKey } from '../components/calendar/weekCalendarUtils';
 import { DashboardWeekdayChart } from '../components/dashboard/DashboardWeekdayChart';
 import { useFrontdeskCancelNotifyCount } from '../hooks/useFrontdeskCancelNotifyCount';
+import { CardInfoButton } from '../components/balanse-flow/CardInfoButton';
 
 function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="min-w-0 rounded-2xl border border-[#D4CDB5]/55 bg-white px-4 py-3 shadow-sm">
-      <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">{label}</p>
+      <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-[#9A8E7E]">
+        {label}
+        <CardInfoButton title={label} />
+      </p>
       <p
         className="mt-1.5 truncate leading-none text-[#1E2A35]"
         style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.65rem', letterSpacing: '0.04em' }}
@@ -66,7 +70,10 @@ function ActionRow({
       >
         {icon}
       </span>
-      <span className="min-w-0 flex-1 text-sm font-semibold text-[#1E2A35]">{label}</span>
+      <span className="min-w-0 flex-1 text-sm font-semibold text-[#1E2A35]">
+        {label}
+        <CardInfoButton title={label} />
+      </span>
       {loading ? (
         <Loader2 size={16} className="shrink-0 animate-spin text-[#B0A898]" />
       ) : (

@@ -13,6 +13,7 @@ import { ContentSkeleton } from '../components/layout/PageLoadingScreen';
 import { useAuth } from '../context/AuthContext';
 import { ProfileIncompleteState } from '../components/ProfileIncompleteState';
 import { MemberPageShell } from '../components/layout/MemberPageShell';
+import { CardInfoButton } from '../components/balanse-flow/CardInfoButton';
 import { CARD_HOVER_GROW } from '../../lib/motion-classes';
 import {
   computeProfileScore,
@@ -111,7 +112,10 @@ function StatTile({
         accent === 'gold' ? 'border-[#c49a3c]/35 bg-[#c49a3c]/08' : 'border-[#D4CDB5]/55 bg-white'
       }`}
     >
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E]">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9A8E7E]">
+        {label}
+        <CardInfoButton title={label} />
+      </p>
       <p
         className="mt-0.5 text-[#1E2A35] leading-none tabular-nums truncate"
         style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', letterSpacing: '0.04em' }}
@@ -144,7 +148,10 @@ function QuickLink({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold text-[#1E2A35]">{label}</span>
+        <span className="block text-sm font-bold text-[#1E2A35]">
+          {label}
+          <CardInfoButton title={label} />
+        </span>
         <span className="block text-xs text-[#8A7E6E] mt-0.5">{description}</span>
       </span>
       <ArrowRight size={16} className="shrink-0 text-[#C4B8A0]" aria-hidden />
